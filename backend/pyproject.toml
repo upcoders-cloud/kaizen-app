@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kaizen-backend"
+version = "0.1.0"
+description = "Backend aplikacji Kaizen MVP oparty na Django"
+requires-python = ">=3.9"
+authors = [
+    {name = "Twoje Imie", email = "twoj.email@example.com"},
+]
+dependencies = [
+    "Django>=5.0",
+    "djangorestframework>=3.14",
+    "django-cors-headers>=4.3",  # Niezbędne do komunikacji z React Native
+    "psycopg2-binary>=2.9",      # Sterownik bazy danych PostgreSQL
+    "python-dotenv>=1.0",        # Do obsługi zmiennych środowiskowych (.env)
+    "Pillow>=10.0",              # Obsługa obrazków (jeśli dodasz zdjęcia do postów)
+]
+
+[tool.setuptools]
+# Umieszczenie pakietów
+packages = ["app", "ideas", "users", "config_kaizen"]
+
+[tool.setuptools.package-data]
+# Pliki statyczne lub szablony wewnątrz pakietów
+"*" = ["*.html", "*.json"]

@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    container_name: kaizen_backend
+    volumes:
+      - ./backend:/app  # Syncs your local code changes to the container instantly
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    # This command overrides the default if you need to;
+    # otherwise it uses the ENTRYPOINT from Dockerfile

@@ -1,0 +1,27 @@
+# Ignore the virtual environment (we install fresh in Docker)
+venv/
+.venv/
+
+# Ignore compiled python files
+pycache/
+*.pyc
+*.pyo
+
+# Ignore git history (reduces size)
+.git/
+.gitignore
+
+# Ignore local env file (Security best practice: inject via docker-compose instead)
+.env
+
+# Ignore IDE settings
+.idea/
+*.dot
+
+# Ignore local database (The container should start fresh or use a volume)
+db.sqlite3
+db.sqlite3-journal
+
+# Ignore static/media (These are generated or uploaded, not part of the code)
+media/
+staticfiles/

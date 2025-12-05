@@ -1,73 +1,73 @@
-# Kaizen Proof of Concept - Backend
+#Kaizen Proof of Concept - Backend
 
-## This project is a Django-based backend API.
+## This project is a Django-based backend API, fully containerized with Docker for easy development and deployment.
 
 ### Prerequisites
 
-Python 3.10 or higher
+Docker Desktop (ensure it is running)
 Git
-Local Setup Instructions
 
-Follow these steps to get the server running on your local machine.
+## Quick Start (Docker)
+
+### Follow these steps to get the server running instantly.
 
 ## 1. Clone the Repository
-```
 git clone https://github.com/upcoders-cloud/kaizen-app.git
-cd ./backend
-```
+cd kaizenProofOfConcept
 
-## 2. Create and Activate Virtual Environment
-It is recommended to use a virtual environment to manage dependencies.
 
-Windows:
-```
-python -m venv venv
-.\venv\Scripts\activate
-```
+## 2. Configure Environment Variables
+Create a .env file in the backend folder.
+Open backend/.env and ensure the values are correct.
 
-macOS/Linux:
+## 3. Run the Application
+
+This command builds the image, installs dependencies, runs migrations, and starts the server.
+
+docker-compose up --build
+
+Wait until you see: Starting development server at http://0.0.0.0:8000/
+
+Access the site: http://localhost:8000/
+
+First-Time Setup (Superuser)
+
+Since the database runs inside the container, you execute commands using docker exec. Run this in a new terminal window while the container is running:
+
 ```bash
-python3 -m venv venv
-source venv/bin/activate
+docker exec -it kaizen_backend python manage.py createsuperuser
 ```
 
-## 3. Install Dependencies
+Admin Panel: http://localhost:8000/admin/
+
+Useful Docker Commands
+
+Goal
+
+Command
+
+Stop Server
+
+Press Ctrl+C in the running terminal
+
+Stop & Remove Containers
 ```bash
-pip install -r requirements.txt
-cd ./backend 
-pip install -e .
+docker-compose down
 ```
-
-## 4. Environment Variables
-
-This project uses python-dotenv. You need to create a .env file in the backend folder to store your secret keys.
-
-## 5. Database Setup
-
-Since the database is not included in the repository (for security reasons), you must initialize it locally.
-
-# Create the database tables
+Rebuild (after changing requirements)
 ```bash
-python manage.py migrate
+docker-compose up --build
 ```
-
-# (Optional) Create an admin user to access the Django Admin panel
+Run Migrations Manually
 ```bash
-python manage.py createsuperuser
+docker exec -it kaizen_backend python manage.py migrate
 ```
-
-## 6. Run the Server
-```bash
-python manage.py runserver
+Open Shell inside Container
 ```
+docker exec -it kaizen_backend /bin/bash
+```
+Troubleshooting
 
-The server will start at http://127.0.0.1:8000/.
+"Port is already allocated": Stop any other services running on port 8000 (like a local python runserver) and try again.
 
-### API Documentation
-Admin Panel: http://127.0.0.1:8000/admin/
-Swagger/API Docs: http://127.0.0.1:8000/api/docs/ (or your configured schema URL)
-
-### Troubleshooting
-"No such table" error: This means you forgot to run python manage.py migrate.
-"OperationalError": Check if your virtual environment is activated.
-
+Database errors: If db.sqlite3 permissions get messed up, delete the file locally and restart Docker to regenerate it.

@@ -71,4 +71,3 @@ Swagger/API Docs: http://127.0.0.1:8000/api/docs/ (or your configured schema URL
 "No such table" error: This means you forgot to run python manage.py migrate.
 "OperationalError": Check if your virtual environment is activated.
 
-

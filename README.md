@@ -4,8 +4,8 @@
 
 ### Prerequisites
 
-Docker Desktop (ensure it is running)
-Git
+- Docker Desktop (ensure it is running)
+- Git
 
 ## Quick Start (Docker)
 
@@ -71,3 +71,4 @@ Troubleshooting
 "Port is already allocated": Stop any other services running on port 8000 (like a local python runserver) and try again.
 
 Database errors: If db.sqlite3 permissions get messed up, delete the file locally and restart Docker to regenerate it.
+

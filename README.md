@@ -72,3 +72,4 @@ Troubleshooting
 
 Database errors: If db.sqlite3 permissions get messed up, delete the file locally and restart Docker to regenerate it.
 
+

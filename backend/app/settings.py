@@ -48,6 +48,9 @@ REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
+# CORS (development)
+CORS_ALLOW_ALL_ORIGINS = True
+
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Kaizen API',
     'DESCRIPTION': 'Backend dla aplikacji zgłaszania pomysłów Kaizen',

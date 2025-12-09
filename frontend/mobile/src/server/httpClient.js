@@ -1,52 +1,40 @@
-import {API_BASE_URL} from 'src/constants/api';
+import axios from 'axios';
+import {API_BASE_URL} from 'src/constants/apiConfig';
 import {
 	APPLICATION_JSON,
 	CONTENT_TYPE,
-	CONTENT_TYPE_SMALL_C,
 	DELETE,
 	GET,
 	PATCH,
 	POST,
 	PUT,
-	REQUEST_FAILED_WITH_STATUS,
-} from '@constants/constans';
-
-const STRING = 'string';
+	REQUEST_FAILED_WITH_STATUS
+} from 'src/constants/constans';
 
 class HttpClient {
-	constructor(baseUrl) {
-		this.baseUrl = baseUrl;
+	constructor(client) {
+		this.client = client;
 	}
 
-	buildUrl(path) {
-		const base = this.baseUrl.endsWith('/') ? this.baseUrl : `${this.baseUrl}/`;
-		return new URL(path, base).toString();
-	}
-
-	async request(path, {method = GET, headers, body} = {}) {
-		const url = this.buildUrl(path);
-		const mergedHeaders = {
-			Accept: APPLICATION_JSON,
-			[CONTENT_TYPE]: APPLICATION_JSON,
-			...headers,
-		};
-
-		const options = {method, headers: mergedHeaders};
-
-		if (body !== undefined) {
-			options.body = typeof body === STRING ? body : JSON.stringify(body);
+	async request(path, {method = GET, headers, body, params} = {}) {
+		try {
+			const response = await this.client.request({
+				url: path,
+				method,
+				headers,
+				data: body,
+				params,
+			});
+			return response.data;
+		} catch (error) {
+			const {response} = error || {};
+			const message =
+				response?.data?.detail ||
+				response?.data?.message ||
+				response?.statusText ||
+				error?.message;
+			throw new Error(message || REQUEST_FAILED_WITH_STATUS);
 		}
-
-		const response = await fetch(url, options);
-		const isJson = response.headers.get(CONTENT_TYPE_SMALL_C)?.includes(APPLICATION_JSON);
-		const data = isJson ? await response.json() : await response.text();
-
-		if (!response.ok) {
-			const message = data?.detail || data?.message || response.statusText;
-			throw new Error(message || `${REQUEST_FAILED_WITH_STATUS} ${response.status}`);
-		}
-
-		return data;
 	}
 
 	get(path, options) {
@@ -70,6 +58,14 @@ class HttpClient {
 	}
 }
 
-const httpClient = new HttpClient(API_BASE_URL);
+const axiosInstance = axios.create({
+	baseURL: API_BASE_URL,
+	headers: {
+		Accept: APPLICATION_JSON,
+		[CONTENT_TYPE]: APPLICATION_JSON,
+	},
+});
+
+const httpClient = new HttpClient(axiosInstance);
 
 export default httpClient;

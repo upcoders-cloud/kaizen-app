@@ -9,6 +9,7 @@
     "web": "EXPO_ROUTER_APP_ROOT=src/app expo start --web"
   },
   "dependencies": {
+    "axios": "^1.7.9",
     "expo": "~54.0.27",
     "expo-constants": "~18.0.11",
     "expo-linking": "~8.0.10",

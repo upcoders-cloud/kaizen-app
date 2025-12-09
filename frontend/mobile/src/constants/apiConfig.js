@@ -7,29 +7,33 @@ import {
 	PLATFORM_IOS,
 	PLATFORM_WEB,
 	PROTOCOL_HTTP,
+	UNDEFINED
 } from './constans';
 
-const UNDEFINED = 'undefined'
 const buildUrl = (host) => `${PROTOCOL_HTTP}://${host}:${DEFAULT_PORT}`;
 
-const getBaseUrl = () => {
+const getPlatformBaseUrl = () => {
 	if (Platform.OS === PLATFORM_ANDROID) {
 		return buildUrl(HOST_ANDROID_EMULATOR);
 	}
-
 	if (Platform.OS === PLATFORM_IOS) {
 		return buildUrl(HOST_LOCAL);
 	}
-
 	if (Platform.OS === PLATFORM_WEB) {
-		// On web use current host (keeps same LAN/IP when sharing dev server)
 		if (typeof window !== UNDEFINED && window.location?.hostname) {
 			return `${window.location.protocol}//${window.location.hostname}:${DEFAULT_PORT}`;
 		}
 		return buildUrl(HOST_LOCAL);
 	}
-
 	return buildUrl(HOST_LOCAL);
+};
+
+const getBaseUrl = () => {
+	const envBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL || process.env.API_BASE_URL;
+	if (envBaseUrl) {
+		return envBaseUrl;
+	}
+	return getPlatformBaseUrl();
 };
 
 export const API_BASE_URL = getBaseUrl();

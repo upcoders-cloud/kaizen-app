@@ -42,13 +42,13 @@ docker exec -it kaizen_backend python manage.py createsuperuser
 Admin Panel: http://localhost:8000/admin/
 # Useful Docker Commands
 
-| Goal                               | Command                                                      |
-|------------------------------------|--------------------------------------------------------------|
-| Stop Server                        | Press `Ctrl + C` in the running terminal                     |
-| Stop & Remove Containers           | `docker-compose down`                                        |
+| Goal                                  | Command                                                   |
+|---------------------------------------|-----------------------------------------------------------|
+| Stop Server                           | Press `Ctrl + C` in the running terminal                  |
+| Stop & Remove Containers              | `docker-compose down`                                     |
 | Rebuild (after changing requirements) | `docker-compose up --build`                               |
-| Run Migrations Manually            | `docker exec -it kaizen_backend python manage.py migrate`    |
-| Open Shell inside Container        | `docker exec -it kaizen_backend /bin/bash`                   |
+| Run Migrations Manually               | `docker exec -it kaizen_backend python manage.py migrate` |
+| Open Shell inside Container           | `docker exec -it kaizen_backend /bin/bash`                |
 
 ## Troubleshooting
 

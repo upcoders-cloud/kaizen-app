@@ -1,11 +1,12 @@
 import {ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View} from 'react-native';
 import Post from './Post';
+import colors from 'theme/colors';
 
 const PostList = ({posts = [], loading = false, error = null, onRefresh}) => {
 	if (loading) {
 		return (
 			<View style={styles.centered}>
-				<ActivityIndicator size="large" color="#1d2b64" />
+				<ActivityIndicator size="large" color={colors.primary} />
 				<Text style={styles.muted}>Loading posts...</Text>
 			</View>
 		);
@@ -29,7 +30,7 @@ const PostList = ({posts = [], loading = false, error = null, onRefresh}) => {
 			showsVerticalScrollIndicator={false}
 			refreshControl={
 				onRefresh ? (
-					<RefreshControl refreshing={loading} onRefresh={onRefresh} tintColor="#1d2b64" />
+					<RefreshControl refreshing={loading} onRefresh={onRefresh} tintColor={colors.primary} />
 				) : undefined
 			}
 		/>
@@ -51,11 +52,11 @@ const styles = StyleSheet.create({
 		gap: 12,
 	},
 	muted: {
-		color: '#6c7a92',
+		color: colors.muted,
 		marginTop: 8,
 	},
 	error: {
-		color: '#d22',
+		color: colors.danger,
 		fontSize: 15,
 		textAlign: 'center',
 	},

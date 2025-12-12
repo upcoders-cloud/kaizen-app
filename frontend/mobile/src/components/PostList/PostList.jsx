@@ -2,7 +2,7 @@ import {ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View} fro
 import Post from './Post';
 import colors from 'theme/colors';
 
-const PostList = ({posts = [], loading = false, error = null, onRefresh}) => {
+const PostList = ({posts = [], loading = false, error = null, onRefresh, onPressItem}) => {
 	if (loading) {
 		return (
 			<View style={styles.centered}>
@@ -24,7 +24,7 @@ const PostList = ({posts = [], loading = false, error = null, onRefresh}) => {
 		<FlatList
 			data={posts}
 			keyExtractor={(item) => String(item.id)}
-			renderItem={({item}) => <Post post={item} />}
+			renderItem={({item}) => <Post post={item} onPress={() => onPressItem?.(item)} />}
 			contentContainerStyle={posts.length ? styles.listContent : styles.centered}
 			ListEmptyComponent={<Text style={styles.muted}>No posts to display.</Text>}
 			showsVerticalScrollIndicator={false}

@@ -3,8 +3,8 @@ import {StyleSheet, Text, View} from 'react-native';
 import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';
 import {Feather} from '@expo/vector-icons';
 import {useRouter} from 'expo-router';
-import {FAILED_TO_LOAD_POSTS} from 'src/constants/constans';
-import PostList from 'src/screens/Posts/PostList';
+import {FAILED_TO_LOAD_POSTS} from 'constants/constans';
+import PostList from 'components/PostList/PostList';
 import postsService from 'src/server/services/postsService';
 import Button from 'components/Button/Button';
 import colors from 'theme/colors';
@@ -35,9 +35,10 @@ const Home = () => {
 					<PostList
 						posts={posts}
 						loading={loading}
-					error={error}
-					onRefresh={() => loadPostsData({setLoading, setError, setPosts})}
-				/>
+						error={error}
+						onRefresh={() => loadPostsData({setLoading, setError, setPosts})}
+						onPressItem={(item) => router.push(`/post/${item.id}`)}
+					/>
 			</SafeAreaView>
 		</SafeAreaProvider>
 	);

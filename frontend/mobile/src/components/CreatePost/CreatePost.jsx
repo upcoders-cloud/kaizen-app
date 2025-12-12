@@ -5,41 +5,23 @@ import postsService from 'src/server/services/postsService';
 import Input from 'components/Input/Input';
 import Button from 'components/Button/Button';
 import Text from 'components/Text/Text';
+import {CONTENT_IS_REQUIRED, EMPTY_STRING, FAILED_TO_CREATE_POST} from "constants/constans";
 
 const CATEGORIES = ['Idea', 'Bug', 'Improvement', 'Question'];
 
 const CreatePost = ({onSubmitSuccess, onSubmitFail}) => {
-	const [title, setTitle] = useState('');
-	const [content, setContent] = useState('');
+	const [title, setTitle] = useState(EMPTY_STRING);
+	const [content, setContent] = useState(EMPTY_STRING);
 	const [category, setCategory] = useState(CATEGORIES[0]);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState(null);
 
-	const onSubmit = async () => {
-		if (!content.trim()) {
-			setError('Content is required');
-			onSubmitFail?.('Content is required');
-			return;
-		}
-
-		setLoading(true);
-		setError(null);
-		try {
-			await postsService.create({
-				title: title.trim() || undefined,
-				content: content.trim(),
-				category,
-				images: [],
-			});
-			onSubmitSuccess?.();
-		} catch (err) {
-			const message = err?.message || 'Failed to create post';
-			setError(message);
-			onSubmitFail?.(message);
-		} finally {
-			setLoading(false);
-		}
-	};
+	const handleSubmit = () => submitPost(
+		{
+			title, content, category,
+			onSubmitSuccess, onSubmitFail,
+			setLoading, setError
+		});
 
 	return (
 		<ScrollView contentContainerStyle={styles.container}>
@@ -83,12 +65,40 @@ const CreatePost = ({onSubmitSuccess, onSubmitFail}) => {
 				<Text style={styles.placeholderText}>Image picker coming soon.</Text>
 			</View>
 			{error ? <Text style={styles.error}>{error}</Text> : null}
-			<Button title="Submit Post" onPress={onSubmit} loading={loading} style={styles.submitButton} />
+			<Button title="Submit Post" onPress={handleSubmit} loading={loading} style={styles.submitButton} />
 		</ScrollView>
 	);
 };
 
 export default CreatePost;
+
+async function submitPost({ title, content, category, onSubmitSuccess, onSubmitFail, setLoading, setError }) {
+	if (!content.trim()) {
+		setError(CONTENT_IS_REQUIRED);
+		onSubmitFail?.(CONTENT_IS_REQUIRED);
+		return;
+	}
+
+	setLoading(true);
+	setError(null);
+
+	try {
+		await postsService.create({
+			title: title.trim() || undefined,
+			content: content.trim(),
+			category,
+			images: [],
+		});
+
+		onSubmitSuccess?.();
+	} catch (err) {
+		const message = err?.message || FAILED_TO_CREATE_POST;
+		setError(message);
+		onSubmitFail?.(message);
+	} finally {
+		setLoading(false);
+	}
+}
 
 const styles = StyleSheet.create({
 	container: {
@@ -143,5 +153,8 @@ const styles = StyleSheet.create({
 	},
 	submitButton: {
 		marginTop: 8,
+		marginLeft: "auto",
+		marginRight: "auto",
+		width: '50%',
 	},
 });

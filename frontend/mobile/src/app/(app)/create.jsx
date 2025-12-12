@@ -1,20 +1,13 @@
 import {Pressable, Text, StyleSheet} from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import {Stack, useRouter} from 'expo-router';
-import CreatePost from 'screens/CreatePost/CreatePost';
+import CreatePost from 'components/CreatePost/CreatePost';
 import colors from 'theme/colors';
-import {SLASH} from "constants/constans";
-
+import {navigateBack} from 'utils/navigation';
 
 const CreateRoute = () => {
 	const router = useRouter();
-	const handleBack = () => {
-		if (router.canGoBack()) {
-			router.back();
-		} else {
-			router.replace(SLASH);
-		}
-	};
+	const handleBack = () => navigateBack(router);
 
 	return (
 		<>

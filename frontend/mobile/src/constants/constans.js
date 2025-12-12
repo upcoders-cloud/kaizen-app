@@ -9,7 +9,11 @@ export const APPLICATION_JSON = 'application/json'
 
 // error message constants
 export const FAILED_TO_LOAD_POSTS = 'Failed to load posts';
+export const FAILED_TO_LOAD_POST = 'Failed to load post';
+export const FAILED_TO_LOAD_COMMENTS = 'Failed to load comments';
 export const REQUEST_FAILED_WITH_STATUS = 'Request failed with status';
+export const CONTENT_IS_REQUIRED = 'Content is required';
+export const FAILED_TO_CREATE_POST = 'Failed to create post';
 
 // String constants
 export const EMPTY_STRING = '';

@@ -7,7 +7,7 @@ import {navigateBack} from 'utils/navigation';
 
 const CreateRoute = () => {
 	const router = useRouter();
-	const handleBack = () => navigateBack(router);
+	const handleBack = () => navigateBack(router, '/');
 
 	return (
 		<>
@@ -18,12 +18,12 @@ const CreateRoute = () => {
 					headerTitleAlign: 'center',
 					headerLeft: () => (
 						<Pressable onPress={handleBack} style={styles.backButton}>
-								<Feather name="arrow-left" size={18} color={colors.primary} />
-								<Text style={styles.backText}>Back</Text>
-							</Pressable>
-						),
-					}}
-				/>
+							<Feather name="arrow-left" size={18} color={colors.primary} />
+							<Text style={styles.backText}>Back</Text>
+						</Pressable>
+					),
+				}}
+			/>
 			<CreatePost
 				onSubmitSuccess={() => {
 					handleBack();

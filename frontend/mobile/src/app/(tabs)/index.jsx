@@ -49,6 +49,7 @@ const loadPostsData = async ({setLoading, setError, setPosts}) => {
 	setError(null);
 	try {
 		const data = await postsService.list();
+		console.log(data)
 		setPosts(data);
 	} catch (err) {
 		setError(err?.message || FAILED_TO_LOAD_POSTS);

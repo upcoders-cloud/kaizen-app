@@ -5,6 +5,7 @@ import postsService from 'src/server/services/postsService';
 import Input from 'components/Input/Input';
 import Button from 'components/Button/Button';
 import Text from 'components/Text/Text';
+import ImagePicker from 'components/ImagePicker/ImagePicker';
 import {CONTENT_IS_REQUIRED, EMPTY_STRING, FAILED_TO_CREATE_POST} from "constants/constans";
 
 const CATEGORIES = ['Idea', 'Bug', 'Improvement', 'Question'];
@@ -13,12 +14,13 @@ const CreatePost = ({onSubmitSuccess, onSubmitFail}) => {
 	const [title, setTitle] = useState(EMPTY_STRING);
 	const [content, setContent] = useState(EMPTY_STRING);
 	const [category, setCategory] = useState(CATEGORIES[0]);
+	const [images, setImages] = useState([]);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState(null);
 
 	const handleSubmit = () => submitPost(
 		{
-			title, content, category,
+			title, content, category, images,
 			onSubmitSuccess, onSubmitFail,
 			setLoading, setError
 		});
@@ -60,10 +62,7 @@ const CreatePost = ({onSubmitSuccess, onSubmitFail}) => {
 					))}
 				</View>
 			</View>
-			<View style={styles.placeholder}>
-				<Text style={styles.placeholderTitle}>Images</Text>
-				<Text style={styles.placeholderText}>Image picker coming soon.</Text>
-			</View>
+			<ImagePicker value={images} onChange={setImages} />
 			{error ? <Text style={styles.error}>{error}</Text> : null}
 			<Button title="Submit Post" onPress={handleSubmit} loading={loading} style={styles.submitButton} />
 		</ScrollView>
@@ -72,7 +71,7 @@ const CreatePost = ({onSubmitSuccess, onSubmitFail}) => {
 
 export default CreatePost;
 
-async function submitPost({ title, content, category, onSubmitSuccess, onSubmitFail, setLoading, setError }) {
+async function submitPost({ title, content, category, images, onSubmitSuccess, onSubmitFail, setLoading, setError }) {
 	if (!content.trim()) {
 		setError(CONTENT_IS_REQUIRED);
 		onSubmitFail?.(CONTENT_IS_REQUIRED);
@@ -83,14 +82,26 @@ async function submitPost({ title, content, category, onSubmitSuccess, onSubmitF
 	setError(null);
 
 	try {
-		await postsService.create({
-			title: title.trim() || undefined,
-			content: content.trim(),
-			category,
-			images: [],
-		});
+		// if (__DEV__) {
+		// 	console.log(
+		// 		'ImagePicker: normalized assets sample',
+		// 		images.map((item) => ({
+		// 			id: item.id,
+		// 			fileName: item.fileName,
+		// 			mimeType: item.mimeType,
+		// 			base64Length: item.base64?.length,
+		// 			base64Preview: item.base64 ? `${item.base64.slice(0, 30)}...` : undefined,
+		// 		}))
+		// 	);
+		// }
+		// await postsService.create({
+		// 	title: title.trim() || undefined,
+		// 	content: content.trim(),
+		// 	category,
+		// 	images: images?.map(({uri, fileName, mimeType}) => ({uri, fileName, mimeType})),
+		// });
 
-		onSubmitSuccess?.();
+		// onSubmitSuccess?.();
 	} catch (err) {
 		const message = err?.message || FAILED_TO_CREATE_POST;
 		setError(message);
@@ -131,21 +142,6 @@ const styles = StyleSheet.create({
 	},
 	categoryButtonTextActive: {
 		color: colors.surface,
-	},
-	placeholder: {
-		padding: 12,
-		borderRadius: 10,
-		borderColor: colors.border,
-		borderWidth: 1,
-		backgroundColor: colors.placeholderSurface,
-	},
-	placeholderTitle: {
-		fontWeight: '700',
-		marginBottom: 4,
-		color: colors.text,
-	},
-	placeholderText: {
-		color: colors.muted,
 	},
 	error: {
 		color: colors.danger,

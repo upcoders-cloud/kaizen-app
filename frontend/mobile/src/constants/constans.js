@@ -33,3 +33,6 @@ export const PROTOCOL_HTTPS = 'https';
 export const DEFAULT_PORT = 8000;
 export const HOST_LOCAL = 'localhost';
 export const HOST_ANDROID_EMULATOR = '10.0.2.2';
+
+// ExpoImagePicker
+export const EXPO_IMAGE_PICKER_STATUS_GRANTED = 'granted';

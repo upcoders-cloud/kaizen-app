@@ -47,7 +47,7 @@ export default function PostDetails() {
 	}, []);
 
 	const handleBack = () => {
-		navigateBack(router);
+		navigateBack(router, '/');
 	};
 
 	const fetchPost = async (targetId, {withLoader = true} = {}) => {

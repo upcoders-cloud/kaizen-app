@@ -19,6 +19,7 @@ export const FAILED_TO_CREATE_POST = 'Failed to create post';
 export const EMPTY_STRING = '';
 export const SPACE = ' ';
 export const UNDEFINED = 'undefined';
+export const STRING = 'string';
 export const SLASH = '/';
 
 // Platform constants

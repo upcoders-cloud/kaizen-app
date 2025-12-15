@@ -1,6 +1,7 @@
-import {Pressable, Text, StyleSheet} from 'react-native';
+import {Pressable, Text, StyleSheet, View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import {Stack, useRouter} from 'expo-router';
+import {SafeAreaView} from 'react-native-safe-area-context';
 import CreatePost from 'components/CreatePost/CreatePost';
 import colors from 'theme/colors';
 import {navigateBack} from 'utils/navigation';
@@ -16,6 +17,7 @@ const CreateRoute = () => {
 					title: 'Create Post',
 					headerShown: true,
 					headerTitleAlign: 'center',
+					contentStyle: {backgroundColor: colors.background},
 					headerLeft: () => (
 						<Pressable onPress={handleBack} style={styles.backButton}>
 							<Feather name="arrow-left" size={18} color={colors.primary} />
@@ -24,11 +26,14 @@ const CreateRoute = () => {
 					),
 				}}
 			/>
-			<CreatePost
-				onSubmitSuccess={() => {
-					handleBack();
-				}}
-			/>
+			<SafeAreaView style={styles.safeArea}>
+				<View style={styles.decorativeBubbleLarge} pointerEvents="none" />
+				<CreatePost
+					onSubmitSuccess={() => {
+						handleBack();
+					}}
+				/>
+			</SafeAreaView>
 		</>
 	);
 };
@@ -36,6 +41,10 @@ const CreateRoute = () => {
 export default CreateRoute;
 
 const styles = StyleSheet.create({
+	safeArea: {
+		flex: 1,
+		backgroundColor: colors.background,
+	},
 	backButton: {
 		flexDirection: 'row',
 		alignItems: 'center',
@@ -45,5 +54,15 @@ const styles = StyleSheet.create({
 	backText: {
 		color: colors.primary,
 		fontWeight: '600',
+	},
+	decorativeBubbleLarge: {
+		position: 'absolute',
+		bottom: -70,
+		right: -50,
+		width: 240,
+		height: 240,
+		borderRadius: 120,
+		backgroundColor: '#36d1dc22',
+		transform: [{rotate: '-6deg'}],
 	},
 });

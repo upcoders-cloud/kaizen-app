@@ -2,9 +2,10 @@ import {StatusBar} from 'expo-status-bar';
 import {Redirect, Stack} from 'expo-router';
 import {StyleSheet, View} from 'react-native';
 import colors from 'theme/colors';
-import {isAuthenticated} from 'constants/auth';
+import {useAuthStore} from "store/authStore";
 
 const RootLayout = () => {
+	const {isAuthenticated} = useAuthStore();
 	const initialRouteName = isAuthenticated ? '(tabs)' : '(auth)';
 
 	return (

@@ -21,24 +21,25 @@ const Home = () => {
 
 	return (
 		<SafeAreaProvider>
-				<SafeAreaView style={styles.safeArea}>
-					<View style={styles.header}>
-						<Text style={styles.title}>Kaizen Posts</Text>
-						<Text style={styles.subtitle}>Latest team ideas</Text>
-						<Button
-							title="Create Post"
-							onPress={() => router.push('/create')}
-							leftIcon={<Feather name="plus" size={16} color="white" />}
-							style={styles.createButton}
-						/>
-					</View>
-					<PostList
-						posts={posts}
-						loading={loading}
-						error={error}
-						onRefresh={() => loadPostsData({setLoading, setError, setPosts})}
-						onPressItem={(item) => router.push(`/post/${item.id}`)}
+			<SafeAreaView style={styles.safeArea}>
+				<View style={styles.decorativeBubble} pointerEvents="none" />
+				<View style={styles.header}>
+					<Text style={styles.title}>Kaizen Posts</Text>
+					<Text style={styles.subtitle}>Latest team ideas</Text>
+					<Button
+						title="Create Post"
+						onPress={() => router.push('/create')}
+						leftIcon={<Feather name="plus" size={16} color="white" />}
+						style={styles.createButton}
 					/>
+				</View>
+				<PostList
+					posts={posts}
+					loading={loading}
+					error={error}
+					onRefresh={() => loadPostsData({setLoading, setError, setPosts})}
+					onPressItem={(item) => router.push(`/post/${item.id}`)}
+				/>
 			</SafeAreaView>
 		</SafeAreaProvider>
 	);
@@ -49,7 +50,6 @@ const loadPostsData = async ({setLoading, setError, setPosts}) => {
 	setError(null);
 	try {
 		const data = await postsService.list();
-		console.log(data)
 		setPosts(data);
 	} catch (err) {
 		setError(err?.message || FAILED_TO_LOAD_POSTS);
@@ -84,5 +84,15 @@ const styles = StyleSheet.create({
 	createButton: {
 		alignSelf: 'center',
 		marginTop: 10,
+	},
+	decorativeBubble: {
+		position: 'absolute',
+		top: -60,
+		right: -60,
+		width: 200,
+		height: 200,
+		borderRadius: 100,
+		backgroundColor: '#36d1dc22',
+		transform: [{rotate: '8deg'}],
 	},
 });

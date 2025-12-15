@@ -1,7 +1,5 @@
 import httpClient from 'src/server/httpClient';
-import {SLASH} from "constants/constans";
-
-const ensureTrailingSlash = (path) => (path.endsWith(SLASH) ? path : `${path}/`);
+import {ensureTrailingSlash} from 'utils/url';
 
 export const createResourceService = (resourcePath) => {
 	const basePath = ensureTrailingSlash(resourcePath);

@@ -16,7 +16,8 @@ class HttpClient {
 		this.client = client;
 	}
 
-	async request(path, {method = GET, headers, body, params} = {}) {
+	async request(path, options = {}) {
+		const {method = GET, headers, body, params, ...rest} = options;
 		try {
 			const response = await this.client.request({
 				url: path,

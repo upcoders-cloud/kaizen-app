@@ -1,6 +1,7 @@
 import {StatusBar} from 'expo-status-bar';
 import {Redirect, Stack} from 'expo-router';
 import {StyleSheet, View} from 'react-native';
+import Toast from 'react-native-toast-message';
 import colors from 'theme/colors';
 import {useAuthStore} from "store/authStore";
 
@@ -26,6 +27,11 @@ const RootLayout = () => {
 					<Stack.Screen name="post/[id]" options={{headerShown: false}} />
 				</Stack.Protected>
 			</Stack>
+			<Toast
+				topOffset={60}
+				text1Style={{fontSize: 16}}
+				text2Style={{fontSize: 14}}
+			/>
 		</View>
 	);
 };

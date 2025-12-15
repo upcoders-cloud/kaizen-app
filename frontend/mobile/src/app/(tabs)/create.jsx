@@ -26,7 +26,7 @@ const CreateRoute = () => {
 					),
 				}}
 			/>
-			<SafeAreaView style={styles.safeArea}>
+			<SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
 				<View style={styles.decorativeBubbleLarge} pointerEvents="none" />
 				<CreatePost
 					onSubmitSuccess={() => {

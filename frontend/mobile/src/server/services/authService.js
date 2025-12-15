@@ -1,23 +1,23 @@
 import httpClient from 'src/server/httpClient';
 import {ensureTrailingSlash} from 'utils/url';
-const basePath = '/auth';
+const basePath = 'https://dummyjson.com/auth';
 
 const authService = {
-	login(credentials) {
-		return httpClient.post(ensureTrailingSlash(`${basePath}/login`), credentials);
+	login(body, options) {
+		return httpClient.post(`${basePath}/login`, body, options);
 	},
-	register(payload) {
-		return httpClient.post(ensureTrailingSlash(`${basePath}/register`), payload);
-	},
-	logout() {
-		return httpClient.post(ensureTrailingSlash(`${basePath}/logout`));
-	},
-	refresh(payload) {
-		return httpClient.post(ensureTrailingSlash(`${basePath}/refresh`), payload);
-	},
-	me() {
-		return httpClient.get(ensureTrailingSlash(`${basePath}/me`));
-	},
+	// register(body, options) {
+	// 	return httpClient.post(ensureTrailingSlash(`${basePath}/register`), body, options);
+	// },
+	// logout(options) {
+	// 	return httpClient.post(ensureTrailingSlash(`${basePath}/logout`), undefined, options);
+	// },
+	// refresh(body, options) {
+	// 	return httpClient.post(ensureTrailingSlash(`${basePath}/refresh`), body, options);
+	// },
+	// me(options) {
+	// 	return httpClient.get(ensureTrailingSlash(`${basePath}/me`), options);
+	// },
 };
 
 export default authService;

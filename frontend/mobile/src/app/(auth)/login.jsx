@@ -2,6 +2,7 @@ import {useState} from 'react';
 import {Redirect} from 'expo-router';
 import {Feather} from '@expo/vector-icons';
 import Constants from 'expo-constants';
+import Toast from 'react-native-toast-message';
 import {
 	KeyboardAvoidingView,
 	Platform,
@@ -20,19 +21,20 @@ import {EMPTY_STRING, PLATFORM_IOS, STRING} from "constants/constans";
 
 const Login = () => {
 	const appVersion = Constants.expoConfig?.version ?? '1.0.0';
-	const [email, setEmail] = useState(EMPTY_STRING);
+	const [username, setUsername] = useState(EMPTY_STRING);
 	const [password, setPassword] = useState(EMPTY_STRING);
-	const { isAuthenticated, login } = useAuthStore();
+	const [loading, setLoading] = useState(false);
+	const {isAuthenticated, login, error: authError} = useAuthStore();
 
 	if (isAuthenticated) {
 		return <Redirect href="/(tabs)" />;
 	}
 
-	const handleEmailChange = (valueOrEvent) => {
+	const handleUsernameChange = (valueOrEvent) => {
 		const value = typeof valueOrEvent === STRING
 			? valueOrEvent
 			: valueOrEvent?.nativeEvent?.text || EMPTY_STRING;
-		setEmail(value);
+		setUsername(value);
 	};
 
 	const handlePasswordChange = (valueOrEvent) => {
@@ -42,9 +44,34 @@ const Login = () => {
 		setPassword(value);
 	};
 
-	const handleLogin = () => {
-		// Auth flow to be wired later
-		login();
+	const handleLogin = async () => {
+		setLoading(true);
+		try {
+			const result = await login(username, password);
+			if (result?.success) {
+				Toast.show({
+					type: 'success',
+					text1: 'Signed in successfully',
+					visibilityTime: 2000,
+				});
+			} else {
+				Toast.show({
+					type: 'error',
+					text1: 'Sign in failed',
+					text2: result?.error || authError || 'Please try again',
+					visibilityTime: 2500,
+				});
+			}
+		} catch (error) {
+			Toast.show({
+				type: 'error',
+				text1: 'Sign in failed',
+				text2: error?.message || 'Please try again',
+				visibilityTime: 2500,
+			});
+		} finally {
+			setLoading(false);
+		}
 	};
 
 	return (
@@ -84,13 +111,12 @@ const Login = () => {
 
 						<View style={styles.form}>
 							<Input
-								label="Email"
-								placeholder="john.doe@company.com"
+								label="Username"
+								placeholder="np. emilys"
 								autoCapitalize="none"
-								keyboardType="email-address"
-								value={email}
-								onChangeText={handleEmailChange}
-								onChange={handleEmailChange}
+								value={username}
+								onChangeText={handleUsernameChange}
+								onChange={handleUsernameChange}
 							/>
 							<Input
 								label="Password"
@@ -104,6 +130,7 @@ const Login = () => {
 							<Button
 								title="Continue"
 								onPress={handleLogin}
+								loading={loading}
 								leftIcon={<Feather name="log-in" size={16} color="#ffffff" />}
 								style={styles.submitButton}
 							/>

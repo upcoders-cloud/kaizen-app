@@ -15,6 +15,7 @@ export const REQUEST_FAILED_WITH_STATUS = 'Request failed with status';
 export const CONTENT_IS_REQUIRED = 'Content is required';
 export const FAILED_TO_CREATE_POST = 'Failed to create post';
 export const LOGIN_FAILED = 'Login failed';
+export const REFRESH_FAILED = 'Refresh failed';
 
 // String constants
 export const EMPTY_STRING = '';

@@ -6,15 +6,10 @@ const authService = {
 	login(body, options) {
 		return httpClient.post(`${basePath}/login`, body, options);
 	},
-	// register(body, options) {
-	// 	return httpClient.post(ensureTrailingSlash(`${basePath}/register`), body, options);
-	// },
-	// logout(options) {
-	// 	return httpClient.post(ensureTrailingSlash(`${basePath}/logout`), undefined, options);
-	// },
-	// refresh(body, options) {
-	// 	return httpClient.post(ensureTrailingSlash(`${basePath}/refresh`), body, options);
-	// },
+	refresh(body, options) {
+		return httpClient.post(`${basePath}/refresh`, body, options);
+	}
+	// raczej nie potrzebujemy tego endpoint'a
 	// me(options) {
 	// 	return httpClient.get(ensureTrailingSlash(`${basePath}/me`), options);
 	// },

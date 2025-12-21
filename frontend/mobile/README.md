@@ -1,6 +1,6 @@
 # 📱 Mobile App
 
-A React Native application powered by **Expo**, built as part of the Upcoders improvement-idea platform (similar to SherlockWaste). The mobile app is designed for employees to anonymously submit improvement ideas, like, and comment.
+A React Native application powered by **Expo**, built as part of the **UPCODERS** improvement-idea platform. The mobile app is designed for employees to anonymously submit improvement ideas, like, and comment.
 
 ---
 
@@ -11,6 +11,8 @@ A React Native application powered by **Expo**, built as part of the Upcoders im
 * **Axios** — API communication
 * **React Navigation** — screen navigation
 * **Expo Image Picker** — photo attachments
+* **Zustand** — state manager
+* **MMKV** — key/value storage
 
 ---
 
@@ -22,11 +24,11 @@ A React Native application powered by **Expo**, built as part of the Upcoders im
   /scripts
   /src
     /app
-    /components      
-    /screens                 
-    /constans
-    /theme
+    /components   
+    /constans   
     /server
+    /store
+    /theme
     /utils
 ```
 
@@ -37,7 +39,7 @@ A React Native application powered by **Expo**, built as part of the Upcoders im
 Make sure you have:
 
 * **Node.js 18+**
-* **npm** or **yarn**
+* **npm**
 * **Expo CLI** (installed automatically)
 * **Expo Go** app on your phone
 
@@ -54,12 +56,6 @@ Optional:
 
 ```
 npm install
-```
-
-or
-
-```
-yarn install
 ```
 
 ### 2️⃣ Start Expo

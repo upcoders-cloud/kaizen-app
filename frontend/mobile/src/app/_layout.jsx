@@ -1,13 +1,28 @@
 import {StatusBar} from 'expo-status-bar';
 import {Redirect, Stack} from 'expo-router';
-import {StyleSheet, View} from 'react-native';
+import {ActivityIndicator, StyleSheet, View} from 'react-native';
 import Toast from 'react-native-toast-message';
 import colors from 'theme/colors';
 import {useAuthStore} from "store/authStore";
+import {useEffect, useState} from "react";
 
 const RootLayout = () => {
-	const {isAuthenticated} = useAuthStore();
+	const {isAuthenticated, checkAuth} = useAuthStore();
 	const initialRouteName = isAuthenticated ? '(tabs)' : '(auth)';
+	const [isLoading, setIsLoading] = useState(true);
+
+	useEffect(() => {
+		checkAuth();
+		setIsLoading(false);
+	}, []);
+
+	if (isLoading) {
+		return (
+			<View style={styles.loaderContainer}>
+				<ActivityIndicator size="large" />
+			</View>
+		)
+	}
 
 	return (
 		<View style={styles.container}>
@@ -69,4 +84,9 @@ const styles = StyleSheet.create({
 		color: colors.mutedAlt,
 		marginTop: 2,
 	},
+	loaderContainer: {
+		flex: 1,
+		justifyContent: 'center',
+		alignItems: 'center',
+	}
 });

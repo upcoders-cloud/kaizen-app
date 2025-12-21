@@ -52,29 +52,61 @@ Optional:
 
 ## ▶️ Running the App
 
-### 1️⃣ Install dependencies
+This project uses **npm** for installing packages, **Expo** for running the app, and **MMKV** (`react-native-mmkv`) as a native key/value storage. MMKV is a native module, so it works in a **custom dev client** or a **native build** (Expo Go does not include it by default).
+
+### 1️⃣ Install dependencies (npm)
 
 ```
+cd /workspace/kaizen-app/frontend/mobile
 npm install
 ```
 
-### 2️⃣ Start Expo
+* **npm** installs all dependencies from `package.json` (Expo SDK, React Native, MMKV, Zustand, Axios, etc.).
+
+### 2️⃣ Start Expo (development)
+
+Use the built-in scripts (they set `EXPO_ROUTER_APP_ROOT=src/app`):
 
 ```
-npx expo start
+npm run start
+```
+
+Or target a specific platform:
+
+```
+npm run android
+npm run ios
+npm run web
 ```
 
 This opens the Expo dashboard.
 
-### 3️⃣ Run on mobile device
+### 3️⃣ Run on mobile device (Expo + MMKV)
 
-* Scan the QR code using **Expo Go**
-* The app reloads live on save
+Because **MMKV** is a native module:
 
-### 4️⃣ Run in browser
+* **Expo Go** will **not** load MMKV.
+* Generate native projects with **prebuild** and then use a custom dev client or native build.
+
+Required prebuild step:
 
 ```
-npx expo start --web
+npx expo prebuild --clean
+```
+
+This creates fresh native projects, and the app should then be run from the newly generated native app (custom dev client or native build).
+
+Then use a **custom dev client** or a **native build** (e.g., `expo run:android` / `expo run:ios` or EAS build).
+
+After launching a dev client:
+
+* Scan the QR code or select the running device.
+* The app reloads live on save.
+
+### 4️⃣ Run in browser (web)
+
+```
+npm run web
 ```
 
 ---

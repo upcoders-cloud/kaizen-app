@@ -35,6 +35,8 @@ DEBUG = True
 
 MEDIA_URL = '/kaizen_attachments/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+DATA_UPLOAD_MAX_MEMORY_SIZE = int(os.getenv('DATA_UPLOAD_MAX_MEMORY_SIZE', 20 * 1024 * 1024))
+FILE_UPLOAD_MAX_MEMORY_SIZE = int(os.getenv('FILE_UPLOAD_MAX_MEMORY_SIZE', 20 * 1024 * 1024))
 
 ALLOWED_HOSTS = []
 

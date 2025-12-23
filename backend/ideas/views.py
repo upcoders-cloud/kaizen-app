@@ -1,15 +1,19 @@
+import logging
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from .models import KaizenPost, Comment, Like
 from .serializers import PostSerializer, CommentSerializer, LikeSerializer
+from .permissions import IsCommentAuthorOrReadOnly, IsPostAuthorOrReadOnly
 from rest_framework.exceptions import ValidationError
 from django.db import IntegrityError, transaction
+
+logger = logging.getLogger(__name__)
 
 class PostViewSet(viewsets.ModelViewSet):
     queryset = KaizenPost.objects.all().order_by('-created_at')
     serializer_class = PostSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]  # IsAuthenticated jeśli zamknąć apkę
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsPostAuthorOrReadOnly]  # IsAuthenticated jeśli zamknąć apkę
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
@@ -33,6 +37,11 @@ class PostViewSet(viewsets.ModelViewSet):
             serializer = CommentSerializer(comments, many=True)
             return Response(serializer.data)
         elif request.method == 'POST':
+            logger.info(
+                '[comments] auth_header=%s user=%s',
+                request.META.get('HTTP_AUTHORIZATION'),
+                request.user
+            )
             serializer = CommentSerializer(data=request.data)
             if serializer.is_valid():
                 serializer.save(author=request.user, post=post)
@@ -46,12 +55,13 @@ class CommentViewSet(viewsets.ModelViewSet):
     serializer_class = CommentSerializer
 
     # Opcjonalnie: Tylko zalogowani mogą widzieć/pisać
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsCommentAuthorOrReadOnly]
 
     # To jest KLUCZOWE przy dodawaniu komentarza:
     # Automatycznie przypisujemy autora jako osobę zalogowaną
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
+
 
 
 class LikeViewSet(viewsets.ModelViewSet):

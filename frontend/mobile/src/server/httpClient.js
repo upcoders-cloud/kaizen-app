@@ -19,14 +19,15 @@ class HttpClient {
 	async request(path, options = {}) {
 		const {method = GET, headers, body, params, ...rest} = options;
 		try {
-			const response = await this.client.request({
+			const requestConfig = {
 				url: path,
 				method,
 				headers,
 				data: body,
 				params,
 				...rest,
-			});
+			};
+			const response = await this.client.request(requestConfig);
 			return response.data;
 		} catch (error) {
 			const {response} = error || {};

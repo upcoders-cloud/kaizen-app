@@ -16,6 +16,7 @@ const PostHeader = ({post}) => {
 				<Text style={styles.category}>{post.category || 'Post'}</Text>
 				<Text style={styles.badge}>#{post.id}</Text>
 			</View>
+			<Text style={styles.title}>{post.title || 'Bez tytułu'}</Text>
 			<Text style={styles.author}>{post.author?.nickname || 'Anon'}</Text>
 			<Text style={styles.meta}>{formatDate(post.created_at)}</Text>
 		</View>
@@ -58,6 +59,11 @@ const styles = StyleSheet.create({
 		fontSize: 12,
 		fontWeight: '700',
 		color: colors.muted,
+	},
+	title: {
+		fontSize: 22,
+		fontWeight: '800',
+		color: colors.text,
 	},
 	author: {
 		fontSize: 18,

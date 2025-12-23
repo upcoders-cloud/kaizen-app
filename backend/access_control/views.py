@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from rest_framework import status, serializers
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -11,11 +12,21 @@ from drf_spectacular.utils import extend_schema, inline_serializer, OpenApiRespo
 # --- Documentation Helpers ---
 AUTH_TAG = ["Authentication"]
 
-TOKEN_RESPONSE_SCHEMA = inline_serializer(
-    name='TokenResponse',
+LOGIN_RESPONSE_SCHEMA = inline_serializer(
+    name='LoginResponse',
     fields={
         'access': serializers.CharField(),
         'username': serializers.CharField(),
+        'first_name': serializers.CharField(),
+        'last_name': serializers.CharField(),
+        'gender': serializers.CharField(),
+    }
+)
+
+TOKEN_REFRESH_RESPONSE_SCHEMA = inline_serializer(
+    name='TokenRefreshResponse',
+    fields={
+        'access': serializers.CharField(),
     }
 )
 
@@ -29,7 +40,7 @@ class SecureTokenObtainPairView(TokenObtainPairView):
         ),
         tags=AUTH_TAG,
         responses={
-            200: TOKEN_RESPONSE_SCHEMA,
+            200: LOGIN_RESPONSE_SCHEMA,
             401: OpenApiResponse(description="Invalid credentials (Username/Password)")
         },
         examples=[
@@ -37,7 +48,10 @@ class SecureTokenObtainPairView(TokenObtainPairView):
                 'Successful Login Response',
                 value={
                     "access": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-                    "username": "michal_kaizen"
+                    "username": "michal_kaizen",
+                    "first_name": "Michal",
+                    "last_name": "Nowak",
+                    "gender": "male"
                 },
                 response_only=True,
             )
@@ -50,6 +64,16 @@ class SecureTokenObtainPairView(TokenObtainPairView):
             # Inject username into response body
             username = request.data.get('username')
             response.data['username'] = username
+            User = get_user_model()
+            user = User.objects.filter(username=username).first()
+            if user:
+                response.data['first_name'] = user.first_name or ''
+                response.data['last_name'] = user.last_name or ''
+                response.data['gender'] = user.gender or ''
+            else:
+                response.data['first_name'] = ''
+                response.data['last_name'] = ''
+                response.data['gender'] = ''
 
             # Extract and set Refresh Token as HttpOnly Cookie
             refresh_token = response.data.get('refresh')
@@ -78,7 +102,7 @@ class SecureTokenRefreshView(TokenRefreshView):
         tags=AUTH_TAG,
         request=None,  # Removes the 'refresh' requirement from Swagger UI body
         responses={
-            200: TOKEN_RESPONSE_SCHEMA,
+            200: TOKEN_REFRESH_RESPONSE_SCHEMA,
             401: OpenApiResponse(description="Refresh token is expired or invalid")
         }
     )

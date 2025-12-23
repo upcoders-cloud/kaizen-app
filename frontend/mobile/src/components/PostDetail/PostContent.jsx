@@ -1,16 +1,52 @@
-import {StyleSheet, View} from 'react-native';
+import {Image, Modal, Pressable, StyleSheet, View} from 'react-native';
+import {useMemo, useState} from 'react';
 import Text from 'components/Text/Text';
 import colors from 'theme/colors';
 
-const PostContent = ({content}) => {
+const PostContent = ({content, images = []}) => {
+	const [previewUri, setPreviewUri] = useState(null);
+	const validImages = useMemo(
+		() => (Array.isArray(images) ? images.filter(Boolean) : []),
+		[images]
+	);
+	const closePreview = () => setPreviewUri(null);
+
 	return (
 		<View style={styles.container}>
 			<Text style={styles.title}>Opis</Text>
 			<Text style={styles.content}>{content || 'Brak treści.'}</Text>
-			<View style={styles.placeholder}>
-				<Text style={styles.placeholderTitle}>Załączone obrazy</Text>
-				<Text style={styles.placeholderText}>Wkrótce tutaj pojawi się galeria.</Text>
+			<View style={styles.attachments}>
+				<Text style={styles.attachmentsTitle}>Załączone obrazy</Text>
+				{validImages.length === 0 ? (
+					<Text style={styles.placeholderText}>Brak załączników.</Text>
+				) : (
+					<View style={styles.gallery}>
+						{validImages.map((uri, index) => (
+							<Pressable
+								key={`${uri}-${index}`}
+								style={styles.thumbWrapper}
+								onPress={() => setPreviewUri(uri)}
+							>
+								<Image source={{uri}} style={styles.thumb} />
+							</Pressable>
+						))}
+					</View>
+				)}
 			</View>
+			<Modal
+				transparent
+				visible={Boolean(previewUri)}
+				animationType="fade"
+				onRequestClose={closePreview}
+			>
+				<Pressable style={styles.previewOverlay} onPress={closePreview}>
+					<View style={styles.previewCard} pointerEvents="box-none">
+						{previewUri ? (
+							<Image source={{uri: previewUri}} style={styles.previewImage} resizeMode="contain" />
+						) : null}
+					</View>
+				</Pressable>
+			</Modal>
 		</View>
 	);
 };
@@ -36,21 +72,47 @@ const styles = StyleSheet.create({
 		lineHeight: 22,
 		color: colors.text,
 	},
-	placeholder: {
-		borderWidth: 1,
-		borderColor: colors.border,
-		borderStyle: 'dashed',
-		borderRadius: 12,
-		padding: 12,
-		backgroundColor: colors.placeholderSurface,
-		gap: 4,
+	attachments: {
+		gap: 8,
 	},
-	placeholderTitle: {
+	attachmentsTitle: {
 		fontWeight: '700',
 		color: colors.text,
 	},
 	placeholderText: {
 		color: colors.muted,
 		fontSize: 13,
+	},
+	gallery: {
+		flexDirection: 'row',
+		flexWrap: 'wrap',
+		gap: 10,
+	},
+	thumbWrapper: {
+		width: 90,
+		height: 90,
+		borderRadius: 10,
+		overflow: 'hidden',
+		backgroundColor: colors.surface,
+		borderWidth: 1,
+		borderColor: colors.border,
+	},
+	thumb: {
+		width: '100%',
+		height: '100%',
+	},
+	previewOverlay: {
+		flex: 1,
+		backgroundColor: 'rgba(0,0,0,0.65)',
+		alignItems: 'center',
+		justifyContent: 'center',
+	},
+	previewCard: {
+		width: '92%',
+		height: '82%',
+	},
+	previewImage: {
+		flex: 1,
+		borderRadius: 14,
 	},
 });

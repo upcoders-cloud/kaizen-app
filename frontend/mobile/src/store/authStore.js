@@ -1,15 +1,14 @@
 import {create} from 'zustand';
 import authService from 'server/services/authService';
-import {LOGIN_FAILED, REFRESH_FAILED} from "constants/constans";
+import {LOGIN_FAILED, MMKV_AUTH_KEY, REFRESH_FAILED} from "constants/constans";
 import {getItem, removeItem, setItem} from "store/storage";
 import {getAccessTokenExpiration} from "utils/jwt";
-
-const MMKV_AUTH_KEY = 'AUTH_DATA';
 
 export const useAuthStore = create((set, get) => ({
 	isAuthenticated: false,
 	accessToken: null,
 	accessTokenExpiration: null,
+	user: null,
 	error: null,
 
 	login: async (username, password) => {
@@ -26,6 +25,7 @@ export const useAuthStore = create((set, get) => ({
 					isAuthenticated: false,
 					accessToken: null,
 					accessTokenExpiration: null,
+					user: null,
 					error: message,
 				}));
 				return {success: false, error: message};
@@ -33,8 +33,9 @@ export const useAuthStore = create((set, get) => ({
 			const authData = {
 				isAuthenticated: true,
 				accessToken,
-				error: null,
 				accessTokenExpiration: getAccessTokenExpiration(accessToken, {skewMs: 60 * 1000}),
+				user: response,
+				error: null,
 			};
 
 			// save in MMKV
@@ -50,6 +51,7 @@ export const useAuthStore = create((set, get) => ({
 				isAuthenticated: false,
 				accessToken: null,
 				accessTokenExpiration: null,
+				user: null,
 				error: message,
 			}));
 			return {success: false, error: message};
@@ -62,6 +64,7 @@ export const useAuthStore = create((set, get) => ({
 			isAuthenticated: false,
 			accessToken: null,
 			accessTokenExpiration: null,
+			user: null,
 			error: null,
 		}));
 		return {success: true};
@@ -69,7 +72,6 @@ export const useAuthStore = create((set, get) => ({
 
 	refreshAccessToken: async () => {
 		try {
-			console.log('[auth] Refreshing access token...');
 			const response = await authService.refresh(undefined, {withCredentials: true});
 			const accessToken = response?.access || null;
 			if (!accessToken) {
@@ -82,13 +84,13 @@ export const useAuthStore = create((set, get) => ({
 				isAuthenticated: true,
 				accessToken,
 				accessTokenExpiration: getAccessTokenExpiration(accessToken, {skewMs: 60 * 1000}),
+				user: get().user ?? null,
 				error: null,
 			};
 
 			set(updatedAuthData);
 			setItem(MMKV_AUTH_KEY, updatedAuthData);
 
-			console.log('[auth] Access token refreshed.');
 			return true;
 		} catch (error) {
 			const message = error?.message || REFRESH_FAILED;
@@ -119,7 +121,6 @@ export const useAuthStore = create((set, get) => ({
 			getAccessTokenExpiration(accessToken, {skewMs: 60 * 1000});
 
 		if (accessToken && resolvedExpiration && resolvedExpiration > Date.now()) {
-			console.log('[auth] Access token still valid.');
 			const updatedAuthData = accessTokenExpiration === resolvedExpiration
 				? authData
 				: {...authData, accessTokenExpiration: resolvedExpiration};
@@ -130,7 +131,6 @@ export const useAuthStore = create((set, get) => ({
 			return true;
 		}
 
-		console.log('[auth] Access token expired or missing, trying refresh.');
 		set(authData);
 		return await get().refreshAccessToken();
 	}

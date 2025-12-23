@@ -1,10 +1,26 @@
-import {Pressable, StyleSheet, Text, View} from 'react-native';
+import {Image, Pressable, StyleSheet, Text, View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import colors from 'theme/colors';
+
+const CATEGORY_STYLES = {
+	BHP: {backgroundColor: '#E6F6FF', color: '#0F5F7F'},
+	PROCES: {backgroundColor: '#E9F7EF', color: '#2E7D32'},
+	JAKOSC: {backgroundColor: '#FFF3E0', color: '#C16A00'},
+	INNE: {backgroundColor: '#F2F4F8', color: '#4A5568'},
+};
 
 const Post = ({post, onPress}) => {
 	const likes = post?.likes_count ?? post?.likes?.length ?? 0;
 	const comments = post?.comments_count ?? post?.comments?.length ?? 0;
+	const imageUrls = Array.isArray(post?.image_urls)
+		? post.image_urls
+		: Array.isArray(post?.images)
+			? post.images
+			: [];
+	const primaryImage = imageUrls[0];
+	const extraImagesCount = Math.max(0, imageUrls.length - 1);
+	const categoryKey = post?.category || 'INNE';
+	const categoryStyle = CATEGORY_STYLES[categoryKey] || CATEGORY_STYLES.INNE;
 
 	return (
 		<Pressable
@@ -13,9 +29,26 @@ const Post = ({post, onPress}) => {
 		>
 			<View style={styles.accent} />
 			<View style={styles.headerRow}>
-				<Text style={styles.category}>{post?.category || 'Post'}</Text>
+				<View style={styles.headerMain}>
+					<Text style={[styles.category, categoryStyle]}>{post?.category || 'Post'}</Text>
+					<Text style={styles.title}>{post?.title || 'Bez tytułu'}</Text>
+					<Text style={styles.excerpt} numberOfLines={2} ellipsizeMode="tail">
+						{post?.content || 'No content'}
+					</Text>
+				</View>
+				{primaryImage ? (
+					<View style={styles.thumbContainer}>
+						<View style={styles.thumbWrapper}>
+							<Image source={{uri: primaryImage}} style={styles.thumb} />
+						</View>
+						{extraImagesCount > 0 ? (
+							<View style={styles.thumbBadge}>
+								<Text style={styles.thumbBadgeText}>+{extraImagesCount}</Text>
+							</View>
+						) : null}
+					</View>
+				) : null}
 			</View>
-			<Text style={styles.content}>{post?.content || 'No content'}</Text>
 			<View style={styles.metaRow}>
 				<View style={styles.metaItem}>
 					<Feather name="user" size={14} color={colors.muted} />
@@ -65,14 +98,19 @@ const styles = StyleSheet.create({
 		backgroundColor: colors.badgeBackground,
 		alignSelf: 'flex-start',
 	},
-	content: {
-		marginTop: 12,
-		fontSize: 16,
-		lineHeight: 22,
+	title: {
+		marginTop: 10,
+		fontSize: 18,
+		fontWeight: '800',
 		color: colors.text,
 	},
+	excerpt: {
+		fontSize: 14,
+		lineHeight: 20,
+		color: colors.muted,
+	},
 	metaRow: {
-		marginTop: 12,
+		marginTop: 10,
 		flexDirection: 'row',
 		justifyContent: 'space-between',
 		alignItems: 'center',
@@ -108,6 +146,46 @@ const styles = StyleSheet.create({
 	headerRow: {
 		flexDirection: 'row',
 		justifyContent: 'space-between',
-		alignItems: 'center',
+		alignItems: 'flex-start',
+		gap: 12,
+	},
+	headerMain: {
+		flex: 1,
+		minWidth: 0,
+		gap: 6,
+	},
+	thumbWrapper: {
+		width: 68,
+		height: 68,
+		borderRadius: 14,
+		overflow: 'hidden',
+		backgroundColor: colors.surface,
+		borderWidth: 1,
+		borderColor: colors.border,
+	},
+	thumbContainer: {
+		width: 68,
+		height: 68,
+		position: 'relative',
+	},
+	thumb: {
+		width: '100%',
+		height: '100%',
+	},
+	thumbBadge: {
+		position: 'absolute',
+		right: -6,
+		top: -6,
+		backgroundColor: colors.primary,
+		borderRadius: 12,
+		paddingHorizontal: 7,
+		paddingVertical: 3,
+		borderWidth: 1,
+		borderColor: colors.surface,
+	},
+	thumbBadgeText: {
+		color: colors.surface,
+		fontSize: 12,
+		fontWeight: '700',
 	},
 });

@@ -13,6 +13,7 @@ export const FAILED_TO_LOAD_POST = 'Failed to load post';
 export const FAILED_TO_LOAD_COMMENTS = 'Failed to load comments';
 export const REQUEST_FAILED_WITH_STATUS = 'Request failed with status';
 export const CONTENT_IS_REQUIRED = 'Content is required';
+export const TITLE_IS_REQUIRED = 'Title is required';
 export const FAILED_TO_CREATE_POST = 'Failed to create post';
 export const LOGIN_FAILED = 'Login failed';
 export const REFRESH_FAILED = 'Refresh failed';
@@ -23,6 +24,8 @@ export const SPACE = ' ';
 export const UNDEFINED = 'undefined';
 export const STRING = 'string';
 export const SLASH = '/';
+export const AUTH_BEARER_PREFIX = 'Bearer';
+export const MMKV_AUTH_KEY = 'AUTH_DATA';
 
 // Platform constants
 export const PLATFORM_ANDROID = 'android';

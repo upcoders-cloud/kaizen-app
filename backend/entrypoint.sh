@@ -12,6 +12,9 @@ python manage.py init_users
 echo "Seeding posts..."
 python manage.py init_posts
 
+echo "Seeding comments..."
+python manage.py init_comments
+
 # Optional: Load initial data if you have fixtures
 # python manage.py loaddata initial_data.json
 

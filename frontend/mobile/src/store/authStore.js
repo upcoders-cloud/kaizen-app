@@ -15,10 +15,21 @@ export const useAuthStore = create((set, get) => ({
 	login: async (username, password) => {
 		try {
 			const response = await authService.login(
-				{username, password}
+				{username, password},
+				{withCredentials: true}
 			);
 
 			const accessToken = response?.access || null;
+			if (!accessToken) {
+				const message = LOGIN_FAILED;
+				set(() => ({
+					isAuthenticated: false,
+					accessToken: null,
+					accessTokenExpiration: null,
+					error: message,
+				}));
+				return {success: false, error: message};
+			}
 			const authData = {
 				isAuthenticated: true,
 				accessToken,
@@ -68,23 +79,32 @@ export const useAuthStore = create((set, get) => ({
 			}
 
 			const updatedAuthData = {
-				...get(),
 				isAuthenticated: true,
 				accessToken,
 				accessTokenExpiration: getAccessTokenExpiration(accessToken, {skewMs: 60 * 1000}),
 				error: null,
-			}
+			};
 
 			set(updatedAuthData);
 			setItem(MMKV_AUTH_KEY, updatedAuthData);
 
 			console.log('[auth] Access token refreshed.');
 			return true;
-		}
-		catch (error) {
+		} catch (error) {
 			const message = error?.message || REFRESH_FAILED;
+			const status = error?.status;
+			if (error?.isNetworkError) {
+				console.error('[auth] Refresh failed (network):', message);
+				set((state) => ({...state, error: message}));
+				return false;
+			}
+			if (status >= 400 && status < 500) {
+				console.error('[auth] Refresh failed (auth):', message);
+				get().logout();
+				return false;
+			}
 			console.error('[auth] Refresh failed:', message);
-			get().logout();
+			set((state) => ({...state, error: message}));
 			return false;
 		}
 	},

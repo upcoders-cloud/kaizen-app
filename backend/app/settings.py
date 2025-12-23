@@ -42,6 +42,8 @@ INSTALLED_APPS = [
     'ideas',
     'drf_spectacular',
     'django_extensions',
+    'rest_framework_simplejwt.token_blacklist',
+    'access_control',
 ]
 
 REST_FRAMEWORK = {
@@ -57,8 +59,10 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
     'ROTATE_REFRESH_TOKENS': False,
     'BLACKLIST_AFTER_ROTATION': False,
     'ALGORITHM': 'HS256',
@@ -68,6 +72,7 @@ SIMPLE_JWT = {
 
 # CORS (development)
 CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOWED_ORIGINS = ["http://localhost:3000"]
 
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Kaizen API',

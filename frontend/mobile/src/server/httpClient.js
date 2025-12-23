@@ -25,6 +25,7 @@ class HttpClient {
 				headers,
 				data: body,
 				params,
+				...rest,
 			});
 			return response.data;
 		} catch (error) {
@@ -34,7 +35,11 @@ class HttpClient {
 				response?.data?.message ||
 				response?.statusText ||
 				error?.message;
-			throw new Error(message || REQUEST_FAILED_WITH_STATUS);
+			const wrappedError = new Error(message || REQUEST_FAILED_WITH_STATUS);
+			wrappedError.status = response?.status;
+			wrappedError.data = response?.data;
+			wrappedError.isNetworkError = !response;
+			throw wrappedError;
 		}
 	}
 

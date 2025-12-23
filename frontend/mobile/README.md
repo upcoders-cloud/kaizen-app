@@ -146,7 +146,7 @@ npx expo build:ios
 ## 🧑‍💻 Contributors
 
 * **Pawel Biniak** — Frontend (React Native)
-* **Michał** — Backend (Django / DRF)
+* **Michał Patz** — Backend (Django / DRF)
 * **Upcoders Team**
 
 ---

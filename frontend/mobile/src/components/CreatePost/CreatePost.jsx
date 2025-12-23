@@ -82,26 +82,26 @@ async function submitPost({ title, content, category, images, onSubmitSuccess, o
 	setError(null);
 
 	try {
-		// if (__DEV__) {
-		// 	console.log(
-		// 		'ImagePicker: normalized assets sample',
-		// 		images.map((item) => ({
-		// 			id: item.id,
-		// 			fileName: item.fileName,
-		// 			mimeType: item.mimeType,
-		// 			base64Length: item.base64?.length,
-		// 			base64Preview: item.base64 ? `${item.base64.slice(0, 30)}...` : undefined,
-		// 		}))
-		// 	);
-		// }
-		// await postsService.create({
-		// 	title: title.trim() || undefined,
-		// 	content: content.trim(),
-		// 	category,
-		// 	images: images?.map(({uri, fileName, mimeType}) => ({uri, fileName, mimeType})),
-		// });
+		if (__DEV__) {
+			console.log(
+				'ImagePicker: normalized assets sample',
+				images.map((item) => ({
+					id: item.id,
+					fileName: item.fileName,
+					mimeType: item.mimeType,
+					base64Length: item.base64?.length,
+					base64Preview: item.base64 ? `${item.base64.slice(0, 30)}...` : undefined,
+				}))
+			);
+		}
+		await postsService.create({
+			title: title.trim() || undefined,
+			content: content.trim(),
+			category,
+			images: images?.map(({uri, fileName, mimeType}) => ({uri, fileName, mimeType})),
+		});
 
-		// onSubmitSuccess?.();
+		onSubmitSuccess?.();
 	} catch (err) {
 		const message = err?.message || FAILED_TO_CREATE_POST;
 		setError(message);

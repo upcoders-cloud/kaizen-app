@@ -1,10 +1,11 @@
 from django.db import models
 from django.conf import settings
 
+
 class KaizenPost(models.Model):
     class Meta:
-        verbose_name = "Post"  # Liczba pojedyncza
-        verbose_name_plural = "Posty"  # Liczba mnoga (to pokaże się w Adminie)
+        verbose_name = "Post"
+        verbose_name_plural = "Posty"
 
     CATEGORY_CHOICES = [
         ('BHP', 'BHP'),
@@ -13,13 +14,21 @@ class KaizenPost(models.Model):
         ('INNE', 'Inne'),
     ]
 
+    title = models.CharField(max_length=200, verbose_name="Tytuł")
+
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    content = models.TextField()
-    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='INNE')
+    content = models.TextField(verbose_name="Treść")
+    category = models.CharField(
+        max_length=20,
+        choices=CATEGORY_CHOICES,
+        default='INNE',
+        verbose_name="Kategoria"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.category}: {self.content[:20]}..."
+        # Updated to show title and category in admin lists
+        return f"[{self.get_category_display()}] {self.title}"
 
     @property
     def likes_count(self):
@@ -28,6 +37,31 @@ class KaizenPost(models.Model):
     @property
     def comments_count(self):
         return self.comments.count()
+
+
+class PostImage(models.Model):
+    """
+    Model specifically for handling multiple image attachments
+    linked to a single KaizenPost.
+    """
+    post = models.ForeignKey(
+        KaizenPost,
+        related_name='images',
+        on_delete=models.CASCADE
+    )
+    image = models.ImageField(
+        upload_to='kaizen_attachments/%Y/%m/%d/',
+        verbose_name="Zdjęcie"
+    )
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Załącznik (Zdjęcie)"
+        verbose_name_plural = "Załączniki (Zdjęcia)"
+
+    def __str__(self):
+        return f"Zdjęcie do postu: {self.post.title}"
+
 
 class Comment(models.Model):
     class Meta:

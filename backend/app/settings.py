@@ -33,6 +33,9 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 # SECURITY WARNING: don't run with debug turned on in production
 DEBUG = True
 
+MEDIA_URL = '/kaizen_attachments/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
 ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [

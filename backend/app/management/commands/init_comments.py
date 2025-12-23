@@ -1,7 +1,7 @@
 import random
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
-from your_app.models import KaizenPost, Comment  # Adjust your_app name
+from ideas.models import KaizenPost, Comment  # Adjust your_app name
 
 
 class Command(BaseCommand):

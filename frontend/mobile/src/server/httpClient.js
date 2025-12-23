@@ -25,6 +25,7 @@ class HttpClient {
 				headers,
 				data: body,
 				params,
+				...rest,
 			});
 			return response.data;
 		} catch (error) {

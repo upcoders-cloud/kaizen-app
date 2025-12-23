@@ -2,31 +2,28 @@ import {create} from 'zustand';
 import authService from 'server/services/authService';
 import {LOGIN_FAILED, REFRESH_FAILED} from "constants/constans";
 import {getItem, removeItem, setItem} from "store/storage";
+import {getAccessTokenExpiration} from "utils/jwt";
 
 const MMKV_AUTH_KEY = 'AUTH_DATA';
 
 export const useAuthStore = create((set, get) => ({
 	isAuthenticated: false,
 	accessToken: null,
-	refreshToken: null,
-	user: null,
 	accessTokenExpiration: null,
 	error: null,
 
 	login: async (username, password) => {
 		try {
 			const response = await authService.login(
-				{username, password, expiresInMins: 30},
-				{withCredentials: true}
+				{username, password}
 			);
 
+			const accessToken = response?.access || null;
 			const authData = {
 				isAuthenticated: true,
-				accessToken: response?.accessToken || response?.token || null,
-				refreshToken: response?.refreshToken || null,
-				user: response || null,
+				accessToken,
 				error: null,
-				accessTokenExpiration: Date.now() + (60 * 60 * 1000), // 1 hour
+				accessTokenExpiration: getAccessTokenExpiration(accessToken, {skewMs: 60 * 1000}),
 			};
 
 			// save in MMKV
@@ -41,8 +38,7 @@ export const useAuthStore = create((set, get) => ({
 			set(() => ({
 				isAuthenticated: false,
 				accessToken: null,
-				refreshToken: null,
-				user: null,
+				accessTokenExpiration: null,
 				error: message,
 			}));
 			return {success: false, error: message};
@@ -54,8 +50,6 @@ export const useAuthStore = create((set, get) => ({
 		set(() => ({
 			isAuthenticated: false,
 			accessToken: null,
-			refreshToken: null,
-			user: null,
 			accessTokenExpiration: null,
 			error: null,
 		}));
@@ -64,27 +58,32 @@ export const useAuthStore = create((set, get) => ({
 
 	refreshAccessToken: async () => {
 		try {
-			const { refreshToken } = get();
-			const response = await authService.refresh(
-				{ refreshToken },
-				{ withCredentials: true }
-			);
+			console.log('[auth] Refreshing access token...');
+			const response = await authService.refresh(undefined, {withCredentials: true});
+			const accessToken = response?.access || null;
+			if (!accessToken) {
+				console.error('[auth] Refresh failed: empty access token.');
+				get().logout();
+				return false;
+			}
 
 			const updatedAuthData = {
 				...get(),
-				accessToken: response?.accessToken,
-				refreshToken: response?.refreshToken,
-				accessTokenExpiration: Date.now() + (60 * 60 * 1000), // 1 hour
+				isAuthenticated: true,
+				accessToken,
+				accessTokenExpiration: getAccessTokenExpiration(accessToken, {skewMs: 60 * 1000}),
+				error: null,
 			}
 
 			set(updatedAuthData);
 			setItem(MMKV_AUTH_KEY, updatedAuthData);
 
+			console.log('[auth] Access token refreshed.');
 			return true;
 		}
 		catch (error) {
 			const message = error?.message || REFRESH_FAILED;
-			console.error(message);
+			console.error('[auth] Refresh failed:', message);
 			get().logout();
 			return false;
 		}
@@ -94,18 +93,25 @@ export const useAuthStore = create((set, get) => ({
 		const authData = getItem(MMKV_AUTH_KEY);
 		if (!authData) return false;
 
-		const { accessToken, accessTokenExpiration, refreshToken } = authData;
+		const { accessToken, accessTokenExpiration } = authData;
+		const resolvedExpiration =
+			accessTokenExpiration ??
+			getAccessTokenExpiration(accessToken, {skewMs: 60 * 1000});
 
-		if (accessToken && accessTokenExpiration && accessTokenExpiration > Date.now()) {
-			set(authData);
+		if (accessToken && resolvedExpiration && resolvedExpiration > Date.now()) {
+			console.log('[auth] Access token still valid.');
+			const updatedAuthData = accessTokenExpiration === resolvedExpiration
+				? authData
+				: {...authData, accessTokenExpiration: resolvedExpiration};
+			set(updatedAuthData);
+			if (updatedAuthData !== authData) {
+				setItem(MMKV_AUTH_KEY, updatedAuthData);
+			}
 			return true;
 		}
 
-		if (refreshToken) {
-			set(authData);
-			return await get().refreshAccessToken();
-		}
-
-		return false;
+		console.log('[auth] Access token expired or missing, trying refresh.');
+		set(authData);
+		return await get().refreshAccessToken();
 	}
 }))

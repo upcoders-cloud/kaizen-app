@@ -85,6 +85,7 @@ class PostSerializer(serializers.ModelSerializer):
             'title',
             'content',
             'category',
+            'status',
             'created_at',
             'likes_count',
             'comments_count',
@@ -92,6 +93,7 @@ class PostSerializer(serializers.ModelSerializer):
             'images',
             'image_urls',
         ]
+        read_only_fields = ['status']
 
     def get_is_liked_by_me(self, obj):
         request = self.context.get('request')

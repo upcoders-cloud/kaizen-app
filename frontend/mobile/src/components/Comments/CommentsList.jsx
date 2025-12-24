@@ -21,17 +21,23 @@ const CommentsList = ({
 
 	return (
 		<View style={styles.list}>
-			{comments.map((comment, index) => (
-				<CommentItem
-					key={comment.id ?? `${comment.created_at}-${index}`}
-					comment={comment}
-					isOwner={String(comment?.author?.id) === String(currentUserId)}
-					onEdit={onUpdate}
-					onDelete={onDelete}
-					isUpdating={updatingId === comment?.id}
-					isDeleting={deletingId === comment?.id}
-				/>
-			))}
+			{comments.map((comment, index) => {
+				const key = comment.id ?? `${comment.created_at}-${index}`;
+				const isLast = index === comments.length - 1;
+				return (
+					<View key={key}>
+						<CommentItem
+							comment={comment}
+							isOwner={String(comment?.author?.id) === String(currentUserId)}
+							onEdit={onUpdate}
+							onDelete={onDelete}
+							isUpdating={updatingId === comment?.id}
+							isDeleting={deletingId === comment?.id}
+						/>
+						{!isLast ? <View style={styles.separator} /> : null}
+					</View>
+				);
+			})}
 		</View>
 	);
 };
@@ -40,7 +46,11 @@ export default CommentsList;
 
 const styles = StyleSheet.create({
 	list: {
-		gap: 10,
+		gap: 0,
+	},
+	separator: {
+		height: 1,
+		backgroundColor: colors.border,
 	},
 	empty: {
 		borderWidth: 1,

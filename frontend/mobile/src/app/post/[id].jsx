@@ -1,5 +1,6 @@
 import {Stack, useLocalSearchParams, useRouter} from 'expo-router';
 import {
+	Animated,
 	ScrollView,
 	Pressable,
 	Text,
@@ -12,9 +13,12 @@ import {
 	UIManager,
 	Modal,
 	Alert,
+	Image,
+	Dimensions,
+	useWindowDimensions,
 } from 'react-native';
 import {Feather} from '@expo/vector-icons';
-import {useCallback, useEffect, useMemo, useState} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {useFocusEffect} from '@react-navigation/native';
 
 import postsService from 'src/server/services/postsService';
@@ -23,17 +27,32 @@ import {useAuthStore} from 'store/authStore';
 import colors from 'theme/colors';
 import {navigateBack} from 'utils/navigation';
 import {getJwtPayload} from 'utils/jwt';
-import PostHeader from 'components/PostDetail/PostHeader';
-import PostContent from 'components/PostDetail/PostContent';
-import PostActions from 'components/PostDetail/PostActions';
 import CommentsList from 'components/Comments/CommentsList';
 import CommentInput from 'components/Comments/CommentInput';
 import TextBase from 'components/Text/Text';
 import {CONTENT_IS_REQUIRED, EMPTY_STRING, FAILED_TO_LOAD_POST, FAILED_TO_LOAD_COMMENTS} from 'constants/constans';
+import {getPostStatusMeta} from 'utils/postStatus';
+import ImageCarousel from 'components/PostDetail/ImageCarousel';
+
+const CATEGORY_STYLES = {
+	BHP: {backgroundColor: '#E6F6FF', color: '#0F5F7F'},
+	PROCES: {backgroundColor: '#E9F7EF', color: '#2E7D32'},
+	JAKOSC: {backgroundColor: '#FFF3E0', color: '#C16A00'},
+	INNE: {backgroundColor: '#F2F4F8', color: '#4A5568'},
+};
+
+const COMMENTS_PREVIEW_COUNT = 2;
 
 export default function PostDetails() {
 	const router = useRouter();
 	const {id: resolvedId} = useLocalSearchParams();
+	const scrollRef = useRef(null);
+	const {width: windowWidth} = useWindowDimensions();
+	// Explicit screen width keeps carousel pages perfectly aligned.
+	const screenWidth = Dimensions.get('window').width;
+	const screenHeight = Dimensions.get('window').height;
+	const contentWidth = windowWidth - 32;
+	const [commentsLayoutY, setCommentsLayoutY] = useState(0);
 	const [post, setPost] = useState(null);
 	const [comments, setComments] = useState([]);
 	const [loading, setLoading] = useState(true);
@@ -49,6 +68,10 @@ export default function PostDetails() {
 	const [deletingCommentId, setDeletingCommentId] = useState(null);
 	const [menuVisible, setMenuVisible] = useState(false);
 	const [deletingPost, setDeletingPost] = useState(false);
+	const [showAllComments, setShowAllComments] = useState(false);
+	const [previewVisible, setPreviewVisible] = useState(false);
+	const [previewIndex, setPreviewIndex] = useState(0);
+	const likeScale = useRef(new Animated.Value(1)).current;
 	const accessToken = useAuthStore((state) => state.accessToken);
 	const currentUserId = useMemo(
 		() => getJwtPayload(accessToken)?.user_id ?? null,
@@ -146,6 +169,11 @@ export default function PostDetails() {
 
 	const handleToggleLike = async () => {
 		if (!resolvedId || liking) return;
+		likeScale.setValue(1);
+		Animated.sequence([
+			Animated.spring(likeScale, {toValue: 1.08, useNativeDriver: true, speed: 30, bounciness: 6}),
+			Animated.spring(likeScale, {toValue: 1, useNativeDriver: true, speed: 30, bounciness: 6}),
+		]).start();
 		setLiking(true);
 		const nextLiked = !isLiked;
 		setIsLiked(nextLiked);
@@ -215,7 +243,41 @@ export default function PostDetails() {
 		}
 	};
 
-	const likesLabel = likesCount === 1 ? 'polubienie' : 'polubienia';
+	const handleToggleComments = () => {
+		LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+		setShowAllComments((prev) => !prev);
+	};
+
+	const closePreview = () => setPreviewVisible(false);
+	const openPreview = (index) => {
+		setPreviewIndex(index);
+		setPreviewVisible(true);
+	};
+
+	const scrollToComments = () => {
+		if (!scrollRef.current) return;
+		scrollRef.current.scrollTo({y: commentsLayoutY, animated: true});
+	};
+
+	const statusMeta = getPostStatusMeta(post?.status);
+	const authorName = post?.author?.full_name || post?.author?.nickname || 'Użytkownik';
+	const categoryStyle = CATEGORY_STYLES[post?.category] || CATEGORY_STYLES.INNE;
+	const imageUrls = Array.isArray(post?.image_urls) ? post.image_urls.filter(Boolean) : [];
+	const formattedDate = post?.created_at
+		? new Date(post.created_at).toLocaleDateString('pl-PL', {
+			day: '2-digit',
+			month: 'short',
+			year: 'numeric',
+		})
+		: '—';
+	const sortedComments = useMemo(
+		() =>
+			[...comments].sort((a, b) => new Date(b?.created_at) - new Date(a?.created_at)),
+		[comments]
+	);
+	const visibleComments = showAllComments
+		? sortedComments
+		: sortedComments.slice(0, COMMENTS_PREVIEW_COUNT);
 
 	return (
 		<>
@@ -240,6 +302,7 @@ export default function PostDetails() {
 				}}
 			/>
 			<ScrollView
+				ref={scrollRef}
 				contentContainerStyle={styles.container}
 				refreshControl={
 					<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />
@@ -257,39 +320,148 @@ export default function PostDetails() {
 					</View>
 				) : (
 					<>
-						<PostHeader post={post} />
-						<PostContent content={post?.content} images={post?.image_urls} />
-						<PostActions
-							likes={likesCount}
-							comments={comments.length}
-							isLiked={isLiked}
-							onLikePress={handleToggleLike}
-							disabled={liking || loading}
-						/>
-						<View style={styles.sectionHeader}>
-							<TextBase style={styles.sectionTitle}>Komentarze</TextBase>
-							<TextBase style={styles.sectionSubtitle}>
-								{likesCount} {likesLabel} • {comments.length} komentarzy
+						{/* Header section */}
+						<View style={styles.headerSection}>
+							<View style={styles.badgesRow}>
+								<TextBase style={[styles.categoryBadge, categoryStyle]}>
+									{post?.category || 'Post'}
+								</TextBase>
+								<TextBase
+									style={[
+										styles.statusBadge,
+										{color: statusMeta.color, backgroundColor: statusMeta.backgroundColor},
+									]}
+								>
+									{statusMeta.label}
+								</TextBase>
+								{post?.id ? <TextBase style={styles.postId}>#{post.id}</TextBase> : null}
+							</View>
+							<TextBase style={styles.postTitle}>{post?.title || 'Bez tytułu'}</TextBase>
+							<View style={styles.metaRow}>
+								<TextBase style={styles.authorName}>{authorName}</TextBase>
+								<TextBase style={styles.metaSeparator}>•</TextBase>
+								<TextBase style={styles.metaText}>{formattedDate}</TextBase>
+							</View>
+						</View>
+
+						{/* Description section */}
+						<View style={styles.section}>
+							<TextBase style={styles.sectionTitle}>Opis</TextBase>
+							<TextBase style={styles.descriptionText}>
+								{post?.content || 'Brak treści.'}
 							</TextBase>
 						</View>
-						<CommentsList
-							comments={comments}
-							currentUserId={currentUserId}
-							onUpdate={handleUpdateComment}
-							onDelete={handleDeleteComment}
-							updatingId={updatingCommentId}
-							deletingId={deletingCommentId}
-						/>
-						<CommentInput
-							value={commentValue}
-							onChangeText={setCommentValue}
-							onSubmit={handleSubmitComment}
-							loading={submittingComment}
-							error={commentError}
-						/>
+
+						{/* Attachments section */}
+						<View style={styles.section}>
+							<TextBase style={styles.sectionTitle}>Załączniki</TextBase>
+							{imageUrls.length === 1 ? (
+								<Pressable style={styles.imageWrapper} onPress={() => openPreview(0)}>
+									<Image source={{uri: imageUrls[0]}} style={styles.image} resizeMode="cover" />
+								</Pressable>
+							) : imageUrls.length > 1 ? (
+								<ImageCarousel
+									images={imageUrls}
+									width={contentWidth}
+									height={240}
+									onImagePress={openPreview}
+									showDots
+								/>
+							) : (
+								<TextBase style={styles.placeholderText}>Brak załączników.</TextBase>
+							)}
+						</View>
+
+						{/* Actions section (single source of interaction counts) */}
+						<View style={styles.section}>
+							<View style={styles.actionsRow}>
+								<Animated.View style={[styles.actionButtonWrapper, {transform: [{scale: likeScale}]}]}>
+									<Pressable
+										onPress={handleToggleLike}
+										disabled={liking || loading}
+										style={({pressed}) => [
+											styles.actionButton,
+											isLiked ? styles.actionButtonActive : null,
+											pressed && !(liking || loading) ? styles.actionButtonPressed : null,
+										]}
+									>
+										<Feather name="thumbs-up" size={16} color={isLiked ? '#fff' : colors.primary} />
+										<TextBase style={[styles.actionButtonText, isLiked ? styles.actionButtonTextActive : null]}>
+											Mam to samo
+										</TextBase>
+										<TextBase style={[styles.actionCount, isLiked ? styles.actionButtonTextActive : null]}>
+											{likesCount}
+										</TextBase>
+									</Pressable>
+								</Animated.View>
+								<Pressable style={styles.actionButton} onPress={scrollToComments}>
+									<Feather name="message-circle" size={16} color={colors.primary} />
+									<TextBase style={styles.actionButtonText}>Komentarze</TextBase>
+									<TextBase style={styles.actionCount}>{comments.length}</TextBase>
+								</Pressable>
+							</View>
+						</View>
+
+						{/* Comments section */}
+						<View
+							style={styles.section}
+							onLayout={(event) => setCommentsLayoutY(event.nativeEvent.layout.y)}
+						>
+							<View style={styles.sectionHeader}>
+								<TextBase style={styles.sectionTitle}>Komentarze</TextBase>
+								{comments.length > COMMENTS_PREVIEW_COUNT ? (
+									<Pressable onPress={handleToggleComments}>
+										<TextBase style={styles.showAllText}>
+											{showAllComments
+												? 'Pokaż mniej'
+												: `Pokaż wszystkie komentarze (${comments.length})`}
+										</TextBase>
+									</Pressable>
+								) : null}
+							</View>
+							<CommentsList
+								comments={visibleComments}
+								currentUserId={currentUserId}
+								onUpdate={handleUpdateComment}
+								onDelete={handleDeleteComment}
+								updatingId={updatingCommentId}
+								deletingId={deletingCommentId}
+							/>
+						</View>
+						<View style={styles.commentInputSection}>
+							<CommentInput
+								value={commentValue}
+								onChangeText={setCommentValue}
+								onSubmit={handleSubmitComment}
+								loading={submittingComment}
+								error={commentError}
+							/>
+						</View>
 					</>
 				)}
 			</ScrollView>
+			<Modal
+				transparent
+				visible={previewVisible}
+				animationType="fade"
+				onRequestClose={closePreview}
+			>
+				<View style={styles.previewOverlay}>
+					<Pressable style={styles.previewBackdrop} onPress={closePreview} />
+					<View style={styles.previewCard}>
+						<ImageCarousel
+							images={imageUrls}
+							width={screenWidth}
+							height={Math.min(520, screenHeight * 0.78)}
+							initialIndex={previewIndex}
+							showDots={false}
+							showCounter
+							imageResizeMode="contain"
+							containerStyle={styles.previewCarousel}
+						/>
+					</View>
+				</View>
+			</Modal>
 			<Modal transparent visible={menuVisible} animationType="fade" onRequestClose={handleCloseMenu}>
 				<Pressable style={styles.menuOverlay} onPress={handleCloseMenu}>
 					<Pressable style={styles.menuCard} onPress={(event) => event.stopPropagation()}>
@@ -312,7 +484,7 @@ const styles = StyleSheet.create({
 	container: {
 		padding: 16,
 		gap: 14,
-		backgroundColor: colors.background,
+		backgroundColor: colors.surface,
 	},
 	backButton: {
 		flexDirection: 'row',
@@ -352,6 +524,9 @@ const styles = StyleSheet.create({
 		textAlign: 'center',
 	},
 	sectionHeader: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'space-between',
 		gap: 4,
 	},
 	sectionTitle: {
@@ -359,8 +534,152 @@ const styles = StyleSheet.create({
 		fontWeight: '700',
 		color: colors.text,
 	},
-	sectionSubtitle: {
+	headerSection: {
+		gap: 8,
+		paddingBottom: 16,
+		borderBottomWidth: 1,
+		borderBottomColor: colors.border,
+	},
+	badgesRow: {
+		flexDirection: 'row',
+		flexWrap: 'wrap',
+		gap: 8,
+		alignItems: 'center',
+	},
+	categoryBadge: {
+		fontSize: 11,
+		fontWeight: '700',
+		paddingHorizontal: 8,
+		paddingVertical: 4,
+		borderRadius: 999,
+		textTransform: 'uppercase',
+	},
+	statusBadge: {
+		fontSize: 11,
+		fontWeight: '700',
+		paddingHorizontal: 8,
+		paddingVertical: 4,
+		borderRadius: 999,
+	},
+	postId: {
+		fontSize: 11,
 		color: colors.muted,
+		fontWeight: '600',
+	},
+	postTitle: {
+		fontSize: 22,
+		fontWeight: '700',
+		color: colors.text,
+	},
+	metaRow: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		gap: 6,
+	},
+	authorName: {
+		fontSize: 14,
+		fontWeight: '600',
+		color: colors.text,
+	},
+	metaSeparator: {
+		color: colors.muted,
+	},
+	metaText: {
+		fontSize: 13,
+		color: colors.muted,
+	},
+	section: {
+		paddingVertical: 12,
+		gap: 8,
+		borderBottomWidth: 1,
+		borderBottomColor: colors.border,
+	},
+	descriptionText: {
+		fontSize: 15,
+		lineHeight: 22,
+		color: colors.text,
+	},
+	placeholderText: {
+		color: colors.muted,
+		fontSize: 13,
+	},
+	imageWrapper: {
+		width: '100%',
+		height: 240,
+		borderRadius: 12,
+		overflow: 'hidden',
+		backgroundColor: colors.placeholderSurface,
+	},
+	image: {
+		width: '100%',
+		height: '100%',
+	},
+	previewOverlay: {
+		flex: 1,
+		backgroundColor: 'rgba(0,0,0,0.7)',
+		alignItems: 'stretch',
+		justifyContent: 'center',
+	},
+	previewBackdrop: {
+		position: 'absolute',
+		top: 0,
+		right: 0,
+		bottom: 0,
+		left: 0,
+	},
+	previewCard: {
+		width: '100%',
+	},
+	previewCarousel: {
+		borderRadius: 0,
+	},
+	actionsRow: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'space-between',
+		gap: 12,
+	},
+	actionButton: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		gap: 8,
+		paddingHorizontal: 12,
+		paddingVertical: 8,
+		borderRadius: 10,
+		borderWidth: 1,
+		borderColor: colors.border,
+		backgroundColor: colors.placeholderSurface,
+	},
+	actionButtonWrapper: {
+		alignSelf: 'flex-start',
+	},
+	actionButtonActive: {
+		borderColor: colors.primary,
+		backgroundColor: colors.primary,
+	},
+	actionButtonPressed: {
+		opacity: 0.75,
+	},
+	actionButtonText: {
+		fontSize: 13,
+		fontWeight: '600',
+		color: colors.primary,
+	},
+	actionCount: {
+		fontSize: 13,
+		fontWeight: '700',
+		color: colors.text,
+	},
+	actionButtonTextActive: {
+		color: '#fff',
+	},
+	showAllText: {
+		fontSize: 13,
+		fontWeight: '600',
+		color: colors.primary,
+	},
+	commentInputSection: {
+		paddingTop: 8,
 	},
 	menuOverlay: {
 		flex: 1,

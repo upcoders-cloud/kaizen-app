@@ -25,6 +25,7 @@ const Home = () => {
 	const [error, setError] = useState(null);
 	const [activeFilter, setActiveFilter] = useState(FILTERS[0]);
 	const [filterVisible, setFilterVisible] = useState(false);
+	const [likingPostId, setLikingPostId] = useState(null);
 	const router = useRouter();
 	const accessToken = useAuthStore((state) => state.accessToken);
 	const currentUserId = useMemo(
@@ -68,6 +69,34 @@ const Home = () => {
 		setFilterVisible(false);
 	};
 
+	const handleToggleLike = async (postId) => {
+		if (!postId || likingPostId) return;
+		let previousPosts = null;
+		setLikingPostId(postId);
+		setAllPosts((prev) => {
+			previousPosts = prev;
+			return prev.map((post) => {
+				if (String(post?.id) !== String(postId)) return post;
+				const currentLikes = post?.likes_count ?? post?.likes?.length ?? 0;
+				const nextLiked = !post?.is_liked_by_me;
+				return {
+					...post,
+					is_liked_by_me: nextLiked,
+					likes_count: Math.max(0, currentLikes + (nextLiked ? 1 : -1)),
+				};
+			});
+		});
+		try {
+			await postsService.toggleLike(postId);
+		} catch (err) {
+			if (previousPosts) {
+				setAllPosts(previousPosts);
+			}
+		} finally {
+			setLikingPostId(null);
+		}
+	};
+
 	return (
 		<SafeAreaProvider>
 			<SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
@@ -79,6 +108,7 @@ const Home = () => {
 						error={error}
 						onRefresh={loadPosts}
 						onPressItem={(item) => router.push(`/post/${item.id}`)}
+						onToggleLike={handleToggleLike}
 					/>
 				<Modal transparent visible={filterVisible} animationType="fade" onRequestClose={handleCloseFilter}>
 					<Pressable style={styles.filterOverlay} onPress={handleCloseFilter}>
@@ -131,10 +161,13 @@ const styles = StyleSheet.create({
 	filterOverlay: {
 		flex: 1,
 		backgroundColor: 'rgba(15, 23, 42, 0.2)',
-		justifyContent: 'center',
-		paddingHorizontal: 24,
+		justifyContent: 'flex-start',
+		paddingTop: 68,
+		paddingHorizontal: 16,
 	},
 	filterMenu: {
+		alignSelf: 'flex-end',
+		marginRight: 96,
 		backgroundColor: colors.surface,
 		borderRadius: 16,
 		borderWidth: 1,

@@ -7,6 +7,12 @@ class KaizenPost(models.Model):
         verbose_name = "Post"
         verbose_name_plural = "Posty"
 
+    class Status(models.TextChoices):
+        TO_VERIFY = "TO_VERIFY", "Do weryfikacji"
+        SUBMITTED = "SUBMITTED", "Zgłoszony"
+        IN_PROGRESS = "IN_PROGRESS", "W trakcie wdrożenia"
+        IMPLEMENTED = "IMPLEMENTED", "Wdrożone"
+
     CATEGORY_CHOICES = [
         ('BHP', 'BHP'),
         ('PROCES', 'Usprawnienie Procesu'),
@@ -23,6 +29,12 @@ class KaizenPost(models.Model):
         choices=CATEGORY_CHOICES,
         default='INNE',
         verbose_name="Kategoria"
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.TO_VERIFY,
+        verbose_name="Status",
     )
     created_at = models.DateTimeField(auto_now_add=True)
 

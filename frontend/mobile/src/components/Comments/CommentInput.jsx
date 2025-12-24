@@ -34,11 +34,7 @@ export default CommentInput;
 const styles = StyleSheet.create({
 	container: {
 		gap: 12,
-		padding: 12,
-		borderRadius: 12,
-		borderWidth: 1,
-		borderColor: colors.border,
-		backgroundColor: colors.surface,
+		paddingVertical: 8,
 	},
 	inputWrapper: {
 		marginBottom: 0,

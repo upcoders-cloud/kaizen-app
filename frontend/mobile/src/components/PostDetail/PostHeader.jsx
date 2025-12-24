@@ -1,6 +1,7 @@
 import {StyleSheet, View} from 'react-native';
 import Text from 'components/Text/Text';
 import colors from 'theme/colors';
+import {getPostStatusMeta} from 'utils/postStatus';
 
 const formatDate = (value) => {
 	if (!value) return 'Unknown date';
@@ -10,10 +11,19 @@ const formatDate = (value) => {
 
 const PostHeader = ({post}) => {
 	if (!post) return null;
+	const statusMeta = getPostStatusMeta(post?.status);
 	return (
 		<View style={styles.container}>
 			<View style={styles.row}>
 				<Text style={styles.category}>{post.category || 'Post'}</Text>
+				<Text
+					style={[
+						styles.statusBadge,
+						{color: statusMeta.color, backgroundColor: statusMeta.backgroundColor},
+					]}
+				>
+					{statusMeta.label}
+				</Text>
 				<Text style={styles.badge}>#{post.id}</Text>
 			</View>
 			<Text style={styles.title}>{post.title || 'Bez tytułu'}</Text>
@@ -54,6 +64,13 @@ const styles = StyleSheet.create({
 		backgroundColor: '#e7edff',
 		letterSpacing: 0.4,
 		textTransform: 'uppercase',
+	},
+	statusBadge: {
+		fontSize: 11,
+		fontWeight: '700',
+		paddingHorizontal: 10,
+		paddingVertical: 6,
+		borderRadius: 999,
 	},
 	badge: {
 		fontSize: 12,

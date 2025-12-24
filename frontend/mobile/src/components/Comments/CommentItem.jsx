@@ -153,11 +153,7 @@ export default CommentItem;
 
 const styles = StyleSheet.create({
 	container: {
-		borderWidth: 1,
-		borderColor: colors.borderMuted,
-		borderRadius: 12,
-		backgroundColor: colors.surface,
-		padding: 12,
+		paddingVertical: 12,
 		gap: 6,
 	},
 	header: {

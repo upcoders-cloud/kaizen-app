@@ -15,6 +15,15 @@ class PostViewSet(viewsets.ModelViewSet):
     serializer_class = PostSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsPostAuthorOrReadOnly]  # IsAuthenticated jeśli zamknąć apkę
 
+    def get_permissions(self):
+        if self.action == 'like':
+            return [permissions.IsAuthenticated()]
+        if self.action == 'comments':
+            if self.request.method == 'POST':
+                return [permissions.IsAuthenticated()]
+            return [permissions.AllowAny()]
+        return super().get_permissions()
+
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 

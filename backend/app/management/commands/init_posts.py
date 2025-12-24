@@ -25,16 +25,19 @@ class Command(BaseCommand):
                 "title": "Bezpieczniejsze stanowisko pakowania",
                 "content": "Dodanie osłon i oznaczeń poprawi bezpieczeństwo pracy.",
                 "category": "BHP",
+                "status": KaizenPost.Status.TO_VERIFY,
             },
             {
                 "title": "Skrócenie czasu przezbrojeń",
                 "content": "Standaryzacja narzędzi i checklisty skrócą zmianę linii.",
                 "category": "PROCES",
+                "status": KaizenPost.Status.IN_PROGRESS,
             },
             {
                 "title": "Lepsza kontrola jakości etykiet",
                 "content": "Wprowadzenie wzorca referencyjnego zmniejszy liczbę błędów.",
                 "category": "JAKOSC",
+                "status": KaizenPost.Status.IMPLEMENTED,
             },
         ]
 
@@ -50,5 +53,6 @@ class Command(BaseCommand):
                     title=data["title"],
                     content=data["content"],
                     category=data["category"],
+                    status=data.get("status", KaizenPost.Status.TO_VERIFY),
                 )
             self.stdout.write(self.style.SUCCESS(f'Successfully added {len(sample_data)} posts.'))

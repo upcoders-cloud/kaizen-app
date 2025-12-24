@@ -1,10 +1,10 @@
-import {Pressable, StyleSheet, View} from 'react-native';
+import {Pressable, ScrollView, StyleSheet, View} from 'react-native';
 import {Stack, useLocalSearchParams, useRouter} from 'expo-router';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {Feather} from '@expo/vector-icons';
 import colors from 'theme/colors';
 import TextBase from 'components/Text/Text';
-import {useEffect, useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import ConfettiCannon from 'react-native-confetti-cannon';
 
 const SurveyResults = () => {
@@ -18,7 +18,14 @@ const SurveyResults = () => {
 		? parsedSavings.toLocaleString('pl-PL', {minimumFractionDigits: 2, maximumFractionDigits: 2})
 		: '0.00';
 
-	const [showConfetti, setShowConfetti] = useState(true);
+	const [showConfetti, setShowConfetti] = useState(false);
+	const hasFiredRef = useRef(false);
+
+	useEffect(() => {
+		if (hasFiredRef.current) return;
+		hasFiredRef.current = true;
+		setShowConfetti(true);
+	}, []);
 
 	const handleClose = () => {
 		if (id) {
@@ -47,44 +54,49 @@ const SurveyResults = () => {
 				}}
 			/>
 			<SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
-				<View style={styles.container}>
-					{/* Summary hero */}
-					<View style={styles.hero}>
-						<View style={styles.heroIcon}>
-							<Feather name="check-circle" size={20} color={colors.primary} />
+				<ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+					<View style={styles.content}>
+						{/* Summary hero */}
+						<View style={styles.hero}>
+							<View style={styles.heroIcon}>
+								<Feather name="check-circle" size={20} color={colors.primary} />
+							</View>
+							<View style={styles.heroText}>
+								<TextBase style={styles.title}>Przewidywane usprawnienia</TextBase>
+								<TextBase style={styles.subtitle}>Podsumowanie potencjalnych korzyści</TextBase>
+							</View>
 						</View>
-						<View style={styles.heroText}>
-							<TextBase style={styles.title}>Przewidywane usprawnienia</TextBase>
-							<TextBase style={styles.subtitle}>Podsumowanie potencjalnych korzyści</TextBase>
-						</View>
-					</View>
 
-					{/* Results */}
-					<View style={styles.results}>
-						<View style={styles.resultBlock}>
-							<TextBase style={styles.resultValue}>{hoursLabel} h</TextBase>
-							<TextBase style={styles.resultLabel}>Szacowany czas oszczędności</TextBase>
-						</View>
-						<View style={styles.resultDivider} />
-						<View style={styles.resultBlock}>
-							<TextBase style={styles.resultValue}>{savingsLabel} PLN</TextBase>
-							<TextBase style={styles.resultLabel}>Szacowane oszczędności finansowe</TextBase>
+						{/* Results */}
+						<View style={styles.results}>
+							<View style={styles.resultBlock}>
+								<TextBase style={styles.resultValue}>{hoursLabel} h</TextBase>
+								<TextBase style={styles.resultLabel}>Szacowany czas oszczędności</TextBase>
+							</View>
+							<View style={styles.resultDivider} />
+							<View style={styles.resultBlock}>
+								<TextBase style={styles.resultValue}>{savingsLabel} PLN</TextBase>
+								<TextBase style={styles.resultLabel}>Szacowane oszczędności finansowe</TextBase>
+							</View>
 						</View>
 					</View>
 
 					<Pressable style={styles.closeButton} onPress={handleClose}>
 						<TextBase style={styles.closeText}>Zamknij</TextBase>
 					</Pressable>
-				</View>
+				</ScrollView>
 				{showConfetti ? (
-					<ConfettiCannon
-						count={60}
-						origin={{x: 0, y: 0}}
-						fadeOut
-						explosionSpeed={220}
-						fallSpeed={1800}
-						onAnimationEnd={() => setShowConfetti(false)}
-					/>
+					<View pointerEvents="none" style={styles.confettiLayer}>
+						<ConfettiCannon
+							count={60}
+							origin={{x: 0, y: 0}}
+							fadeOut
+							explosionSpeed={220}
+							fallSpeed={1800}
+							recycle={false}
+							onAnimationEnd={() => setShowConfetti(false)}
+						/>
+					</View>
 				) : null}
 			</SafeAreaView>
 		</>
@@ -101,8 +113,13 @@ const styles = StyleSheet.create({
 	container: {
 		paddingHorizontal: 16,
 		paddingTop: 8,
-		paddingBottom: 16,
-		gap: 24,
+		paddingBottom: 24,
+		flexGrow: 1,
+		justifyContent: 'space-between',
+		gap: 20,
+	},
+	content: {
+		gap: 20,
 	},
 	hero: {
 		flexDirection: 'row',
@@ -143,7 +160,7 @@ const styles = StyleSheet.create({
 		gap: 6,
 	},
 	resultValue: {
-		fontSize: 28,
+		fontSize: 26,
 		fontWeight: '700',
 		color: colors.text,
 	},
@@ -168,5 +185,8 @@ const styles = StyleSheet.create({
 	headerClose: {
 		paddingHorizontal: 12,
 		paddingVertical: 6,
+	},
+	confettiLayer: {
+		...StyleSheet.absoluteFillObject,
 	},
 });

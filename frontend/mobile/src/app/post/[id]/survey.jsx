@@ -1,4 +1,13 @@
-import {Pressable, StyleSheet, View} from 'react-native';
+import {
+	Keyboard,
+	KeyboardAvoidingView,
+	Platform,
+	Pressable,
+	ScrollView,
+	StyleSheet,
+	TouchableWithoutFeedback,
+	View,
+} from 'react-native';
 import {Stack, useLocalSearchParams, useRouter} from 'expo-router';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useState} from 'react';
@@ -88,12 +97,7 @@ const SurveyScreen = () => {
 					headerShown: true,
 					headerTitleAlign: 'center',
 					contentStyle: {backgroundColor: colors.background},
-					headerLeft: () => (
-						<Pressable onPress={handleClose} style={styles.backButton}>
-							<Feather name="arrow-left" size={18} color={colors.primary} />
-							<TextBase style={styles.backText}>Wróć</TextBase>
-						</Pressable>
-					),
+					headerLeft: () => null,
 					headerRight: () => (
 						<Pressable onPress={handleClose} style={styles.deferButton}>
 							<TextBase style={styles.deferText}>Zrobię to później</TextBase>
@@ -103,49 +107,64 @@ const SurveyScreen = () => {
 				}}
 			/>
 			<SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
-				<View style={styles.container}>
-					<TextBase style={styles.title}>Opcjonalna ankieta</TextBase>
-					<TextBase style={styles.subtitle}>
-						Wypełnij krótką ankietę, aby oszacować korzyści z usprawnienia.
-					</TextBase>
+				<KeyboardAvoidingView
+					style={styles.flex}
+					behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+					keyboardVerticalOffset={Platform.OS === 'ios' ? 12 : 0}
+				>
+					<TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+						<ScrollView
+							contentContainerStyle={styles.container}
+							keyboardShouldPersistTaps="handled"
+							showsVerticalScrollIndicator={false}
+						>
+							<TextBase style={styles.title}>Opcjonalna ankieta</TextBase>
+							<TextBase style={styles.subtitle}>
+								Wypełnij krótką ankietę, aby oszacować korzyści z usprawnienia.
+							</TextBase>
 
-					<Input
-						label="Częstotliwość problemu"
-						placeholder="np. 3"
-						value={frequencyValue}
-						onChangeText={setFrequencyValue}
-						keyboardType="numeric"
-					/>
-					<View style={styles.unitRow}>
-						{UNITS.map((unit) => (
-							<Button
-								key={unit.value}
-								title={unit.label}
-								variant={frequencyUnit === unit.value ? 'primary' : 'outline'}
-								onPress={() => setFrequencyUnit(unit.value)}
-								style={styles.unitButton}
-								textStyle={frequencyUnit === unit.value ? styles.unitButtonTextActive : styles.unitButtonText}
+							<Input
+								label="Częstotliwość problemu"
+								placeholder="np. 3"
+								value={frequencyValue}
+								onChangeText={setFrequencyValue}
+								keyboardType="numeric"
+								returnKeyType="done"
 							/>
-						))}
-					</View>
-					<Input
-						label="Liczba osób dotkniętych"
-						placeholder="np. 5"
-						value={affectedPeople}
-						onChangeText={setAffectedPeople}
-						keyboardType="numeric"
-					/>
-					<Input
-						label="Strata czasu na zdarzenie (min)"
-						placeholder="np. 15"
-						value={timeLostMinutes}
-						onChangeText={setTimeLostMinutes}
-						keyboardType="numeric"
-					/>
+							<View style={styles.unitRow}>
+								{UNITS.map((unit) => (
+									<Button
+										key={unit.value}
+										title={unit.label}
+										variant={frequencyUnit === unit.value ? 'primary' : 'outline'}
+										onPress={() => setFrequencyUnit(unit.value)}
+										style={styles.unitButton}
+										textStyle={frequencyUnit === unit.value ? styles.unitButtonTextActive : styles.unitButtonText}
+									/>
+								))}
+							</View>
+							<Input
+								label="Liczba osób dotkniętych"
+								placeholder="np. 5"
+								value={affectedPeople}
+								onChangeText={setAffectedPeople}
+								keyboardType="numeric"
+								returnKeyType="done"
+							/>
+							<Input
+								label="Strata czasu na zdarzenie (min)"
+								placeholder="np. 15"
+								value={timeLostMinutes}
+								onChangeText={setTimeLostMinutes}
+								keyboardType="numeric"
+								returnKeyType="done"
+							/>
 
-					{error ? <TextBase style={styles.error}>{error}</TextBase> : null}
-					<Button title="Przelicz" onPress={handleSubmit} loading={loading} />
-				</View>
+							{error ? <TextBase style={styles.error}>{error}</TextBase> : null}
+							<Button title="Przelicz" onPress={handleSubmit} loading={loading} />
+						</ScrollView>
+					</TouchableWithoutFeedback>
+				</KeyboardAvoidingView>
 			</SafeAreaView>
 		</>
 	);
@@ -158,8 +177,13 @@ const styles = StyleSheet.create({
 		flex: 1,
 		backgroundColor: colors.background,
 	},
+	flex: {
+		flex: 1,
+	},
 	container: {
-		padding: 16,
+		paddingHorizontal: 16,
+		paddingBottom: 24,
+		paddingTop: 8,
 		gap: 14,
 	},
 	title: {
@@ -188,16 +212,6 @@ const styles = StyleSheet.create({
 	},
 	error: {
 		color: colors.danger,
-		fontWeight: '600',
-	},
-	backButton: {
-		flexDirection: 'row',
-		alignItems: 'center',
-		gap: 6,
-		paddingHorizontal: 8,
-	},
-	backText: {
-		color: colors.primary,
 		fontWeight: '600',
 	},
 	deferButton: {

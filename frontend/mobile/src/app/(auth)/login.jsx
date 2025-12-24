@@ -99,14 +99,16 @@ const Login = () => {
 
 					<View style={styles.card}>
 						<View style={styles.cardHeader}>
-							<View>
-								<Text style={styles.cardTitle}>Log in</Text>
-								<Text style={styles.cardSubtitle}>Fill in your details to enter the app</Text>
-							</View>
-							<View style={styles.badge}>
-								<Feather name="shield" size={14} color={colors.primary} />
-								<Text style={styles.badgeText}>Encrypted</Text>
-							</View>
+						<View style={styles.cardHeaderText}>
+							<Text style={styles.cardTitle}>Log in</Text>
+							<Text style={styles.cardSubtitle}>Fill in your details to enter the app</Text>
+						</View>
+						<View style={styles.badge}>
+							<Feather name="shield" size={14} color={colors.primary} />
+							<Text style={styles.badgeText} numberOfLines={1}>
+								Encrypted
+							</Text>
+						</View>
 						</View>
 
 						<View style={styles.form}>
@@ -219,8 +221,12 @@ const styles = StyleSheet.create({
 	cardHeader: {
 		flexDirection: 'row',
 		justifyContent: 'space-between',
-		alignItems: 'center',
+		alignItems: 'flex-start',
 		gap: 12,
+	},
+	cardHeaderText: {
+		flex: 1,
+		minWidth: 0,
 	},
 	cardTitle: {
 		fontSize: 18,
@@ -239,6 +245,7 @@ const styles = StyleSheet.create({
 		paddingVertical: 6,
 		borderRadius: 999,
 		backgroundColor: colors.badgeBackground,
+		flexShrink: 0,
 	},
 	badgeText: {
 		fontSize: 12,

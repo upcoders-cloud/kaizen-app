@@ -10,7 +10,6 @@ import {
 	PUT,
 	REQUEST_FAILED_WITH_STATUS
 } from 'src/constants/constans';
-import authService from 'src/server/services/authService';
 import {AUTH_BEARER_PREFIX, MMKV_AUTH_KEY} from 'src/constants/constans';
 import {getItem, setItem, removeItem} from 'store/storage';
 import {getAccessTokenExpiration} from 'utils/jwt';
@@ -31,6 +30,11 @@ class HttpClient {
 				params,
 				...rest,
 			};
+			console.log('[http] request', {
+				method,
+				url: path,
+				baseURL: this.client.defaults?.baseURL,
+			});
 			const response = await this.client.request(requestConfig);
 			return response.data;
 		} catch (error) {
@@ -40,6 +44,13 @@ class HttpClient {
 				response?.data?.message ||
 				response?.statusText ||
 				error?.message;
+			console.log('[http] error', {
+				method,
+				url: path,
+				baseURL: this.client.defaults?.baseURL,
+				status: response?.status,
+				message,
+			});
 			const wrappedError = new Error(message || REQUEST_FAILED_WITH_STATUS);
 			wrappedError.status = response?.status;
 			wrappedError.data = response?.data;
@@ -70,6 +81,14 @@ class HttpClient {
 }
 
 const axiosInstance = axios.create({
+	baseURL: API_BASE_URL,
+	headers: {
+		Accept: APPLICATION_JSON,
+		[CONTENT_TYPE]: APPLICATION_JSON,
+	},
+});
+
+const refreshClient = axios.create({
 	baseURL: API_BASE_URL,
 	headers: {
 		Accept: APPLICATION_JSON,
@@ -121,8 +140,8 @@ axiosInstance.interceptors.response.use(
 		isRefreshing = true;
 		console.log('[auth] 401 detected, refreshing token...');
 		try {
-			const response = await authService.refresh(undefined, {withCredentials: true});
-			const accessToken = response?.access;
+			const response = await refreshClient.post('/api/access/token/refresh/', undefined, {withCredentials: true});
+			const accessToken = response?.data?.access;
 			if (!accessToken) {
 				throw new Error('Missing access token during refresh');
 			}

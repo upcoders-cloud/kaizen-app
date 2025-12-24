@@ -30,11 +30,6 @@ class HttpClient {
 				params,
 				...rest,
 			};
-			console.log('[http] request', {
-				method,
-				url: path,
-				baseURL: this.client.defaults?.baseURL,
-			});
 			const response = await this.client.request(requestConfig);
 			return response.data;
 		} catch (error) {
@@ -44,13 +39,6 @@ class HttpClient {
 				response?.data?.message ||
 				response?.statusText ||
 				error?.message;
-			console.log('[http] error', {
-				method,
-				url: path,
-				baseURL: this.client.defaults?.baseURL,
-				status: response?.status,
-				message,
-			});
 			const wrappedError = new Error(message || REQUEST_FAILED_WITH_STATUS);
 			wrappedError.status = response?.status;
 			wrappedError.data = response?.data;
@@ -124,7 +112,6 @@ axiosInstance.interceptors.response.use(
 		originalRequest._retry = true;
 		const authData = getItem(MMKV_AUTH_KEY);
 		if (!authData?.accessToken) {
-			console.log('[auth] 401 without token, redirect likely needed.');
 			return Promise.reject(error);
 		}
 
@@ -138,7 +125,6 @@ axiosInstance.interceptors.response.use(
 		}
 
 		isRefreshing = true;
-		console.log('[auth] 401 detected, refreshing token...');
 		try {
 			const response = await refreshClient.post('/api/access/token/refresh/', undefined, {withCredentials: true});
 			const accessToken = response?.data?.access;
@@ -156,11 +142,9 @@ axiosInstance.interceptors.response.use(
 			setItem(MMKV_AUTH_KEY, updatedAuthData);
 			axiosInstance.defaults.headers.common.Authorization = `${AUTH_BEARER_PREFIX} ${accessToken}`;
 			processRefreshQueue(null, accessToken);
-			console.log('[auth] Token refreshed, retrying original request.');
 			originalRequest.headers.Authorization = `${AUTH_BEARER_PREFIX} ${accessToken}`;
 			return axiosInstance.request(originalRequest);
 		} catch (refreshError) {
-			console.log('[auth] Refresh failed, clearing auth.');
 			removeItem(MMKV_AUTH_KEY);
 			processRefreshQueue(refreshError, null);
 			return Promise.reject(refreshError);

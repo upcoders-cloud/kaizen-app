@@ -17,7 +17,6 @@ const RootLayout = () => {
 
 		const subscription = AppState.addEventListener('change', (nextState) => {
 			if (nextState === 'active') {
-				console.log('[auth] App resumed, checking auth.');
 				checkAuth();
 			}
 		});

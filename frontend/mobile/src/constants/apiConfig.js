@@ -21,7 +21,6 @@ const parseHost = (value) => {
 
 const getHostFromScriptUrl = () => {
 	const scriptUrl = NativeModules?.SourceCode?.scriptURL;
-	console.log('[apiConfig] Script URL:', scriptUrl);
 	if (!scriptUrl) return null;
 	try {
 		return new URL(scriptUrl).hostname;
@@ -69,8 +68,6 @@ const getPlatformBaseUrl = (expoHost) => {
 const getBaseUrl = () => {
 	const envBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL || process.env.API_BASE_URL;
 	const expoHost = getHostFromExpo();
-	console.log('[apiConfig] EXPO_PUBLIC_API_BASE_URL:', envBaseUrl);
-	console.log('[apiConfig] Expo host:', expoHost);
 	if (envBaseUrl) {
 		try {
 			const parsed = new URL(envBaseUrl);
@@ -86,4 +83,3 @@ const getBaseUrl = () => {
 };
 
 export const API_BASE_URL = getBaseUrl();
-console.log('[apiConfig] API_BASE_URL:', API_BASE_URL);

@@ -35,14 +35,14 @@ const TabsLayout = () => {
 			<Tabs.Screen
 				name="index"
 				options={{
-					title: 'Home',
+					title: 'Główna',
 					tabBarIcon: ({color, size}) => <Feather name="home" size={size} color={color} />,
 				}}
 			/>
 			<Tabs.Screen
 				name="create"
 				options={{
-					title: 'Create',
+					title: 'Dodaj',
 					tabBarLabel: () => null,
 					tabBarButton: (props) => <CreateTabButton {...props} />,
 					tabBarIcon: () => <Feather name="plus" size={28} color={colors.surface} />,
@@ -51,7 +51,7 @@ const TabsLayout = () => {
 			<Tabs.Screen
 				name="profile"
 				options={{
-					title: 'Profile',
+					title: 'Profil',
 					tabBarIcon: ({color, size}) => <Feather name="user" size={size} color={color} />,
 				}}
 			/>

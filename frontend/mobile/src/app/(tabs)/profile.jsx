@@ -22,7 +22,7 @@ const Profile = () => {
 		if (result?.success) {
 			Toast.show({
 				type: 'success',
-				text1: 'Signed out',
+				text1: 'Wylogowano',
 				visibilityTime: 1500,
 			});
 		}
@@ -55,9 +55,9 @@ const Profile = () => {
 							)}
 						</View>
 						<View style={styles.headerText}>
-							<Text style={styles.name}>{fullName || user?.username || 'User'}</Text>
+							<Text style={styles.name}>{fullName || user?.username || 'Użytkownik'}</Text>
 							<Text style={styles.subtext}>{user?.email || 'Brak emaila'}</Text>
-							<Text style={styles.username}>@{user?.username || 'anonymous'}</Text>
+							<Text style={styles.username}>@{user?.username || 'anonim'}</Text>
 						</View>
 					</View>
 					<View style={styles.badges}>

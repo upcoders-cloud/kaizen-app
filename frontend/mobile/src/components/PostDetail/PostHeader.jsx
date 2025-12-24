@@ -4,7 +4,7 @@ import colors from 'theme/colors';
 import {getPostStatusMeta} from 'utils/postStatus';
 
 const formatDate = (value) => {
-	if (!value) return 'Unknown date';
+	if (!value) return 'Nieznana data';
 	const date = new Date(value);
 	return date.toLocaleString(undefined, {day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'});
 };
@@ -15,7 +15,7 @@ const PostHeader = ({post}) => {
 	return (
 		<View style={styles.container}>
 			<View style={styles.row}>
-				<Text style={styles.category}>{post.category || 'Post'}</Text>
+				<Text style={styles.category}>{post.category || 'Zgłoszenie'}</Text>
 				<Text
 					style={[
 						styles.statusBadge,
@@ -27,7 +27,7 @@ const PostHeader = ({post}) => {
 				<Text style={styles.badge}>#{post.id}</Text>
 			</View>
 			<Text style={styles.title}>{post.title || 'Bez tytułu'}</Text>
-			<Text style={styles.author}>{post.author?.nickname || 'Anon'}</Text>
+			<Text style={styles.author}>{post.author?.nickname || 'Anonim'}</Text>
 			<Text style={styles.meta}>{formatDate(post.created_at)}</Text>
 		</View>
 	);

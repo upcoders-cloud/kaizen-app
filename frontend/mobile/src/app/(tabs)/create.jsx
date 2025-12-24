@@ -1,5 +1,4 @@
-import {Pressable, Text, StyleSheet, View} from 'react-native';
-import {Feather} from '@expo/vector-icons';
+import {StyleSheet, View} from 'react-native';
 import {Stack, useRouter} from 'expo-router';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import CreatePost from 'components/CreatePost/CreatePost';
@@ -21,7 +20,7 @@ const CreateRoute = () => {
 					headerLeft: () => null
 				}}
 			/>
-			<SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
+			<SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
 				<View style={styles.decorativeBubbleLarge} pointerEvents="none" />
 				<CreatePost
 					onSubmitSuccess={(createdPost) => {

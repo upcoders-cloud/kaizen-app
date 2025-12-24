@@ -91,12 +91,12 @@ const Post = ({post, onPress, onToggleLike}) => {
 
 			{/* Body */}
 			<View style={styles.body}>
-				<Text style={[styles.category, categoryStyle]}>{post?.category || 'Post'}</Text>
+				<Text style={[styles.category, categoryStyle]}>{post?.category || 'Zgłoszenie'}</Text>
 				<Text style={styles.title} numberOfLines={2}>
 					{post?.title || 'Bez tytułu'}
 				</Text>
 				<Text style={styles.excerpt} numberOfLines={4} ellipsizeMode="tail">
-					{post?.content || 'No content'}
+					{post?.content || 'Brak treści'}
 				</Text>
 				{primaryImage ? <Image source={{uri: primaryImage}} style={styles.image} /> : null}
 			</View>

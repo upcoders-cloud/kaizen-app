@@ -301,7 +301,7 @@ export default function PostDetails() {
 					headerShown: true,
 					headerTitleAlign: 'center',
 					headerLeft: () => (
-						<BackButton onPress={handleBack} label="Back" />
+						<BackButton onPress={handleBack} />
 					),
 					headerRight: () =>
 						isOwner ? (
@@ -335,7 +335,7 @@ export default function PostDetails() {
 						<View style={styles.headerSection}>
 							<View style={styles.badgesRow}>
 								<TextBase style={[styles.categoryBadge, categoryStyle]}>
-									{post?.category || 'Post'}
+									{post?.category || 'Zgłoszenie'}
 								</TextBase>
 								<TextBase
 									style={[

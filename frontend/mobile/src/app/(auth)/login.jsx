@@ -51,22 +51,22 @@ const Login = () => {
 			if (result?.success) {
 				Toast.show({
 					type: 'success',
-					text1: 'Signed in successfully',
+					text1: 'Zalogowano pomyślnie',
 					visibilityTime: 2000,
 				});
 			} else {
 				Toast.show({
 					type: 'error',
-					text1: 'Sign in failed',
-					text2: result?.error || authError || 'Please try again',
+					text1: 'Logowanie nieudane',
+					text2: result?.error || authError || 'Spróbuj ponownie',
 					visibilityTime: 2500,
 				});
 			}
 		} catch (error) {
 			Toast.show({
 				type: 'error',
-				text1: 'Sign in failed',
-				text2: error?.message || 'Please try again',
+				text1: 'Logowanie nieudane',
+				text2: error?.message || 'Spróbuj ponownie',
 				visibilityTime: 2500,
 			});
 		} finally {
@@ -89,31 +89,31 @@ const Login = () => {
 					<View style={styles.header}>
 						<View style={styles.tag}>
 							<Feather name="zap" size={14} color={colors.primary} />
-							<Text style={styles.tagText}>Kaizen mindset</Text>
+							<Text style={styles.tagText}>Mentalność Kaizen</Text>
 						</View>
-						<Text style={styles.title}>Welcome back</Text>
+						<Text style={styles.title}>Witaj ponownie</Text>
 						<Text style={styles.subtitle}>
-							Sign in to keep growing your team ideas. Your data stays secure and ready to act.
+							Zaloguj się, aby rozwijać pomysły zespołu. Twoje dane są bezpieczne i gotowe do działania.
 						</Text>
 					</View>
 
 					<View style={styles.card}>
 						<View style={styles.cardHeader}>
 						<View style={styles.cardHeaderText}>
-							<Text style={styles.cardTitle}>Log in</Text>
-							<Text style={styles.cardSubtitle}>Fill in your details to enter the app</Text>
+							<Text style={styles.cardTitle}>Zaloguj się</Text>
+							<Text style={styles.cardSubtitle}>Wpisz dane, aby wejść do aplikacji</Text>
 						</View>
 						<View style={styles.badge}>
 							<Feather name="shield" size={14} color={colors.primary} />
 							<Text style={styles.badgeText} numberOfLines={1}>
-								Encrypted
+								Szyfrowane
 							</Text>
 						</View>
 						</View>
 
 						<View style={styles.form}>
 							<Input
-								label="Username"
+								label="Login"
 								placeholder="np. emilys"
 								autoCapitalize="none"
 								value={username}
@@ -121,7 +121,7 @@ const Login = () => {
 								onChange={handleUsernameChange}
 							/>
 							<Input
-								label="Password"
+								label="Hasło"
 								placeholder="••••••••"
 								secureTextEntry
 								textContentType="password"
@@ -130,16 +130,16 @@ const Login = () => {
 								onChange={handlePasswordChange}
 							/>
 							<Button
-								title="Continue"
+								title="Zaloguj"
 								onPress={handleLogin}
 								loading={loading}
 								leftIcon={<Feather name="log-in" size={16} color="#ffffff" />}
 								style={styles.submitButton}
 							/>
 							<Pressable style={styles.helperRow}>
-								<Text style={styles.helperLink}>Forgot password?</Text>
+								<Text style={styles.helperLink}>Nie pamiętasz hasła?</Text>
 								<View style={styles.dot} />
-								<Text style={styles.helperMuted}>Contact your admin</Text>
+								<Text style={styles.helperMuted}>Skontaktuj się z administratorem</Text>
 							</Pressable>
 						</View>
 					</View>
@@ -147,9 +147,9 @@ const Login = () => {
 					<View style={styles.footer}>
 						<Text style={styles.footerTitle}>Kaizen App</Text>
 						<Text style={styles.footerText}>
-							Version {appVersion} • Built by Upcoders
+							Wersja {appVersion} • Stworzone przez Upcoders
 						</Text>
-						<Text style={styles.footerNote}>Small improvements, big impact.</Text>
+						<Text style={styles.footerNote}>Małe usprawnienia, duży efekt.</Text>
 					</View>
 				</ScrollView>
 			</KeyboardAvoidingView>

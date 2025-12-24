@@ -13,10 +13,10 @@ import {getJwtPayload} from 'utils/jwt';
 import AppHeader from 'components/Navigation/AppHeader';
 
 const FILTERS = [
-	{key: 'all', label: 'All posts'},
-	{key: 'mine', label: 'My posts'},
-	{key: 'newest', label: 'Newest'},
-	{key: 'likes', label: 'Most likes'},
+	{key: 'all', label: 'Wszystkie'},
+	{key: 'mine', label: 'Moje'},
+	{key: 'newest', label: 'Najnowsze'},
+	{key: 'likes', label: 'Najwięcej polubień'},
 ];
 
 const Home = () => {

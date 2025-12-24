@@ -53,11 +53,11 @@ const EditPostRoute = () => {
 		<>
 			<Stack.Screen
 				options={{
-					title: 'Edit Post',
+					title: 'Edycja zgłoszenia',
 					headerShown: true,
 					headerTitleAlign: 'center',
 					contentStyle: {backgroundColor: colors.background},
-					headerLeft: () => <BackButton onPress={handleBack} label="Back" />,
+					headerLeft: () => <BackButton onPress={handleBack} />,
 				}}
 			/>
 			<SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>

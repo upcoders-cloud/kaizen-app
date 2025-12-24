@@ -7,7 +7,7 @@ const PostList = ({posts = [], loading = false, error = null, onRefresh, onPress
 		return (
 			<View style={styles.centered}>
 				<ActivityIndicator size="large" color={colors.primary} />
-				<Text style={styles.muted}>Loading posts...</Text>
+				<Text style={styles.muted}>Ładowanie postów...</Text>
 			</View>
 		);
 	}
@@ -32,7 +32,7 @@ const PostList = ({posts = [], loading = false, error = null, onRefresh, onPress
 				/>
 			)}
 			contentContainerStyle={posts.length ? styles.listContent : styles.centered}
-			ListEmptyComponent={<Text style={styles.muted}>No posts to display.</Text>}
+			ListEmptyComponent={<Text style={styles.muted}>Brak postów do wyświetlenia.</Text>}
 			showsVerticalScrollIndicator={false}
 			refreshControl={
 				onRefresh ? (

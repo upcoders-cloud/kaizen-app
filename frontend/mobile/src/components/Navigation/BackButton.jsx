@@ -2,7 +2,7 @@ import {Pressable, StyleSheet, Text} from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import colors from 'theme/colors';
 
-const BackButton = ({onPress, label = 'Back'}) => (
+const BackButton = ({onPress, label = 'Wróć'}) => (
 	<Pressable onPress={onPress} style={styles.button}>
 		<Feather name="arrow-left" size={18} color={colors.primary} />
 		<Text style={styles.text}>{label}</Text>

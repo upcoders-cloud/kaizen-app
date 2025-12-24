@@ -78,7 +78,7 @@ const CommentItem = ({
 			<View style={styles.header}>
 				<View style={styles.authorRow}>
 					<Feather name="user" size={14} color={colors.muted} />
-					<Text style={styles.author}>{comment.author?.nickname || 'Anon'}</Text>
+					<Text style={styles.author}>{comment.author?.nickname || 'Anonim'}</Text>
 				</View>
 				<View style={styles.metaRow}>
 					<Text style={styles.date}>{formatDate(comment.created_at)}</Text>

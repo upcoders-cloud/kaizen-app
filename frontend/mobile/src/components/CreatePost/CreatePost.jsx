@@ -21,7 +21,7 @@ const CreatePost = ({
 	initialValues,
 	postId,
 	mode = 'create',
-	submitLabel = 'Submit Post',
+	submitLabel = 'Dodaj zgłoszenie',
 }) => {
 	const [title, setTitle] = useState(initialValues?.title ?? EMPTY_STRING);
 	const [content, setContent] = useState(initialValues?.content ?? EMPTY_STRING);

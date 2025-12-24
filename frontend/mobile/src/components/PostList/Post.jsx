@@ -14,7 +14,11 @@ const CATEGORY_STYLES = {
 const Post = ({post, onPress, onToggleLike}) => {
 	const likes = post?.likes_count ?? post?.likes?.length ?? 0;
 	const comments = post?.comments_count ?? post?.comments?.length ?? 0;
-	const authorName = post?.author?.full_name || post?.author?.nickname || 'Użytkownik';
+	const authorFullName = [post?.author?.first_name, post?.author?.last_name]
+		.filter(Boolean)
+		.join(' ')
+		.trim();
+	const authorName = authorFullName || post?.author?.nickname || post?.author?.username || 'Użytkownik';
 	const department = post?.author?.department || '—';
 	const statusMeta = getPostStatusMeta(post?.status);
 	const isLiked = Boolean(post?.is_liked_by_me);
@@ -184,9 +188,9 @@ const styles = StyleSheet.create({
 		borderRadius: 20,
 		alignItems: 'center',
 		justifyContent: 'center',
-		backgroundColor: '#edf2ff',
+		backgroundColor: colors.border,
 		borderWidth: 1,
-		borderColor: '#dfe7ff',
+		borderColor: colors.primary,
 	},
 	avatarText: {
 		fontSize: 14,

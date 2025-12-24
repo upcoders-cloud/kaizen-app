@@ -49,19 +49,6 @@ const ImagePicker = ({value = [], onChange, maxCount = MAX_DEFAULT}) => {
 		(assets) => {
 			if (!onChange) return;
 			const normalized = normalizeAssets(assets);
-			if (__DEV__) {
-				console.log(
-					'ImagePicker: normalized assets sample',
-					normalized.map((item) => ({
-						id: item.id,
-						fileName: item.fileName,
-						mimeType: item.mimeType,
-						base64Length: item.base64?.length,
-						base64Preview: item.base64 ? `${item.base64.slice(0, 30)}...` : undefined,
-					}))
-				);
-			}
-
 			const next = [...value, ...normalized].slice(0, maxCount);
 			onChange(next);
 		},

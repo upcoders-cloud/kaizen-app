@@ -33,6 +33,7 @@ import TextBase from 'components/Text/Text';
 import {CONTENT_IS_REQUIRED, EMPTY_STRING, FAILED_TO_LOAD_POST, FAILED_TO_LOAD_COMMENTS} from 'constants/constans';
 import {getPostStatusMeta} from 'utils/postStatus';
 import ImageCarousel from 'components/PostDetail/ImageCarousel';
+import Button from 'components/Button/Button';
 
 const CATEGORY_STYLES = {
 	BHP: {backgroundColor: '#E6F6FF', color: '#0F5F7F'},
@@ -260,7 +261,11 @@ export default function PostDetails() {
 	};
 
 	const statusMeta = getPostStatusMeta(post?.status);
-	const authorName = post?.author?.full_name || post?.author?.nickname || 'Użytkownik';
+	const authorFullName = [post?.author?.first_name, post?.author?.last_name]
+		.filter(Boolean)
+		.join(' ')
+		.trim();
+	const authorName = authorFullName || post?.author?.nickname || post?.author?.username || 'Użytkownik';
 	const categoryStyle = CATEGORY_STYLES[post?.category] || CATEGORY_STYLES.INNE;
 	const imageUrls = Array.isArray(post?.image_urls) ? post.image_urls.filter(Boolean) : [];
 	const formattedDate = post?.created_at
@@ -270,6 +275,14 @@ export default function PostDetails() {
 			year: 'numeric',
 		})
 		: '—';
+	const survey = post?.survey;
+	const hasSurvey = Boolean(survey);
+	const surveyHours = Number(survey?.estimated_time_savings_hours ?? 0);
+	const surveySavings = Number(survey?.estimated_financial_savings ?? 0);
+	const surveyHoursLabel = Number.isFinite(surveyHours) ? surveyHours.toFixed(2) : '0.00';
+	const surveySavingsLabel = Number.isFinite(surveySavings)
+		? surveySavings.toLocaleString('pl-PL', {minimumFractionDigits: 2, maximumFractionDigits: 2})
+		: '0.00';
 	const sortedComments = useMemo(
 		() =>
 			[...comments].sort((a, b) => new Date(b?.created_at) - new Date(a?.created_at)),
@@ -371,6 +384,33 @@ export default function PostDetails() {
 								<TextBase style={styles.placeholderText}>Brak załączników.</TextBase>
 							)}
 						</View>
+
+						{/* Survey results section */}
+						{hasSurvey ? (
+							<View style={styles.section}>
+								<TextBase style={styles.sectionTitle}>Przewidywane usprawnienia</TextBase>
+								<View style={styles.surveyCard}>
+									<TextBase style={styles.surveyLabel}>Szacowany czas oszczędności</TextBase>
+									<TextBase style={styles.surveyValue}>{surveyHoursLabel} h</TextBase>
+								</View>
+								<View style={styles.surveyCard}>
+									<TextBase style={styles.surveyLabel}>Szacowane oszczędności finansowe</TextBase>
+									<TextBase style={styles.surveyValue}>{surveySavingsLabel} PLN</TextBase>
+								</View>
+							</View>
+						) : isOwner ? (
+							<View style={styles.section}>
+								<TextBase style={styles.sectionTitle}>Przewidywane usprawnienia</TextBase>
+								<TextBase style={styles.placeholderText}>
+									Dodaj ankietę, aby oszacować korzyści z usprawnienia.
+								</TextBase>
+								<Button
+									title="Uzupełnij ankietę"
+									onPress={() => router.push(`/post/${resolvedId}/survey`)}
+									style={styles.surveyCta}
+								/>
+							</View>
+						) : null}
 
 						{/* Actions section (single source of interaction counts) */}
 						<View style={styles.section}>
@@ -677,6 +717,27 @@ const styles = StyleSheet.create({
 		fontSize: 13,
 		fontWeight: '600',
 		color: colors.primary,
+	},
+	surveyCard: {
+		borderWidth: 1,
+		borderColor: colors.border,
+		borderRadius: 12,
+		padding: 14,
+		backgroundColor: colors.surface,
+		gap: 6,
+	},
+	surveyLabel: {
+		color: colors.muted,
+		fontSize: 13,
+	},
+	surveyValue: {
+		fontSize: 18,
+		fontWeight: '700',
+		color: colors.text,
+	},
+	surveyCta: {
+		alignSelf: 'flex-start',
+		marginTop: 6,
 	},
 	commentInputSection: {
 		paddingTop: 8,

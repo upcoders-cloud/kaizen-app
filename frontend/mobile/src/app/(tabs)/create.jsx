@@ -14,14 +14,14 @@ const CreateRoute = () => {
 		<>
 			<Stack.Screen
 				options={{
-					title: 'Create Post',
+					title: 'Nowe zgłoszenie',
 					headerShown: true,
 					headerTitleAlign: 'center',
 					contentStyle: {backgroundColor: colors.background},
 					headerLeft: () => (
 						<Pressable onPress={handleBack} style={styles.backButton}>
 							<Feather name="arrow-left" size={18} color={colors.primary} />
-							<Text style={styles.backText}>Back</Text>
+							<Text style={styles.backText}>Wróć</Text>
 						</Pressable>
 					),
 				}}
@@ -29,7 +29,11 @@ const CreateRoute = () => {
 			<SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
 				<View style={styles.decorativeBubbleLarge} pointerEvents="none" />
 				<CreatePost
-					onSubmitSuccess={() => {
+					onSubmitSuccess={(createdPost) => {
+						if (createdPost?.id) {
+							router.push(`/post/${createdPost.id}/survey`);
+							return;
+						}
 						handleBack();
 					}}
 				/>

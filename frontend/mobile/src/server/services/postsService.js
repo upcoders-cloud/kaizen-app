@@ -34,6 +34,14 @@ const postsService = {
 		const options = withAuthHeaders();
 		return httpClient.post(`${basePath}${postId}/like/`, undefined, options);
 	},
+	createSurvey(postId, payload) {
+		const options = withAuthHeaders();
+		return httpClient.post(`${basePath}${postId}/survey/`, payload, options);
+	},
+	updateSurvey(postId, payload) {
+		const options = withAuthHeaders();
+		return httpClient.put(`${basePath}${postId}/survey/`, payload, options);
+	},
 };
 
 export default postsService;

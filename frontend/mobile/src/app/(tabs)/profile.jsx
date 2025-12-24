@@ -28,7 +28,7 @@ const Profile = () => {
 		}
 	};
 
-	const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(SPACE).trim();
+	const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(SPACE).trim();
 	const avatar = user?.image;
 	const initials =
 		(fullName && fullName.split(SPACE).map((part) => part[0]).join('').slice(0, 2).toUpperCase()) ||
@@ -38,10 +38,13 @@ const Profile = () => {
 		<SafeAreaView style={styles.safeArea}>
 			<View style={styles.decorativeBubble} />
 			<ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-				<Text style={styles.screenTitle}>Profile</Text>
+				<View style={styles.header}>
+					<Text style={styles.screenTitle}>Profil</Text>
+					<Text style={styles.screenSubtitle}>Twoje dane i ustawienia konta</Text>
+				</View>
 
 				<View style={styles.card}>
-					<View style={styles.header}>
+					<View style={styles.profileRow}>
 						<View style={styles.avatarWrapper}>
 							{avatar ? (
 								<Image source={{uri: avatar}} style={styles.avatar} />
@@ -53,14 +56,14 @@ const Profile = () => {
 						</View>
 						<View style={styles.headerText}>
 							<Text style={styles.name}>{fullName || user?.username || 'User'}</Text>
-							<Text style={styles.subtext}>{user?.email || 'No email provided'}</Text>
+							<Text style={styles.subtext}>{user?.email || 'Brak emaila'}</Text>
 							<Text style={styles.username}>@{user?.username || 'anonymous'}</Text>
 						</View>
 					</View>
 					<View style={styles.badges}>
 						<View style={styles.badge}>
 							<Text style={styles.badgeText}>
-								Status: {isAuthenticated ? 'Authenticated' : 'Guest'}
+								Status: {isAuthenticated ? 'Zalogowany' : 'Gość'}
 							</Text>
 						</View>
 						{user?.id ? (
@@ -72,19 +75,19 @@ const Profile = () => {
 				</View>
 
 				<View style={styles.card}>
-					<Text style={styles.sectionTitle}>Details</Text>
+					<Text style={styles.sectionTitle}>Dane użytkownika</Text>
 					<View style={styles.infoList}>
 						<InfoRow label="Email" value={user?.email} />
-						<InfoRow label="Username" value={user?.username} />
-						<InfoRow label="Name" value={fullName || '—'} />
-						<InfoRow label="Gender" value={user?.gender} />
+						<InfoRow label="Login" value={user?.username} />
+						<InfoRow label="Imię i nazwisko" value={fullName || '—'} />
+						<InfoRow label="Płeć" value={user?.gender} />
 					</View>
 				</View>
 
 				<Button
-					title="Log out"
+					title="Wyloguj"
 					onPress={handleLogout}
-					variant="outline"
+					variant="primary"
 					style={styles.logoutButton}
 				/>
 			</ScrollView>
@@ -101,8 +104,8 @@ const styles = StyleSheet.create({
 	},
 	content: {
 		flexGrow: 1,
-		paddingHorizontal: 22,
-		paddingVertical: 24,
+		paddingHorizontal: 20,
+		paddingVertical: 20,
 		gap: 16,
 	},
 	decorativeBubble: {
@@ -114,10 +117,16 @@ const styles = StyleSheet.create({
 		borderRadius: 90,
 		backgroundColor: '#36d1dc22',
 	},
+	header: {
+		gap: 4,
+	},
 	screenTitle: {
-		fontSize: 26,
+		fontSize: 24,
 		fontWeight: '800',
-		color: colors.primary,
+		color: colors.text,
+	},
+	screenSubtitle: {
+		color: colors.muted,
 	},
 	card: {
 		backgroundColor: colors.surface,
@@ -127,12 +136,12 @@ const styles = StyleSheet.create({
 		padding: 18,
 		gap: 14,
 		shadowColor: '#000',
-		shadowOpacity: 0.08,
-		shadowOffset: {width: 0, height: 8},
-		shadowRadius: 16,
-		elevation: 3,
+		shadowOpacity: 0.03,
+		shadowOffset: {width: 0, height: 6},
+		shadowRadius: 12,
+		elevation: 2,
 	},
-	header: {
+	profileRow: {
 		flexDirection: 'row',
 		gap: 14,
 		alignItems: 'center',
@@ -232,7 +241,7 @@ const styles = StyleSheet.create({
 		textAlign: 'right',
 	},
 	logoutButton: {
-		marginTop: 6,
+		marginTop: 4,
 		minWidth: '100%',
 	},
 });

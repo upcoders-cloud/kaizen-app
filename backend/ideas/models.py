@@ -75,6 +75,40 @@ class PostImage(models.Model):
         return f"Zdjęcie do postu: {self.post.title}"
 
 
+class PostSurvey(models.Model):
+    class FrequencyUnit(models.TextChoices):
+        DAY = "DAY", "Dzień"
+        WEEK = "WEEK", "Tydzień"
+        MONTH = "MONTH", "Miesiąc"
+
+    post = models.OneToOneField(
+        KaizenPost,
+        related_name='survey',
+        on_delete=models.CASCADE
+    )
+    frequency_value = models.PositiveIntegerField(verbose_name="Częstotliwość")
+    frequency_unit = models.CharField(
+        max_length=10,
+        choices=FrequencyUnit.choices,
+        verbose_name="Jednostka częstotliwości",
+    )
+    affected_people = models.PositiveIntegerField(verbose_name="Liczba osób")
+    time_lost_minutes = models.PositiveIntegerField(verbose_name="Strata czasu (min)")
+    estimated_time_savings_hours = models.FloatField(verbose_name="Szacowane oszczędności czasu (h)")
+    estimated_financial_savings = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        verbose_name="Szacowane oszczędności finansowe",
+    )
+
+    class Meta:
+        verbose_name = "Ankieta do postu"
+        verbose_name_plural = "Ankiety do postów"
+
+    def __str__(self):
+        return f"Ankieta dla postu: {self.post.title}"
+
+
 class Comment(models.Model):
     class Meta:
         verbose_name = "Komentarz"  # Liczba pojedyncza

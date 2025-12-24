@@ -29,6 +29,8 @@ const CreatePost = ({
 	const [images, setImages] = useState(initialValues?.images ?? []);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState(null);
+	const [titleError, setTitleError] = useState(null);
+	const [contentError, setContentError] = useState(null);
 
 	const resetForm = () => {
 		setTitle(initialValues?.title ?? EMPTY_STRING);
@@ -36,6 +38,8 @@ const CreatePost = ({
 		setCategory(initialValues?.category ?? CATEGORIES[0].value);
 		setImages(initialValues?.images ?? []);
 		setError(null);
+		setTitleError(null);
+		setContentError(null);
 	};
 
 	useEffect(() => {
@@ -44,6 +48,8 @@ const CreatePost = ({
 		setContent(initialValues?.content ?? EMPTY_STRING);
 		setCategory(initialValues?.category ?? CATEGORIES[0].value);
 		setImages(initialValues?.images ?? []);
+		setTitleError(null);
+		setContentError(null);
 	}, [initialValues?.title, initialValues?.content, initialValues?.category]);
 
 	const handleSubmit = () => submitPost(
@@ -51,48 +57,72 @@ const CreatePost = ({
 			title, content, category, images,
 			onSubmitSuccess, onSubmitFail,
 			setLoading, setError, resetForm,
+			setTitleError, setContentError,
 			mode, postId
 		});
 
 	return (
 		<ScrollView contentContainerStyle={styles.container}>
-			<Input
-				label="Title"
-				placeholder="Optional title"
-				value={title}
-				onChangeText={setTitle}
-				autoCapitalize="sentences"
-			/>
-			<Input
-				label="Description"
-				placeholder="Describe your idea"
-				value={content}
-				onChangeText={setContent}
-				multiline
-				numberOfLines={4}
-				textAlignVertical="top"
-				style={styles.multilineInput}
-			/>
-			<View style={styles.categorySection}>
-				<Text style={styles.label}>Category</Text>
+			<View style={styles.header}>
+				<Text style={styles.heading}>Nowe zgłoszenie</Text>
+				<Text style={styles.subheading}>Opisz problem i dodaj materiały pomocnicze.</Text>
+			</View>
+
+			<View style={styles.sectionCard}>
+				<Text style={styles.sectionTitle}>Podstawowe informacje</Text>
+				<Input
+					label="Tytuł"
+					placeholder="Krótki, konkretny tytuł"
+					value={title}
+					onChangeText={(value) => {
+						setTitle(value);
+						if (titleError) setTitleError(null);
+					}}
+					autoCapitalize="sentences"
+					error={titleError}
+				/>
+				<Input
+					label="Opis"
+					placeholder="Opisz sytuację i oczekiwane usprawnienie"
+					value={content}
+					onChangeText={(value) => {
+						setContent(value);
+						if (contentError) setContentError(null);
+					}}
+					multiline
+					numberOfLines={4}
+					textAlignVertical="top"
+					style={styles.multilineInput}
+					error={contentError}
+				/>
+			</View>
+
+			<View style={styles.sectionCard}>
+				<Text style={styles.sectionTitle}>Kategoria</Text>
 				<View style={styles.categoryRow}>
 					{CATEGORIES.map((cat) => (
 						<Button
 							key={cat.value}
 							title={cat.label}
-							variant={cat.value === category ? 'primary' : 'outline'}
+							variant="ghost"
 							onPress={() => setCategory(cat.value)}
 							style={[
 								styles.categoryButton,
-								cat.value === category && {borderColor: colors.primary},
+								cat.value === category
+									? styles.categoryButtonActive
+									: styles.categoryButtonInactive,
 							]}
 							textStyle={cat.value === category ? styles.categoryButtonTextActive : styles.categoryButtonText}
 						/>
 					))}
 				</View>
 			</View>
-			<ImagePicker value={images} onChange={setImages} />
-			{error ? <Text style={styles.error}>{error}</Text> : null}
+
+			<View style={styles.sectionCard}>
+				<Text style={styles.sectionTitle}>Załączniki</Text>
+				<ImagePicker value={images} onChange={setImages} />
+			</View>
+
 			<Button title={submitLabel} onPress={handleSubmit} loading={loading} style={styles.submitButton} />
 		</ScrollView>
 	);
@@ -100,20 +130,36 @@ const CreatePost = ({
 
 export default CreatePost;
 
-async function submitPost({ title, content, category, images, onSubmitSuccess, onSubmitFail, setLoading, setError, resetForm, mode, postId }) {
+async function submitPost({
+	title,
+	content,
+	category,
+	images,
+	onSubmitSuccess,
+	onSubmitFail,
+	setLoading,
+	setError,
+	resetForm,
+	setTitleError,
+	setContentError,
+	mode,
+	postId
+}) {
 	if (!title.trim()) {
-		setError(TITLE_IS_REQUIRED);
+		setTitleError?.(TITLE_IS_REQUIRED);
 		onSubmitFail?.(TITLE_IS_REQUIRED);
 		return;
 	}
 	if (!content.trim()) {
-		setError(CONTENT_IS_REQUIRED);
+		setContentError?.(CONTENT_IS_REQUIRED);
 		onSubmitFail?.(CONTENT_IS_REQUIRED);
 		return;
 	}
 
 	setLoading(true);
 	setError(null);
+	setTitleError?.(null);
+	setContentError?.(null);
 
 	try {
 		const normalizedImages = normalizeImagesForUpload(images);
@@ -129,13 +175,14 @@ async function submitPost({ title, content, category, images, onSubmitSuccess, o
 			if (!postId) {
 				throw new Error(FAILED_TO_CREATE_POST);
 			}
-			await postsService.update(postId, payload);
+			const updated = await postsService.update(postId, payload);
+			onSubmitSuccess?.(updated);
 		} else {
-			await postsService.create(payload);
+			const created = await postsService.create(payload);
+			onSubmitSuccess?.(created);
 		}
 
 		resetForm?.();
-		onSubmitSuccess?.();
 	} catch (err) {
 		const message = err?.message || FAILED_TO_CREATE_POST;
 		setError(message);
@@ -157,19 +204,34 @@ const normalizeImagesForUpload = (images = []) =>
 const styles = StyleSheet.create({
 	container: {
 		padding: 16,
-		gap: 16,
+		gap: 18,
+	},
+	header: {
+		gap: 6,
+	},
+	heading: {
+		fontSize: 20,
+		fontWeight: '700',
+		color: colors.text,
+	},
+	subheading: {
+		color: colors.muted,
+	},
+	sectionCard: {
+		gap: 12,
+		padding: 14,
+		borderRadius: 14,
+		backgroundColor: colors.surface,
+		borderWidth: 1,
+		borderColor: colors.border,
+	},
+	sectionTitle: {
+		fontSize: 14,
+		fontWeight: '700',
+		color: colors.text,
 	},
 	multilineInput: {
 		minHeight: 120,
-	},
-	categorySection: {
-		gap: 8,
-	},
-	label: {
-		fontWeight: '700',
-		fontSize: 14,
-		marginLeft: 4,
-		color: colors.text,
 	},
 	categoryRow: {
 		flexDirection: 'row',
@@ -178,22 +240,31 @@ const styles = StyleSheet.create({
 	},
 	categoryButton: {
 		paddingHorizontal: 12,
+		paddingVertical: 6,
+		minHeight: 32,
+		borderRadius: 999,
+		borderWidth: 1,
+	},
+	categoryButtonInactive: {
+		backgroundColor: '#f8fafc',
 		borderColor: colors.border,
 	},
+	categoryButtonActive: {
+		backgroundColor: '#eef2ff',
+		borderColor: '#c7d2fe',
+	},
 	categoryButtonText: {
-		color: colors.primary,
+		fontSize: 12,
+		fontWeight: '700',
+		color: colors.muted,
 	},
 	categoryButtonTextActive: {
-		color: colors.surface,
-	},
-	error: {
-		color: colors.danger,
+		fontSize: 12,
 		fontWeight: '700',
+		color: colors.primary,
 	},
 	submitButton: {
-		marginTop: 8,
-		marginLeft: "auto",
-		marginRight: "auto",
-		width: '50%',
+		marginTop: 4,
+		alignSelf: 'stretch',
 	},
 });

@@ -2,11 +2,12 @@ import logging
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from .models import KaizenPost, Comment, Like
-from .serializers import PostSerializer, CommentSerializer, LikeSerializer
+from .models import KaizenPost, Comment, Like, PostSurvey
+from .serializers import PostSerializer, CommentSerializer, LikeSerializer, PostSurveySerializer, PostSurveyInputSerializer
 from .permissions import IsCommentAuthorOrReadOnly, IsPostAuthorOrReadOnly
 from rest_framework.exceptions import ValidationError
 from django.db import IntegrityError, transaction
+from .services.post_survey_calculator import calculate_survey_results
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,10 @@ class PostViewSet(viewsets.ModelViewSet):
             return [permissions.IsAuthenticated()]
         if self.action == 'comments':
             if self.request.method == 'POST':
+                return [permissions.IsAuthenticated()]
+            return [permissions.AllowAny()]
+        if self.action == 'survey':
+            if self.request.method in ['POST', 'PUT']:
                 return [permissions.IsAuthenticated()]
             return [permissions.AllowAny()]
         return super().get_permissions()
@@ -56,6 +61,37 @@ class PostViewSet(viewsets.ModelViewSet):
                 serializer.save(author=request.user, post=post)
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['post', 'put'])
+    def survey(self, request, pk=None):
+        post = self.get_object()
+
+        if request.user != post.author:
+            return Response({'detail': 'Brak uprawnień do ankiety.'}, status=status.HTTP_403_FORBIDDEN)
+
+        existing_survey = getattr(post, 'survey', None)
+        if request.method == 'POST' and existing_survey:
+            return Response({'detail': 'Ankieta już istnieje.'}, status=status.HTTP_400_BAD_REQUEST)
+        if request.method == 'PUT' and not existing_survey:
+            return Response({'detail': 'Ankieta nie istnieje.'}, status=status.HTTP_404_NOT_FOUND)
+
+        input_serializer = PostSurveyInputSerializer(data=request.data)
+        input_serializer.is_valid(raise_exception=True)
+        survey_payload = input_serializer.validated_data
+        calculated = calculate_survey_results(**survey_payload)
+
+        survey_values = {**survey_payload, **calculated}
+        if existing_survey:
+            for key, value in survey_values.items():
+                setattr(existing_survey, key, value)
+            existing_survey.save()
+            survey = existing_survey
+            response_status = status.HTTP_200_OK
+        else:
+            survey = PostSurvey.objects.create(post=post, **survey_values)
+            response_status = status.HTTP_201_CREATED
+
+        return Response(PostSurveySerializer(survey).data, status=response_status)
 
 
 class CommentViewSet(viewsets.ModelViewSet):

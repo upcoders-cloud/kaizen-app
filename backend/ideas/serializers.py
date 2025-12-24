@@ -4,7 +4,7 @@ import uuid
 from PIL import Image
 from django.core.files.base import ContentFile
 from rest_framework import serializers
-from .models import KaizenPost, Comment, Like, PostImage
+from .models import KaizenPost, Comment, Like, PostImage, PostSurvey
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -21,7 +21,7 @@ class UserPublicSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'nickname']  # Backend nie wyśle emaila ani nazwiska
+        fields = ['id', 'nickname', 'first_name', 'last_name', 'username']
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -70,6 +70,7 @@ class PostSerializer(serializers.ModelSerializer):
     likes_count = serializers.IntegerField(read_only=True)
     comments_count = serializers.IntegerField(read_only=True)
     is_liked_by_me = serializers.SerializerMethodField()
+    survey = serializers.SerializerMethodField(read_only=True)
     images = serializers.ListField(
         child=Base64ImageField(),
         write_only=True,
@@ -92,6 +93,7 @@ class PostSerializer(serializers.ModelSerializer):
             'is_liked_by_me',
             'images',
             'image_urls',
+            'survey',
         ]
         read_only_fields = ['status']
 
@@ -113,6 +115,12 @@ class PostSerializer(serializers.ModelSerializer):
             urls.append(url)
         return urls
 
+    def get_survey(self, obj):
+        survey = getattr(obj, 'survey', None)
+        if not survey:
+            return None
+        return PostSurveySerializer(survey).data
+
     def create(self, validated_data):
         images = validated_data.pop('images', [])
         post = super().create(validated_data)
@@ -133,3 +141,24 @@ class LikeSerializer(serializers.ModelSerializer):
         model = Like
         fields = ['id', 'user', 'post']
         read_only_fields = ['user']
+
+
+class PostSurveySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PostSurvey
+        fields = [
+            'frequency_value',
+            'frequency_unit',
+            'affected_people',
+            'time_lost_minutes',
+            'estimated_time_savings_hours',
+            'estimated_financial_savings',
+        ]
+        read_only_fields = ['estimated_time_savings_hours', 'estimated_financial_savings']
+
+
+class PostSurveyInputSerializer(serializers.Serializer):
+    frequency_value = serializers.IntegerField(min_value=0)
+    frequency_unit = serializers.ChoiceField(choices=PostSurvey.FrequencyUnit.choices)
+    affected_people = serializers.IntegerField(min_value=0)
+    time_lost_minutes = serializers.IntegerField(min_value=0)

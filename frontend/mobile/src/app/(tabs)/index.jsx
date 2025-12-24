@@ -7,10 +7,10 @@ import {useFocusEffect} from '@react-navigation/native';
 import {FAILED_TO_LOAD_POSTS} from 'constants/constans';
 import PostList from 'components/PostList/PostList';
 import postsService from 'src/server/services/postsService';
-import Button from 'components/Button/Button';
 import colors from 'theme/colors';
 import {useAuthStore} from 'store/authStore';
 import {getJwtPayload} from 'utils/jwt';
+import AppHeader from 'components/Navigation/AppHeader';
 
 const FILTERS = [
 	{key: 'all', label: 'All posts'},
@@ -70,25 +70,9 @@ const Home = () => {
 
 	return (
 		<SafeAreaProvider>
-			<SafeAreaView style={styles.safeArea}>
+			<SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
 				<View style={styles.decorativeBubble} pointerEvents="none" />
-				<View style={styles.header}>
-					<Text style={styles.title}>Kaizen Posts</Text>
-					<Text style={styles.subtitle}>Latest team ideas</Text>
-					<Button
-						title="Create Post"
-						onPress={() => router.push('/create')}
-						leftIcon={<Feather name="plus" size={16} color="white" />}
-						style={styles.createButton}
-					/>
-				</View>
-				<View style={styles.filterCard}>
-					<Text style={styles.filterLabel}>Filter posts</Text>
-					<Pressable style={styles.filterControl} onPress={handleOpenFilter}>
-						<Text style={styles.filterValue}>{activeFilter.label}</Text>
-						<Feather name="chevron-down" size={16} color={colors.primary} />
-					</Pressable>
-				</View>
+				<AppHeader title="Główna" onFilterPress={handleOpenFilter} />
 					<PostList
 						posts={filteredPosts}
 						loading={loading}
@@ -143,64 +127,6 @@ const styles = StyleSheet.create({
 	safeArea: {
 		flex: 1,
 		backgroundColor: colors.background,
-	},
-	header: {
-		alignSelf: 'center',
-		alignItems: 'center',
-		paddingHorizontal: 16,
-		paddingVertical: 12,
-	},
-	title: {
-		fontSize: 24,
-		fontWeight: '700',
-		color: colors.primary,
-	},
-	subtitle: {
-		fontSize: 14,
-		color: '#4a5970',
-		marginTop: 4,
-	},
-	createButton: {
-		alignSelf: 'center',
-		marginTop: 10,
-	},
-	filterCard: {
-		marginHorizontal: 16,
-		marginBottom: 8,
-		padding: 14,
-		borderRadius: 14,
-		borderWidth: 1,
-		borderColor: colors.border,
-		backgroundColor: colors.surface,
-		shadowColor: '#1d2b64',
-		shadowOpacity: 0.08,
-		shadowRadius: 10,
-		shadowOffset: {width: 0, height: 6},
-		elevation: 2,
-	},
-	filterLabel: {
-		fontSize: 12,
-		textTransform: 'uppercase',
-		letterSpacing: 0.8,
-		color: colors.muted,
-		fontWeight: '700',
-		marginBottom: 6,
-	},
-	filterControl: {
-		flexDirection: 'row',
-		alignItems: 'center',
-		justifyContent: 'space-between',
-		paddingHorizontal: 12,
-		paddingVertical: 10,
-		borderRadius: 10,
-		backgroundColor: '#f7f9ff',
-		borderWidth: 1,
-		borderColor: '#e3e9f7',
-	},
-	filterValue: {
-		fontSize: 15,
-		fontWeight: '700',
-		color: colors.text,
 	},
 	filterOverlay: {
 		flex: 1,

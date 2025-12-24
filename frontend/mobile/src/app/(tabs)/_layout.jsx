@@ -45,7 +45,7 @@ const TabsLayout = () => {
 					title: 'Create',
 					tabBarLabel: () => null,
 					tabBarButton: (props) => <CreateTabButton {...props} />,
-					tabBarIcon: () => <Feather name="plus" size={24} color={colors.surface} />,
+					tabBarIcon: () => <Feather name="plus" size={28} color={colors.surface} />,
 				}}
 			/>
 			<Tabs.Screen
@@ -75,8 +75,8 @@ const styles = StyleSheet.create({
 		justifyContent: 'center',
 	},
 	createButton: {
-		width: 45,
-		height: 45,
+		width: 50,
+		height: 50,
 		borderRadius: 25,
 		backgroundColor: colors.primary,
 		alignItems: 'center',

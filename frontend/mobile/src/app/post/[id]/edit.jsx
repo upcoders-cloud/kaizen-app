@@ -1,6 +1,5 @@
 import {useEffect, useMemo, useState} from 'react';
-import {ActivityIndicator, Pressable, StyleSheet, Text, View} from 'react-native';
-import {Feather} from '@expo/vector-icons';
+import {ActivityIndicator, StyleSheet, Text, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {Stack, useLocalSearchParams, useRouter} from 'expo-router';
 
@@ -10,6 +9,7 @@ import colors from 'theme/colors';
 import {navigateBack} from 'utils/navigation';
 import {useAuthStore} from 'store/authStore';
 import {getJwtPayload} from 'utils/jwt';
+import BackButton from 'components/Navigation/BackButton';
 
 const EditPostRoute = () => {
 	const router = useRouter();
@@ -57,12 +57,7 @@ const EditPostRoute = () => {
 					headerShown: true,
 					headerTitleAlign: 'center',
 					contentStyle: {backgroundColor: colors.background},
-					headerLeft: () => (
-						<Pressable onPress={handleBack} style={styles.backButton}>
-							<Feather name="arrow-left" size={18} color={colors.primary} />
-							<Text style={styles.backText}>Back</Text>
-						</Pressable>
-					),
+					headerLeft: () => <BackButton onPress={handleBack} label="Back" />,
 				}}
 			/>
 			<SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
@@ -100,16 +95,6 @@ const styles = StyleSheet.create({
 	safeArea: {
 		flex: 1,
 		backgroundColor: colors.background,
-	},
-	backButton: {
-		flexDirection: 'row',
-		alignItems: 'center',
-		gap: 6,
-		paddingHorizontal: 8,
-	},
-	backText: {
-		color: colors.primary,
-		fontWeight: '600',
 	},
 	decorativeBubbleLarge: {
 		position: 'absolute',

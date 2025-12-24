@@ -34,6 +34,7 @@ import {CONTENT_IS_REQUIRED, EMPTY_STRING, FAILED_TO_LOAD_POST, FAILED_TO_LOAD_C
 import {getPostStatusMeta} from 'utils/postStatus';
 import ImageCarousel from 'components/PostDetail/ImageCarousel';
 import Button from 'components/Button/Button';
+import BackButton from 'components/Navigation/BackButton';
 
 const CATEGORY_STYLES = {
 	BHP: {backgroundColor: '#E6F6FF', color: '#0F5F7F'},
@@ -300,10 +301,7 @@ export default function PostDetails() {
 					headerShown: true,
 					headerTitleAlign: 'center',
 					headerLeft: () => (
-						<Pressable onPress={handleBack} style={styles.backButton}>
-							<Feather name="arrow-left" size={18} color={colors.primary} />
-							<Text style={styles.backText}>Back</Text>
-						</Pressable>
+						<BackButton onPress={handleBack} label="Back" />
 					),
 					headerRight: () =>
 						isOwner ? (
@@ -525,16 +523,6 @@ const styles = StyleSheet.create({
 		padding: 16,
 		gap: 14,
 		backgroundColor: colors.surface,
-	},
-	backButton: {
-		flexDirection: 'row',
-		alignItems: 'center',
-		gap: 6,
-		paddingHorizontal: 8,
-	},
-	backText: {
-		color: colors.primary,
-		fontWeight: '600',
 	},
 	menuButton: {
 		flexDirection: 'row',

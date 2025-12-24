@@ -4,7 +4,7 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import {Feather} from '@expo/vector-icons';
 import colors from 'theme/colors';
 import TextBase from 'components/Text/Text';
-import {useEffect, useRef, useState} from 'react';
+import {useRef} from 'react';
 import ConfettiCannon from 'react-native-confetti-cannon';
 
 const SurveyResults = () => {
@@ -18,14 +18,11 @@ const SurveyResults = () => {
 		? parsedSavings.toLocaleString('pl-PL', {minimumFractionDigits: 2, maximumFractionDigits: 2})
 		: '0.00';
 
-	const [showConfetti, setShowConfetti] = useState(false);
-	const hasFiredRef = useRef(false);
-
-	useEffect(() => {
-		if (hasFiredRef.current) return;
-		hasFiredRef.current = true;
-		setShowConfetti(true);
-	}, []);
+	const confettiFiredRef = useRef(false);
+	const shouldShowConfetti = !confettiFiredRef.current;
+	if (shouldShowConfetti) {
+		confettiFiredRef.current = true;
+	}
 
 	const handleClose = () => {
 		if (id) {
@@ -55,7 +52,7 @@ const SurveyResults = () => {
 			/>
 			<SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
 				<ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-					<View style={styles.content}>
+					<View style={styles.contentBlock}>
 						{/* Summary hero */}
 						<View style={styles.hero}>
 							<View style={styles.heroIcon}>
@@ -79,13 +76,13 @@ const SurveyResults = () => {
 								<TextBase style={styles.resultLabel}>Szacowane oszczędności finansowe</TextBase>
 							</View>
 						</View>
-					</View>
 
-					<Pressable style={styles.closeButton} onPress={handleClose}>
-						<TextBase style={styles.closeText}>Zamknij</TextBase>
-					</Pressable>
+						<Pressable style={styles.closeButton} onPress={handleClose}>
+							<TextBase style={styles.closeText}>Zamknij</TextBase>
+						</Pressable>
+					</View>
 				</ScrollView>
-				{showConfetti ? (
+				{shouldShowConfetti ? (
 					<View pointerEvents="none" style={styles.confettiLayer}>
 						<ConfettiCannon
 							count={60}
@@ -94,7 +91,6 @@ const SurveyResults = () => {
 							explosionSpeed={220}
 							fallSpeed={1800}
 							recycle={false}
-							onAnimationEnd={() => setShowConfetti(false)}
 						/>
 					</View>
 				) : null}
@@ -112,14 +108,14 @@ const styles = StyleSheet.create({
 	},
 	container: {
 		paddingHorizontal: 16,
-		paddingTop: 8,
-		paddingBottom: 24,
+		paddingTop: 12,
+		paddingBottom: 16,
 		flexGrow: 1,
-		justifyContent: 'space-between',
-		gap: 20,
+		justifyContent: 'center',
 	},
-	content: {
-		gap: 20,
+	contentBlock: {
+		gap: 18,
+		alignItems: 'stretch',
 	},
 	hero: {
 		flexDirection: 'row',

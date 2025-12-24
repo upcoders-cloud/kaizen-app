@@ -18,12 +18,7 @@ const CreateRoute = () => {
 					headerShown: true,
 					headerTitleAlign: 'center',
 					contentStyle: {backgroundColor: colors.background},
-					headerLeft: () => (
-						<Pressable onPress={handleBack} style={styles.backButton}>
-							<Feather name="arrow-left" size={18} color={colors.primary} />
-							<Text style={styles.backText}>Wróć</Text>
-						</Pressable>
-					),
+					headerLeft: () => null
 				}}
 			/>
 			<SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>

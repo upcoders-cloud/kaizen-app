@@ -10,6 +10,10 @@ import {
 	PUT,
 	REQUEST_FAILED_WITH_STATUS
 } from 'src/constants/constans';
+import authService from 'src/server/services/authService';
+import {AUTH_BEARER_PREFIX, MMKV_AUTH_KEY} from 'src/constants/constans';
+import {getItem, setItem, removeItem} from 'store/storage';
+import {getAccessTokenExpiration} from 'utils/jwt';
 
 class HttpClient {
 	constructor(client) {
@@ -72,6 +76,80 @@ const axiosInstance = axios.create({
 		[CONTENT_TYPE]: APPLICATION_JSON,
 	},
 });
+
+let isRefreshing = false;
+let refreshQueue = [];
+
+const processRefreshQueue = (error, token = null) => {
+	refreshQueue.forEach((promise) => {
+		if (error) {
+			promise.reject(error);
+		} else {
+			promise.resolve(token);
+		}
+	});
+	refreshQueue = [];
+};
+
+axiosInstance.interceptors.response.use(
+	(response) => response,
+	async (error) => {
+		const originalRequest = error?.config;
+		const status = error?.response?.status;
+		const isRefreshRequest = originalRequest?.url?.includes('/api/access/token/refresh');
+
+		if (status !== 401 || originalRequest?._retry || isRefreshRequest) {
+			return Promise.reject(error);
+		}
+
+		originalRequest._retry = true;
+		const authData = getItem(MMKV_AUTH_KEY);
+		if (!authData?.accessToken) {
+			console.log('[auth] 401 without token, redirect likely needed.');
+			return Promise.reject(error);
+		}
+
+		if (isRefreshing) {
+			return new Promise((resolve, reject) => {
+				refreshQueue.push({resolve, reject});
+			}).then((token) => {
+				originalRequest.headers.Authorization = `${AUTH_BEARER_PREFIX} ${token}`;
+				return axiosInstance.request(originalRequest);
+			});
+		}
+
+		isRefreshing = true;
+		console.log('[auth] 401 detected, refreshing token...');
+		try {
+			const response = await authService.refresh(undefined, {withCredentials: true});
+			const accessToken = response?.access;
+			if (!accessToken) {
+				throw new Error('Missing access token during refresh');
+			}
+
+			const updatedAuthData = {
+				...authData,
+				isAuthenticated: true,
+				accessToken,
+				accessTokenExpiration: getAccessTokenExpiration(accessToken, {skewMs: 60 * 1000}),
+				error: null,
+			};
+			setItem(MMKV_AUTH_KEY, updatedAuthData);
+			axiosInstance.defaults.headers.common.Authorization = `${AUTH_BEARER_PREFIX} ${accessToken}`;
+			processRefreshQueue(null, accessToken);
+			console.log('[auth] Token refreshed, retrying original request.');
+			originalRequest.headers.Authorization = `${AUTH_BEARER_PREFIX} ${accessToken}`;
+			return axiosInstance.request(originalRequest);
+		} catch (refreshError) {
+			console.log('[auth] Refresh failed, clearing auth.');
+			removeItem(MMKV_AUTH_KEY);
+			processRefreshQueue(refreshError, null);
+			return Promise.reject(refreshError);
+		} finally {
+			isRefreshing = false;
+		}
+	}
+);
 
 const httpClient = new HttpClient(axiosInstance);
 

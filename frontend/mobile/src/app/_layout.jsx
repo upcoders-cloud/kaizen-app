@@ -1,6 +1,6 @@
 import {StatusBar} from 'expo-status-bar';
 import {Redirect, Stack} from 'expo-router';
-import {ActivityIndicator, StyleSheet, View} from 'react-native';
+import {ActivityIndicator, AppState, StyleSheet, View} from 'react-native';
 import Toast from 'react-native-toast-message';
 import colors from 'theme/colors';
 import {useAuthStore} from "store/authStore";
@@ -14,7 +14,16 @@ const RootLayout = () => {
 	useEffect(() => {
 		checkAuth();
 		setIsLoading(false);
-	}, []);
+
+		const subscription = AppState.addEventListener('change', (nextState) => {
+			if (nextState === 'active') {
+				console.log('[auth] App resumed, checking auth.');
+				checkAuth();
+			}
+		});
+
+		return () => subscription.remove();
+	}, [checkAuth]);
 
 	if (isLoading) {
 		return (

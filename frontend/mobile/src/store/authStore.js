@@ -37,6 +37,21 @@ export const useAuthStore = create((set, get) => ({
 				user: response,
 				error: null,
 			};
+			console.log(
+				'[auth] Login success, accessTokenExpiration:',
+				authData.accessTokenExpiration
+					? new Date(authData.accessTokenExpiration).toLocaleString('pl-PL', {
+						timeZone: 'Europe/Warsaw',
+						year: 'numeric',
+						month: '2-digit',
+						day: '2-digit',
+						hour: '2-digit',
+						minute: '2-digit',
+						second: '2-digit',
+						hour12: false,
+					})
+					: null
+			);
 
 			// save in MMKV
 			setItem(MMKV_AUTH_KEY, authData);
@@ -87,6 +102,21 @@ export const useAuthStore = create((set, get) => ({
 				user: get().user ?? null,
 				error: null,
 			};
+			console.log(
+				'[auth] Refresh success, accessTokenExpiration:',
+				updatedAuthData.accessTokenExpiration
+					? new Date(updatedAuthData.accessTokenExpiration).toLocaleString('pl-PL', {
+						timeZone: 'Europe/Warsaw',
+						year: 'numeric',
+						month: '2-digit',
+						day: '2-digit',
+						hour: '2-digit',
+						minute: '2-digit',
+						second: '2-digit',
+						hour12: false,
+					})
+					: null
+			);
 
 			set(updatedAuthData);
 			setItem(MMKV_AUTH_KEY, updatedAuthData);
@@ -119,6 +149,43 @@ export const useAuthStore = create((set, get) => ({
 		const resolvedExpiration =
 			accessTokenExpiration ??
 			getAccessTokenExpiration(accessToken, {skewMs: 60 * 1000});
+
+		console.log('[auth] checkAuth', {
+			accessTokenExpiration: accessTokenExpiration
+				? new Date(accessTokenExpiration).toLocaleString('pl-PL', {
+					timeZone: 'Europe/Warsaw',
+					year: 'numeric',
+					month: '2-digit',
+					day: '2-digit',
+					hour: '2-digit',
+					minute: '2-digit',
+					second: '2-digit',
+					hour12: false,
+				})
+				: null,
+			resolvedExpiration: resolvedExpiration
+				? new Date(resolvedExpiration).toLocaleString('pl-PL', {
+					timeZone: 'Europe/Warsaw',
+					year: 'numeric',
+					month: '2-digit',
+					day: '2-digit',
+					hour: '2-digit',
+					minute: '2-digit',
+					second: '2-digit',
+					hour12: false,
+				})
+				: null,
+			now: new Date().toLocaleString('pl-PL', {
+				timeZone: 'Europe/Warsaw',
+				year: 'numeric',
+				month: '2-digit',
+				day: '2-digit',
+				hour: '2-digit',
+				minute: '2-digit',
+				second: '2-digit',
+				hour12: false,
+			}),
+		});
 
 		if (accessToken && resolvedExpiration && resolvedExpiration > Date.now()) {
 			const updatedAuthData = accessTokenExpiration === resolvedExpiration

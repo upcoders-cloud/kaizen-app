@@ -2,6 +2,18 @@ from django.db import models
 from django.conf import settings
 
 
+class Category(models.Model):
+    name = models.CharField(max_length=100, verbose_name="Nazwa kategorii")
+    is_active = models.BooleanField(default=True, verbose_name="Czy aktywna?")
+
+    class Meta:
+        verbose_name = "Kategoria"
+        verbose_name_plural = "Kategorie"
+
+    def __str__(self):
+        return self.name
+
+
 class KaizenPost(models.Model):
     class Meta:
         verbose_name = "Post"
@@ -13,23 +25,18 @@ class KaizenPost(models.Model):
         IN_PROGRESS = "IN_PROGRESS", "W trakcie wdrożenia"
         IMPLEMENTED = "IMPLEMENTED", "Wdrożone"
 
-    CATEGORY_CHOICES = [
-        ('BHP', 'BHP'),
-        ('PROCES', 'Usprawnienie Procesu'),
-        ('JAKOSC', 'Jakość'),
-        ('INNE', 'Inne'),
-    ]
 
     title = models.CharField(max_length=200, verbose_name="Tytuł")
 
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     content = models.TextField(verbose_name="Treść")
-    category = models.CharField(
-        max_length=20,
-        choices=CATEGORY_CHOICES,
-        default='INNE',
-        verbose_name="Kategoria"
+    category = models.ForeignKey(
+        Category,
+        on_delete=models.PROTECT,  # Zabezpiecza przed usunięciem kategorii, która ma posty
+        verbose_name="Kategoria",
+        limit_choices_to={'is_active': True}  # To kluczowy element Twojej prośby
     )
+
     status = models.CharField(
         max_length=20,
         choices=Status.choices,
@@ -40,7 +47,7 @@ class KaizenPost(models.Model):
 
     def __str__(self):
         # Updated to show title and category in admin lists
-        return f"[{self.get_category_display()}] {self.title}"
+        return f"[{self.category.name}] {self.title}"
 
     @property
     def likes_count(self):
@@ -118,6 +125,7 @@ class Comment(models.Model):
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     text = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
+
 
 class Like(models.Model):
     post = models.ForeignKey(KaizenPost, related_name='likes', on_delete=models.CASCADE)

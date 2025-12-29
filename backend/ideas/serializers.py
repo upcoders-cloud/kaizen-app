@@ -4,7 +4,7 @@ import uuid
 from PIL import Image
 from django.core.files.base import ContentFile
 from rest_framework import serializers
-from .models import KaizenPost, Comment, Like, PostImage, PostSurvey
+from .models import KaizenPost, Comment, Like, PostImage, PostSurvey, Notification
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -141,6 +141,33 @@ class LikeSerializer(serializers.ModelSerializer):
         model = Like
         fields = ['id', 'user', 'post']
         read_only_fields = ['user']
+
+
+class NotificationSerializer(serializers.ModelSerializer):
+    actor = UserPublicSerializer(read_only=True)
+    post_id = serializers.IntegerField(source='post.id', read_only=True)
+    post_title = serializers.CharField(source='post.title', read_only=True)
+    comment_id = serializers.IntegerField(source='comment.id', read_only=True)
+    comment_text = serializers.CharField(source='comment.text', read_only=True)
+    is_read = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Notification
+        fields = [
+            'id',
+            'type',
+            'created_at',
+            'read_at',
+            'is_read',
+            'actor',
+            'post_id',
+            'post_title',
+            'comment_id',
+            'comment_text',
+        ]
+
+    def get_is_read(self, obj):
+        return obj.read_at is not None
 
 
 class PostSurveySerializer(serializers.ModelSerializer):

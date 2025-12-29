@@ -6,6 +6,7 @@ import Input from 'components/Input/Input';
 import Button from 'components/Button/Button';
 import Text from 'components/Text/Text';
 import ImagePicker from 'components/ImagePicker/ImagePicker';
+import OptionPills from 'components/OptionPills/OptionPills';
 import {CONTENT_IS_REQUIRED, EMPTY_STRING, FAILED_TO_CREATE_POST, TITLE_IS_REQUIRED} from "constants/constans";
 
 const CATEGORIES = [
@@ -99,23 +100,7 @@ const CreatePost = ({
 
 			<View style={styles.sectionCard}>
 				<Text style={styles.sectionTitle}>Kategoria</Text>
-				<View style={styles.categoryRow}>
-					{CATEGORIES.map((cat) => (
-						<Button
-							key={cat.value}
-							title={cat.label}
-							variant="ghost"
-							onPress={() => setCategory(cat.value)}
-							style={[
-								styles.categoryButton,
-								cat.value === category
-									? styles.categoryButtonActive
-									: styles.categoryButtonInactive,
-							]}
-							textStyle={cat.value === category ? styles.categoryButtonTextActive : styles.categoryButtonText}
-						/>
-					))}
-				</View>
+				<OptionPills options={CATEGORIES} value={category} onChange={setCategory} />
 			</View>
 
 			<View style={styles.sectionCard}>
@@ -232,36 +217,6 @@ const styles = StyleSheet.create({
 	},
 	multilineInput: {
 		minHeight: 120,
-	},
-	categoryRow: {
-		flexDirection: 'row',
-		flexWrap: 'wrap',
-		gap: 8,
-	},
-	categoryButton: {
-		paddingHorizontal: 12,
-		paddingVertical: 6,
-		minHeight: 32,
-		borderRadius: 999,
-		borderWidth: 1,
-	},
-	categoryButtonInactive: {
-		backgroundColor: '#f8fafc',
-		borderColor: colors.border,
-	},
-	categoryButtonActive: {
-		backgroundColor: '#eef2ff',
-		borderColor: '#c7d2fe',
-	},
-	categoryButtonText: {
-		fontSize: 12,
-		fontWeight: '700',
-		color: colors.muted,
-	},
-	categoryButtonTextActive: {
-		fontSize: 12,
-		fontWeight: '700',
-		color: colors.primary,
 	},
 	submitButton: {
 		marginTop: 4,

@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import KaizenPost, Comment, Like, PostImage, PostSurvey
+from .models import KaizenPost, Comment, Like, PostImage, PostSurvey, Notification
 
 
 # 1. This class allows you to manage images directly inside the KaizenPost form
@@ -55,3 +55,9 @@ admin.site.register(Like)
 @admin.register(PostSurvey)
 class PostSurveyAdmin(admin.ModelAdmin):
     list_display = ('post', 'frequency_value', 'frequency_unit', 'affected_people', 'time_lost_minutes')
+
+
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = ('type', 'recipient', 'actor', 'post', 'created_at', 'read_at')
+    list_filter = ('type', 'created_at', 'read_at')

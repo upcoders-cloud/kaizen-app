@@ -72,6 +72,9 @@ const Home = () => {
 		setActiveFilter(filter);
 		setFilterVisible(false);
 	};
+	const handleOpenNotifications = () => {
+		router.push('/notifications');
+	};
 	const handleOpenComments = (post) => {
 		if (!post?.id) return;
 		router.push(`/post/${post.id}`);
@@ -167,7 +170,11 @@ const Home = () => {
 		<SafeAreaProvider>
 			<SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
 				<View style={styles.decorativeBubble} pointerEvents="none" />
-				<AppHeader title="Główna" onFilterPress={handleOpenFilter} />
+				<AppHeader
+					title="Główna"
+					onFilterPress={handleOpenFilter}
+					onNotificationsPress={handleOpenNotifications}
+				/>
 					<PostList
 						posts={filteredPosts}
 						loading={loading}

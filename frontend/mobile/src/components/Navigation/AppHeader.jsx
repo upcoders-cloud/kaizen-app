@@ -3,8 +3,9 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import {Feather} from '@expo/vector-icons';
 import Text from 'components/Text/Text';
 import colors from 'theme/colors';
+import NotificationsBell from 'components/Notifications/NotificationsBell';
 
-const AppHeader = ({title = 'Główna', onFilterPress}) => {
+const AppHeader = ({title = 'Główna', onFilterPress, onNotificationsPress}) => {
 	return (
 		<SafeAreaView edges={['top']} style={styles.safeArea}>
 			<View style={styles.container}>
@@ -16,10 +17,11 @@ const AppHeader = ({title = 'Główna', onFilterPress}) => {
 					<Pressable style={styles.iconButton}>
 						<Feather name="search" size={18} color={colors.primary} />
 					</Pressable>
-					<Pressable style={styles.iconButton}>
-						<Feather name="bell" size={18} color={colors.primary} />
-						<View style={styles.badgeDot} />
-					</Pressable>
+					<NotificationsBell
+						onPress={onNotificationsPress}
+						style={styles.iconButton}
+						badgeStyle={styles.badgeDot}
+					/>
 				</View>
 			</View>
 		</SafeAreaView>

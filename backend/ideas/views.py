@@ -2,14 +2,34 @@ import logging
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from .models import KaizenPost, Comment, Like, PostSurvey
-from .serializers import PostSerializer, CommentSerializer, LikeSerializer, PostSurveySerializer, PostSurveyInputSerializer
+from .models import KaizenPost, Comment, Like, PostSurvey, Notification
+from .serializers import (
+    PostSerializer,
+    CommentSerializer,
+    LikeSerializer,
+    PostSurveySerializer,
+    PostSurveyInputSerializer,
+    NotificationSerializer,
+)
 from .permissions import IsCommentAuthorOrReadOnly, IsPostAuthorOrReadOnly
 from rest_framework.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from .services.post_survey_calculator import calculate_survey_results
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
+
+
+def create_notification(notification_type, recipient, actor, post, comment=None):
+    if not recipient or not actor or recipient == actor:
+        return None
+    return Notification.objects.create(
+        type=notification_type,
+        recipient=recipient,
+        actor=actor,
+        post=post,
+        comment=comment,
+    )
 
 class PostViewSet(viewsets.ModelViewSet):
     queryset = KaizenPost.objects.all().order_by('-created_at')
@@ -45,6 +65,7 @@ class PostViewSet(viewsets.ModelViewSet):
                 'likes_count': post.likes.count(),
                 'is_liked_by_me': False,
             })
+        create_notification(Notification.Type.LIKE, post.author, user, post)
         return Response({
             'status': 'liked',
             'likes_count': post.likes.count(),
@@ -66,8 +87,9 @@ class PostViewSet(viewsets.ModelViewSet):
             )
             serializer = CommentSerializer(data=request.data)
             if serializer.is_valid():
-                serializer.save(author=request.user, post=post)
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
+                comment = serializer.save(author=request.user, post=post)
+                create_notification(Notification.Type.COMMENT, post.author, request.user, post, comment)
+                return Response(CommentSerializer(comment).data, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=True, methods=['post', 'put'])
@@ -113,7 +135,14 @@ class CommentViewSet(viewsets.ModelViewSet):
     # To jest KLUCZOWE przy dodawaniu komentarza:
     # Automatycznie przypisujemy autora jako osobę zalogowaną
     def perform_create(self, serializer):
-        serializer.save(author=self.request.user)
+        comment = serializer.save(author=self.request.user)
+        create_notification(
+            Notification.Type.COMMENT,
+            comment.post.author,
+            self.request.user,
+            comment.post,
+            comment
+        )
 
 
 
@@ -126,9 +155,42 @@ class LikeViewSet(viewsets.ModelViewSet):
         try:
             # Próba zapisania
             with transaction.atomic():
-                serializer.save(user=self.request.user)
+                like = serializer.save(user=self.request.user)
+                create_notification(Notification.Type.LIKE, like.post.author, self.request.user, like.post)
         except IntegrityError:
             # Jeśli baza krzyknie, że duplikat ->  HTTP 400 dla Frontendu
             raise ValidationError({
                 "detail": "Już polubiłeś ten post! (Duplikat)"
             })
+
+
+class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = NotificationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return (
+            Notification.objects.filter(recipient=self.request.user)
+            .select_related('actor', 'post', 'comment')
+            .order_by('-created_at')
+        )
+
+    @action(detail=True, methods=['post'])
+    def mark_read(self, request, pk=None):
+        notification = self.get_object()
+        if notification.read_at is None:
+            notification.read_at = timezone.now()
+            notification.save(update_fields=['read_at'])
+        serializer = self.get_serializer(notification)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['post'])
+    def mark_all_read(self, request):
+        now = timezone.now()
+        updated = self.get_queryset().filter(read_at__isnull=True).update(read_at=now)
+        return Response({'marked_count': updated})
+
+    @action(detail=False, methods=['get'])
+    def unread_count(self, request):
+        count = self.get_queryset().filter(read_at__isnull=True).count()
+        return Response({'count': count})

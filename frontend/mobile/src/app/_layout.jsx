@@ -47,6 +47,7 @@ const RootLayout = () => {
 				</Stack.Protected>
 				<Stack.Protected guard={isAuthenticated} fallback={<Redirect href="/(auth)/login" />}>
 					<Stack.Screen name="(tabs)" options={{headerShown: false}} />
+					<Stack.Screen name="notifications" options={{headerShown: false}} />
 					<Stack.Screen name="post/[id]" options={{headerShown: false}} />
 					<Stack.Screen name="post/[id]/edit" options={{headerShown: false}} />
 					<Stack.Screen name="post/[id]/survey" options={{headerShown: false}} />

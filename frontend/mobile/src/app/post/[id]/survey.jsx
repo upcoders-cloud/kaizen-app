@@ -16,6 +16,7 @@ import colors from 'theme/colors';
 import Input from 'components/Input/Input';
 import Button from 'components/Button/Button';
 import TextBase from 'components/Text/Text';
+import OptionPills from 'components/OptionPills/OptionPills';
 import postsService from 'src/server/services/postsService';
 
 const UNITS = [
@@ -131,18 +132,7 @@ const SurveyScreen = () => {
 								keyboardType="numeric"
 								returnKeyType="done"
 							/>
-							<View style={styles.unitRow}>
-								{UNITS.map((unit) => (
-									<Button
-										key={unit.value}
-										title={unit.label}
-										variant={frequencyUnit === unit.value ? 'primary' : 'outline'}
-										onPress={() => setFrequencyUnit(unit.value)}
-										style={styles.unitButton}
-										textStyle={frequencyUnit === unit.value ? styles.unitButtonTextActive : styles.unitButtonText}
-									/>
-								))}
-							</View>
+							<OptionPills options={UNITS} value={frequencyUnit} onChange={setFrequencyUnit} />
 							<Input
 								label="Liczba osób dotkniętych"
 								placeholder="np. 5"
@@ -194,21 +184,6 @@ const styles = StyleSheet.create({
 	subtitle: {
 		color: colors.muted,
 		marginBottom: 8,
-	},
-	unitRow: {
-		flexDirection: 'row',
-		flexWrap: 'wrap',
-		gap: 8,
-	},
-	unitButton: {
-		paddingHorizontal: 12,
-		borderColor: colors.border,
-	},
-	unitButtonText: {
-		color: colors.primary,
-	},
-	unitButtonTextActive: {
-		color: colors.surface,
 	},
 	error: {
 		color: colors.danger,

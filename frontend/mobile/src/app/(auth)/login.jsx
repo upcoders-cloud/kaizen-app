@@ -9,6 +9,7 @@ import {
 	Pressable,
 	ScrollView,
 	StyleSheet,
+	useWindowDimensions,
 	View,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
@@ -21,6 +22,8 @@ import {EMPTY_STRING, PLATFORM_IOS, STRING} from "constants/constans";
 
 const Login = () => {
 	const appVersion = Constants.expoConfig?.version ?? '1.0.0';
+	const {width} = useWindowDimensions();
+	const isCompact = width < 360;
 	const [username, setUsername] = useState(EMPTY_STRING);
 	const [password, setPassword] = useState(EMPTY_STRING);
 	const [loading, setLoading] = useState(false);
@@ -136,9 +139,9 @@ const Login = () => {
 								leftIcon={<Feather name="log-in" size={16} color="#ffffff" />}
 								style={styles.submitButton}
 							/>
-							<Pressable style={styles.helperRow}>
+							<Pressable style={[styles.helperRow, isCompact ? styles.helperRowCompact : null]}>
 								<Text style={styles.helperLink}>Nie pamiętasz hasła?</Text>
-								<View style={styles.dot} />
+								{isCompact ? null : <View style={styles.dot} />}
 								<Text style={styles.helperMuted}>Skontaktuj się z administratorem</Text>
 							</Pressable>
 						</View>
@@ -261,15 +264,23 @@ const styles = StyleSheet.create({
 	helperRow: {
 		flexDirection: 'row',
 		alignItems: 'center',
+		flexWrap: 'wrap',
 		gap: 8,
 		paddingHorizontal: 4,
+	},
+	helperRowCompact: {
+		flexDirection: 'column',
+		alignItems: 'flex-start',
+		gap: 4,
 	},
 	helperLink: {
 		color: colors.primary,
 		fontWeight: '700',
+		flexShrink: 1,
 	},
 	helperMuted: {
 		color: colors.muted,
+		flexShrink: 1,
 	},
 	dot: {
 		width: 4,

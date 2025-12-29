@@ -127,3 +127,48 @@ class Like(models.Model):
         verbose_name = "Polubienie"  # Liczba pojedyncza
         verbose_name_plural = "Polubienia"  # Liczba mnoga (to pokaże się w Adminie)
         unique_together = ('post', 'user') # Jeden like na usera per post
+
+
+class Notification(models.Model):
+    class Type(models.TextChoices):
+        LIKE = "LIKE", "Like"
+        COMMENT = "COMMENT", "Comment"
+
+    recipient = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name='notifications',
+        on_delete=models.CASCADE
+    )
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name='sent_notifications',
+        on_delete=models.CASCADE
+    )
+    post = models.ForeignKey(
+        KaizenPost,
+        related_name='notifications',
+        on_delete=models.CASCADE
+    )
+    comment = models.ForeignKey(
+        Comment,
+        related_name='notifications',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True
+    )
+    type = models.CharField(max_length=20, choices=Type.choices)
+    created_at = models.DateTimeField(auto_now_add=True)
+    read_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Powiadomienie"
+        verbose_name_plural = "Powiadomienia"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['recipient', 'read_at']),
+            models.Index(fields=['recipient', 'created_at']),
+        ]
+
+    @property
+    def is_read(self):
+        return self.read_at is not None

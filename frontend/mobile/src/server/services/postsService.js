@@ -6,10 +6,12 @@ const basePath = ensureTrailingSlash('/api/posts');
 
 const postsService = {
 	list(params) {
-		return httpClient.get(basePath, {params});
+		const options = withAuthHeaders({params});
+		return httpClient.get(basePath, options);
 	},
 	get(id, params) {
-		return httpClient.get(`${basePath}${id}/`, {params});
+		const options = withAuthHeaders({params});
+		return httpClient.get(`${basePath}${id}/`, options);
 	},
 	create(payload) {
 		const options = withAuthHeaders();

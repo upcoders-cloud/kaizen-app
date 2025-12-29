@@ -40,8 +40,16 @@ class PostViewSet(viewsets.ModelViewSet):
 
         if not created:
             like_obj.delete()  # Jeśli już był like, to go usuwamy (toggle)
-            return Response({'status': 'unliked'})
-        return Response({'status': 'liked'})
+            return Response({
+                'status': 'unliked',
+                'likes_count': post.likes.count(),
+                'is_liked_by_me': False,
+            })
+        return Response({
+            'status': 'liked',
+            'likes_count': post.likes.count(),
+            'is_liked_by_me': True,
+        })
 
     @action(detail=True, methods=['post', 'get'])
     def comments(self, request, pk=None):

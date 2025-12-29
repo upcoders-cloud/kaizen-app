@@ -15,5 +15,7 @@ const styles = StyleSheet.create({
 	base: {
 		color: colors.text,
 		fontSize: 14,
+		// Avoid extra font padding on Android, keeps vertical spacing symmetric.
+		includeFontPadding: false,
 	},
 });

@@ -181,7 +181,15 @@ export default function PostDetails() {
 		setIsLiked(nextLiked);
 		setLikesCount((prev) => Math.max(0, prev + (nextLiked ? 1 : -1)));
 		try {
-			await postsService.toggleLike(resolvedId);
+			const response = await postsService.toggleLike(resolvedId);
+			const nextServerLiked = response?.is_liked_by_me;
+			const nextServerCount = response?.likes_count;
+			if (typeof nextServerLiked === 'boolean') {
+				setIsLiked(nextServerLiked);
+			}
+			if (typeof nextServerCount === 'number') {
+				setLikesCount(nextServerCount);
+			}
 		} catch (err) {
 			setIsLiked(!nextLiked);
 			setLikesCount((prev) => Math.max(0, prev + (nextLiked ? -1 : 1)));
@@ -256,10 +264,10 @@ export default function PostDetails() {
 		setPreviewVisible(true);
 	};
 
-	const scrollToComments = () => {
-		if (!scrollRef.current) return;
+	const scrollToComments = useCallback(() => {
+		if (!scrollRef.current || !commentsLayoutY) return;
 		scrollRef.current.scrollTo({y: commentsLayoutY, animated: true});
-	};
+	}, [commentsLayoutY]);
 
 	const statusMeta = getPostStatusMeta(post?.status);
 	const authorFullName = [post?.author?.first_name, post?.author?.last_name]
@@ -333,31 +341,32 @@ export default function PostDetails() {
 					<>
 						{/* Header section */}
 						<View style={styles.headerSection}>
-							<View style={styles.badgesRow}>
-								<TextBase style={[styles.categoryBadge, categoryStyle]}>
-									{post?.category || 'Zgłoszenie'}
-								</TextBase>
-								<TextBase
-									style={[
-										styles.statusBadge,
-										{color: statusMeta.color, backgroundColor: statusMeta.backgroundColor},
-									]}
-								>
-									{statusMeta.label}
-								</TextBase>
-								{post?.id ? <TextBase style={styles.postId}>#{post.id}</TextBase> : null}
+							<View style={styles.headerTopRow}>
+								<View style={styles.badgesRow}>
+									<TextBase style={[styles.categoryBadge, categoryStyle]}>
+										{post?.category || 'Zgłoszenie'}
+									</TextBase>
+									<TextBase
+										style={[
+											styles.statusBadge,
+											{color: statusMeta.color, backgroundColor: statusMeta.backgroundColor},
+										]}
+									>
+										{statusMeta.label}
+									</TextBase>
+									{post?.id ? <TextBase style={styles.postId}>#{post.id}</TextBase> : null}
+								</View>
+								<View style={styles.metaRow}>
+									<TextBase style={styles.authorName}>{authorName}</TextBase>
+									<TextBase style={styles.metaSeparator}>•</TextBase>
+									<TextBase style={styles.metaText}>{formattedDate}</TextBase>
+								</View>
 							</View>
 							<TextBase style={styles.postTitle}>{post?.title || 'Bez tytułu'}</TextBase>
-							<View style={styles.metaRow}>
-								<TextBase style={styles.authorName}>{authorName}</TextBase>
-								<TextBase style={styles.metaSeparator}>•</TextBase>
-								<TextBase style={styles.metaText}>{formattedDate}</TextBase>
-							</View>
 						</View>
 
 						{/* Description section */}
-						<View style={styles.section}>
-							<TextBase style={styles.sectionTitle}>Opis</TextBase>
+						<View style= {[styles.section, styles.descriptionSection]}>
 							<TextBase style={styles.descriptionText}>
 								{post?.content || 'Brak treści.'}
 							</TextBase>
@@ -568,6 +577,12 @@ const styles = StyleSheet.create({
 		borderBottomWidth: 1,
 		borderBottomColor: colors.border,
 	},
+	headerTopRow: {
+		flexDirection: 'row',
+		justifyContent: 'space-between',
+		alignItems: 'center',
+		gap: 12,
+	},
 	badgesRow: {
 		flexDirection: 'row',
 		flexWrap: 'wrap',
@@ -621,6 +636,9 @@ const styles = StyleSheet.create({
 		gap: 8,
 		borderBottomWidth: 1,
 		borderBottomColor: colors.border,
+	},
+	descriptionSection: {
+		paddingTop: 0,
 	},
 	descriptionText: {
 		fontSize: 15,

@@ -2,7 +2,18 @@ import {ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View} fro
 import Post from './Post';
 import colors from 'theme/colors';
 
-const PostList = ({posts = [], loading = false, error = null, onRefresh, onPressItem, onToggleLike}) => {
+const PostList = ({
+	posts = [],
+	loading = false,
+	error = null,
+	onRefresh,
+	onPressItem,
+	onToggleLike,
+	onPressComment,
+	onPressMore,
+	currentUserId,
+	isDeleting = false,
+}) => {
 	if (loading) {
 		return (
 			<View style={styles.centered}>
@@ -29,6 +40,12 @@ const PostList = ({posts = [], loading = false, error = null, onRefresh, onPress
 					post={item}
 					onPress={() => onPressItem?.(item)}
 					onToggleLike={onToggleLike}
+					onPressComment={onPressComment}
+					onPressMore={onPressMore}
+					canManage={
+						currentUserId != null && String(item?.author?.id) === String(currentUserId)
+					}
+					isDeleting={isDeleting}
 				/>
 			)}
 			contentContainerStyle={posts.length ? styles.listContent : styles.centered}

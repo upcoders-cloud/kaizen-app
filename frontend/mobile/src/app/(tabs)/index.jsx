@@ -1,5 +1,5 @@
 import {useCallback, useMemo, useState} from 'react';
-import {Modal, Pressable, StyleSheet, Text, View} from 'react-native';
+import {Alert, Modal, Pressable, StyleSheet, Text, View} from 'react-native';
 import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';
 import {Feather} from '@expo/vector-icons';
 import {useRouter} from 'expo-router';
@@ -11,6 +11,7 @@ import colors from 'theme/colors';
 import {useAuthStore} from 'store/authStore';
 import {getJwtPayload} from 'utils/jwt';
 import AppHeader from 'components/Navigation/AppHeader';
+import Toast from 'react-native-toast-message';
 
 const FILTERS = [
 	{key: 'all', label: 'Wszystkie'},
@@ -26,6 +27,9 @@ const Home = () => {
 	const [activeFilter, setActiveFilter] = useState(FILTERS[0]);
 	const [filterVisible, setFilterVisible] = useState(false);
 	const [likingPostId, setLikingPostId] = useState(null);
+	const [menuVisible, setMenuVisible] = useState(false);
+	const [menuPost, setMenuPost] = useState(null);
+	const [deletingPostId, setDeletingPostId] = useState(null);
 	const router = useRouter();
 	const accessToken = useAuthStore((state) => state.accessToken);
 	const currentUserId = useMemo(
@@ -68,6 +72,54 @@ const Home = () => {
 		setActiveFilter(filter);
 		setFilterVisible(false);
 	};
+	const handleOpenComments = (post) => {
+		if (!post?.id) return;
+		router.push(`/post/${post.id}`);
+	};
+	const handleOpenMenu = (post) => {
+		if (!post?.id || deletingPostId) return;
+		setMenuPost(post);
+		setMenuVisible(true);
+	};
+	const handleCloseMenu = () => setMenuVisible(false);
+	const handleEditPost = () => {
+		if (!menuPost?.id) return;
+		handleCloseMenu();
+		router.push(`/post/${menuPost.id}/edit`);
+	};
+	const handleDeletePost = () => {
+		if (!menuPost?.id || deletingPostId) return;
+		handleCloseMenu();
+		Alert.alert('Usuń post', 'Na pewno usunąć ten post?', [
+			{text: 'Anuluj', style: 'cancel'},
+			{
+				text: 'Usuń',
+				style: 'destructive',
+				onPress: async () => {
+					setDeletingPostId(menuPost.id);
+					try {
+						await postsService.remove(menuPost.id);
+						setAllPosts((prev) => prev.filter((post) => String(post?.id) !== String(menuPost.id)));
+						setMenuPost(null);
+						Toast.show({
+							type: 'success',
+							text1: 'Post został poprawnie usunięty',
+							visibilityTime: 2000,
+						});
+					} catch (err) {
+						Toast.show({
+							type: 'error',
+							text1: 'Nie udało się usunąć posta',
+							text2: err?.message || 'Spróbuj ponownie',
+							visibilityTime: 2500,
+						});
+					} finally {
+						setDeletingPostId(null);
+					}
+				},
+			},
+		]);
+	};
 
 	const handleToggleLike = async (postId) => {
 		if (!postId || likingPostId) return;
@@ -87,7 +139,21 @@ const Home = () => {
 			});
 		});
 		try {
-			await postsService.toggleLike(postId);
+			const response = await postsService.toggleLike(postId);
+			const nextLiked = response?.is_liked_by_me;
+			const nextLikesCount = response?.likes_count;
+			if (typeof nextLiked === 'boolean' || typeof nextLikesCount === 'number') {
+				setAllPosts((prev) =>
+					prev.map((post) => {
+						if (String(post?.id) !== String(postId)) return post;
+						return {
+							...post,
+							is_liked_by_me: typeof nextLiked === 'boolean' ? nextLiked : post?.is_liked_by_me,
+							likes_count: typeof nextLikesCount === 'number' ? nextLikesCount : post?.likes_count,
+						};
+					})
+				);
+			}
 		} catch (err) {
 			if (previousPosts) {
 				setAllPosts(previousPosts);
@@ -109,6 +175,10 @@ const Home = () => {
 						onRefresh={loadPosts}
 						onPressItem={(item) => router.push(`/post/${item.id}`)}
 						onToggleLike={handleToggleLike}
+						onPressComment={handleOpenComments}
+						onPressMore={handleOpenMenu}
+						currentUserId={currentUserId}
+						isDeleting={Boolean(deletingPostId)}
 					/>
 				<Modal transparent visible={filterVisible} animationType="fade" onRequestClose={handleCloseFilter}>
 					<Pressable style={styles.filterOverlay} onPress={handleCloseFilter}>
@@ -130,6 +200,20 @@ const Home = () => {
 									</Pressable>
 								);
 							})}
+						</Pressable>
+					</Pressable>
+				</Modal>
+				<Modal transparent visible={menuVisible} animationType="fade" onRequestClose={handleCloseMenu}>
+					<Pressable style={styles.menuOverlay} onPress={handleCloseMenu}>
+						<Pressable style={styles.menuCard} onPress={(event) => event.stopPropagation()}>
+							<Pressable style={styles.menuItem} onPress={handleEditPost}>
+								<Feather name="edit-2" size={16} color={colors.primary} />
+								<Text style={styles.menuText}>Edytuj</Text>
+							</Pressable>
+							<Pressable style={styles.menuItem} onPress={handleDeletePost}>
+								<Feather name="trash-2" size={16} color={colors.danger} />
+								<Text style={[styles.menuText, styles.menuTextDanger]}>Usuń</Text>
+							</Pressable>
 						</Pressable>
 					</Pressable>
 				</Modal>
@@ -203,5 +287,38 @@ const styles = StyleSheet.create({
 		borderRadius: 100,
 		backgroundColor: '#36d1dc22',
 		transform: [{rotate: '8deg'}],
+	},
+	menuOverlay: {
+		flex: 1,
+		backgroundColor: 'rgba(15, 23, 42, 0.18)',
+		justifyContent: 'center',
+		paddingHorizontal: 24,
+	},
+	menuCard: {
+		backgroundColor: colors.surface,
+		borderRadius: 14,
+		borderWidth: 1,
+		borderColor: colors.border,
+		paddingVertical: 8,
+		shadowColor: '#0f172a',
+		shadowOpacity: 0.15,
+		shadowRadius: 18,
+		shadowOffset: {width: 0, height: 10},
+		elevation: 5,
+	},
+	menuItem: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		gap: 10,
+		paddingHorizontal: 18,
+		paddingVertical: 12,
+	},
+	menuText: {
+		fontSize: 15,
+		fontWeight: '600',
+		color: colors.text,
+	},
+	menuTextDanger: {
+		color: colors.danger,
 	},
 });

@@ -11,7 +11,15 @@ const CATEGORY_STYLES = {
 	INNE: {backgroundColor: '#F2F4F8', color: '#4A5568'},
 };
 
-const Post = ({post, onPress, onToggleLike}) => {
+const Post = ({
+	post,
+	onPress,
+	onToggleLike,
+	onPressComment,
+	onPressMore,
+	canManage = false,
+	isDeleting = false,
+}) => {
 	const likes = post?.likes_count ?? post?.likes?.length ?? 0;
 	const comments = post?.comments_count ?? post?.comments?.length ?? 0;
 	const authorFullName = [post?.author?.first_name, post?.author?.last_name]
@@ -56,8 +64,15 @@ const Post = ({post, onPress, onToggleLike}) => {
 		onToggleLike?.(post?.id);
 	};
 
-	const handleActionPress = (event) => {
+	const handleCommentPress = (event) => {
 		event.stopPropagation?.();
+		onPressComment?.(post);
+	};
+
+	const handleMorePress = (event) => {
+		event.stopPropagation?.();
+		if (isDeleting) return;
+		onPressMore?.(post);
 	};
 
 	return (
@@ -118,14 +133,20 @@ const Post = ({post, onPress, onToggleLike}) => {
 							</Text>
 						</Pressable>
 					</Animated.View>
-					<Pressable style={styles.footerButton} onPress={handleActionPress}>
+					<Pressable style={styles.footerButton} onPress={handleCommentPress}>
 						<Feather name="plus-circle" size={14} color={colors.primary} />
-						<Text style={styles.footerButtonText}>Dodaj pomysł</Text>
+						<Text style={styles.footerButtonText}>Dodaj komentarz</Text>
 					</Pressable>
-					<Pressable style={styles.footerButton} onPress={handleActionPress}>
-						<Feather name="more-horizontal" size={14} color={colors.primary} />
-						<Text style={styles.footerButtonText}>Więcej</Text>
-					</Pressable>
+					{canManage ? (
+						<Pressable
+							style={[styles.footerButton, isDeleting ? styles.footerButtonDisabled : null]}
+							onPress={handleMorePress}
+							disabled={isDeleting}
+						>
+							<Feather name="more-horizontal" size={14} color={colors.primary} />
+							<Text style={styles.footerButtonText}>Więcej</Text>
+						</Pressable>
+					) : null}
 				</View>
 			</View>
 		</Pressable>
@@ -280,5 +301,8 @@ const styles = StyleSheet.create({
 	},
 	footerButtonTextActive: {
 		color: '#fff',
+	},
+	footerButtonDisabled: {
+		opacity: 0.5,
 	},
 });

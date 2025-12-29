@@ -1,65 +1,36 @@
-# Kaizen Proof of Concept - Backend
+# Kaizen App
 
-## This project is a Django-based backend API, fully containerized with Docker for easy development and deployment.
+Kaizen App is an improvement-idea platform built by **UPCODERS**. This repository contains the backend API and the frontend/mobile clients.
 
-### Prerequisites
+---
 
-- Docker Desktop (ensure it is running)
-- Git
+## 📦 Repository Structure
 
-## Quick Start (Docker)
-
-### Follow these steps to get the server running instantly.
-
-## 1. Clone the Repository
-```bash
-git clone https://github.com/upcoders-cloud/kaizen-app.git
-cd kaizenProofOfConcept
+```
+/backend        # Django REST API
+/frontend       # Frontend projects (including mobile)
+  /mobile       # React Native (Expo) mobile app
 ```
 
-## 2. Configure Environment Variables
-Create a .env file in the backend folder.
-Open backend/.env and ensure the values are correct.
+---
 
-## 3. Run the Application
+## 🚀 Getting Started
 
-This command builds the image, installs dependencies, runs migrations, and starts the server.
-```bash
-docker-compose up --build
-```
-Wait until you see: Starting development server at http://0.0.0.0:8000/
+Choose the part of the system you want to run and follow the dedicated README:
 
-Access the site: http://localhost:8000/
+- **Backend (Django + Docker)** → `backend/README.md`
+- **Mobile app (Expo/React Native)** → `frontend/mobile/README.md`
 
-First-Time Setup (Superuser)
+---
 
-Since the database runs inside the container, you execute commands using docker exec. Run this in a new terminal window while the container is running:
+## 🧩 Tech Overview
 
-```bash
-docker exec -it kaizen_backend python manage.py createsuperuser
-```
+- **Backend:** Django + Django REST Framework, Docker
+- **Mobile:** React Native (Expo), Zustand, MMKV, Axios
 
-Admin Panel: http://localhost:8000/admin/
-# Useful Docker Commands
+---
 
-| Goal                               | Command                                                      |
-|------------------------------------|--------------------------------------------------------------|
-| Stop Server                        | Press `Ctrl + C` in the running terminal                     |
-| Stop & Remove Containers           | `docker-compose down`                                        |
-| Rebuild (after changing requirements) | `docker-compose up --build`                               |
-| Run Migrations Manually            | `docker exec -it kaizen_backend python manage.py migrate`    |
-| Open Shell inside Container        | `docker exec -it kaizen_backend /bin/bash`                   |
+## 📜 License
 
-## Troubleshooting
-
-### **Port is already allocated**
-If you see `"Port is already allocated"`, stop any other service using port **8000**  
-(e.g., a locally running `python manage.py runserver`) and try again.
-
-### **Database errors**
-If `db.sqlite3` permissions get corrupted, delete the file locally and restart Docker.  
-A fresh database will be automatically recreated.
-
-
-
-
+Private proprietary software — © Upcoders.
+Not intended for public distribution.

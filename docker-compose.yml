@@ -6,6 +6,7 @@ services:
     container_name: kaizen_backend
     volumes:
       - ./backend:/app  # Syncs your local code changes to the container instantly
+      - ./backend/media:/app/media
     ports:
       - "8000:8000"
     env_file:

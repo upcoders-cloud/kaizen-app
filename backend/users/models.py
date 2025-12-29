@@ -8,10 +8,18 @@ class CustomUser(AbstractUser):
         verbose_name = "Użytkownik"
         verbose_name_plural = "Użytkownicy"
 
+    GENDER_CHOICES = [
+        ('male', 'Male'),
+        ('female', 'Female'),
+        ('other', 'Other'),
+        ('unspecified', 'Unspecified'),
+    ]
+
     # Pola standardowe (username, password, first_name) dziedziczymy z AbstractUser
     microsoft_oid = models.CharField(max_length=255, unique=True, null=True, blank=True)
     nickname = models.CharField(max_length=50, unique=True)
     is_verified = models.BooleanField(default=True) # Domyślnie aktywny
+    gender = models.CharField(max_length=20, choices=GENDER_CHOICES, default='unspecified')
 
     def save(self, *args, **kwargs):
         if not self.nickname:

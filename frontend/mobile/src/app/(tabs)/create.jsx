@@ -1,0 +1,66 @@
+import {StyleSheet, View} from 'react-native';
+import {Stack, useRouter} from 'expo-router';
+import {SafeAreaView} from 'react-native-safe-area-context';
+import CreatePost from 'components/CreatePost/CreatePost';
+import colors from 'theme/colors';
+import {navigateBack} from 'utils/navigation';
+
+const CreateRoute = () => {
+	const router = useRouter();
+	const handleBack = () => navigateBack(router, '/');
+
+	return (
+		<>
+			<Stack.Screen
+				options={{
+					title: 'Nowe zgłoszenie',
+					headerShown: true,
+					headerTitleAlign: 'center',
+					contentStyle: {backgroundColor: colors.background},
+					headerLeft: () => null
+				}}
+			/>
+			<SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
+				<View style={styles.decorativeBubbleLarge} pointerEvents="none" />
+				<CreatePost
+					onSubmitSuccess={(createdPost) => {
+						if (createdPost?.id) {
+							router.push(`/post/${createdPost.id}/survey`);
+							return;
+						}
+						handleBack();
+					}}
+				/>
+			</SafeAreaView>
+		</>
+	);
+};
+
+export default CreateRoute;
+
+const styles = StyleSheet.create({
+	safeArea: {
+		flex: 1,
+		backgroundColor: colors.background,
+	},
+	backButton: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		gap: 6,
+		paddingHorizontal: 8,
+	},
+	backText: {
+		color: colors.primary,
+		fontWeight: '600',
+	},
+	decorativeBubbleLarge: {
+		position: 'absolute',
+		bottom: -70,
+		right: -50,
+		width: 240,
+		height: 240,
+		borderRadius: 120,
+		backgroundColor: '#36d1dc22',
+		transform: [{rotate: '-6deg'}],
+	},
+});

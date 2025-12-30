@@ -1,6 +1,6 @@
-import {Alert, Pressable, StyleSheet, View} from 'react-native';
+import {Alert, Animated, Easing, LayoutAnimation, Pressable, StyleSheet, View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
-import {useEffect, useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import Button from 'components/Button/Button';
 import Input from 'components/Input/Input';
 import Text from 'components/Text/Text';
@@ -19,15 +19,40 @@ const CommentItem = ({
 	onDelete,
 	isUpdating = false,
 	isDeleting = false,
+	isHighlighted = false,
 }) => {
 	if (!comment) return null;
 	const [isEditing, setIsEditing] = useState(false);
 	const [draft, setDraft] = useState(comment.text ?? '');
 	const [error, setError] = useState(null);
+	const [isPaddingActive, setIsPaddingActive] = useState(false);
+	const highlightOpacity = useRef(new Animated.Value(0)).current;
+	const highlightInset = isPaddingActive ? 8 : 0;
 
 	useEffect(() => {
 		setDraft(comment.text ?? '');
 	}, [comment.text]);
+
+	useEffect(() => {
+		if (!isHighlighted) return;
+		highlightOpacity.stopAnimation();
+		highlightOpacity.setValue(1);
+		Animated.timing(highlightOpacity, {
+			toValue: 0,
+			duration: 1500,
+			easing: Easing.out(Easing.quad),
+			useNativeDriver: true,
+		}).start();
+		setIsPaddingActive(true);
+		const frameId = requestAnimationFrame(() => {
+			LayoutAnimation.configureNext({
+				duration: 1500,
+				update: {type: LayoutAnimation.Types.easeOut},
+			});
+			setIsPaddingActive(false);
+		});
+		return () => cancelAnimationFrame(frameId);
+	}, [highlightOpacity, isHighlighted]);
 
 	const handleEditPress = () => {
 		setError(null);
@@ -75,7 +100,19 @@ const CommentItem = ({
 	const actionsDisabled = isUpdating || isDeleting;
 	return (
 		<View style={styles.container}>
-			<View style={styles.header}>
+			<Animated.View
+				style={[
+					styles.highlightOverlay,
+					{
+						opacity: highlightOpacity,
+						left: highlightInset,
+						right: highlightInset,
+					},
+				]}
+				pointerEvents="none"
+			/>
+			<View style={[styles.content, {paddingHorizontal: highlightInset}]}>
+				<View style={styles.header}>
 				<View style={styles.authorRow}>
 					<Feather name="user" size={14} color={colors.muted} />
 					<Text style={styles.author}>{comment.author?.nickname || 'Anonim'}</Text>
@@ -108,43 +145,44 @@ const CommentItem = ({
 						</View>
 					) : null}
 				</View>
-			</View>
-			{isEditing ? (
-				<View style={styles.editSection}>
-					<Input
-						label="Edytuj komentarz"
-						value={draft}
-						onChangeText={setDraft}
-						multiline
-						numberOfLines={3}
-						error={error}
-						style={styles.editInput}
-					/>
-					<View style={styles.editActions}>
-						<Button
-							title="Anuluj"
-							variant="outline"
-							onPress={handleCancel}
-							disabled={actionsDisabled}
-							style={styles.editButton}
-							textStyle={styles.editButtonText}
-						/>
-						<Button
-							title="Zapisz"
-							onPress={handleSave}
-							loading={isUpdating}
-							disabled={actionsDisabled}
-							style={styles.editButton}
-							textStyle={styles.editButtonText}
-						/>
-					</View>
 				</View>
-			) : (
-				<>
-					<Text style={styles.text}>{comment.text}</Text>
-					{error ? <Text style={styles.error}>{error}</Text> : null}
-				</>
-			)}
+				{isEditing ? (
+					<View style={styles.editSection}>
+						<Input
+							label="Edytuj komentarz"
+							value={draft}
+							onChangeText={setDraft}
+							multiline
+							numberOfLines={3}
+							error={error}
+							style={styles.editInput}
+						/>
+						<View style={styles.editActions}>
+							<Button
+								title="Anuluj"
+								variant="outline"
+								onPress={handleCancel}
+								disabled={actionsDisabled}
+								style={styles.editButton}
+								textStyle={styles.editButtonText}
+							/>
+							<Button
+								title="Zapisz"
+								onPress={handleSave}
+								loading={isUpdating}
+								disabled={actionsDisabled}
+								style={styles.editButton}
+								textStyle={styles.editButtonText}
+							/>
+						</View>
+					</View>
+				) : (
+					<>
+						<Text style={styles.text}>{comment.text}</Text>
+						{error ? <Text style={styles.error}>{error}</Text> : null}
+					</>
+				)}
+			</View>
 		</View>
 	);
 };
@@ -154,6 +192,9 @@ export default CommentItem;
 const styles = StyleSheet.create({
 	container: {
 		paddingVertical: 12,
+		position: 'relative',
+	},
+	content: {
 		gap: 6,
 	},
 	header: {
@@ -222,6 +263,13 @@ const styles = StyleSheet.create({
 	},
 	editButtonText: {
 		fontSize: 14,
+	},
+	highlightOverlay: {
+		...StyleSheet.absoluteFillObject,
+		backgroundColor: '#e7f3ff',
+		borderColor: '#c7e2ff',
+		borderRadius: 10,
+		borderWidth: 1,
 	},
 	error: {
 		color: colors.danger,

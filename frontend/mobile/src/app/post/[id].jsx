@@ -56,19 +56,26 @@ const COMMENTS_PREVIEW_COUNT = 2;
 
 export default function PostDetails() {
 	const router = useRouter();
-	const {id: resolvedId, backTo} = useLocalSearchParams();
+	const {id: resolvedId, backTo, commentId} = useLocalSearchParams();
+	const resolvedCommentId = Array.isArray(commentId) ? commentId[0] : commentId;
 	const scrollRef = useRef(null);
+	const processedCommentIdRef = useRef(null);
+	const highlightTimeoutRef = useRef(null);
+	const contentReadyTimeoutRef = useRef(null);
+	const contentSizeRef = useRef({width: 0, height: 0});
 	const {width: windowWidth} = useWindowDimensions();
 	// Explicit screen width keeps carousel pages perfectly aligned.
 	const screenWidth = Dimensions.get('window').width;
 	const screenHeight = Dimensions.get('window').height;
 	const contentWidth = windowWidth - 32;
-	const [commentsLayoutY, setCommentsLayoutY] = useState(0);
+	const [commentsLayoutY, setCommentsLayoutY] = useState(null);
 	const [post, setPost] = useState(null);
 	const [comments, setComments] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
 	const [refreshing, setRefreshing] = useState(false);
+	const [commentsLoaded, setCommentsLoaded] = useState(false);
+	const [contentReady, setContentReady] = useState(false);
 	const [liking, setLiking] = useState(false);
 	const [commentValue, setCommentValue] = useState('');
 	const [commentError, setCommentError] = useState(null);
@@ -82,6 +89,8 @@ export default function PostDetails() {
 	const [showAllComments, setShowAllComments] = useState(false);
 	const [previewVisible, setPreviewVisible] = useState(false);
 	const [previewIndex, setPreviewIndex] = useState(0);
+	const [commentOffsets, setCommentOffsets] = useState({});
+	const [highlightCommentId, setHighlightCommentId] = useState(null);
 	const likeScale = useRef(new Animated.Value(1)).current;
 	const accessToken = useAuthStore((state) => state.accessToken);
 	const currentUserId = useMemo(
@@ -150,6 +159,7 @@ export default function PostDetails() {
 	const fetchPost = async (targetId, {withLoader = true} = {}) => {
 		if (!targetId) return;
 		if (withLoader) setLoading(true);
+		setContentReady(false);
 		setError(null);
 		try {
 			const data = await postsService.get(targetId);
@@ -165,19 +175,116 @@ export default function PostDetails() {
 
 	const fetchComments = async (targetId) => {
 		if (!targetId) return;
+		setCommentsLoaded(false);
+		setContentReady(false);
 		try {
 			const data = await postsService.fetchComments(targetId);
 			setComments(data || []);
 		} catch (err) {
 			console.warn(FAILED_TO_LOAD_COMMENTS, err);
+		} finally {
+			setCommentsLoaded(true);
 		}
 	};
 
 	useEffect(() => {
 		if (!resolvedId) return;
+		processedCommentIdRef.current = null;
+		setCommentsLoaded(false);
+		setContentReady(false);
 		void fetchPost(resolvedId);
 		void fetchComments(resolvedId);
 	}, [resolvedId]);
+
+	const maybeExpandCommentsForTarget = useCallback((targetId) => {
+		if (!targetId) return;
+		if (comments.length > 3) {
+			if (!showAllComments) setShowAllComments(true);
+			return;
+		}
+		const sorted = [...comments].sort((a, b) => new Date(b?.created_at) - new Date(a?.created_at));
+		const targetIndex = sorted.findIndex((comment) => String(comment?.id) === targetId);
+		if (targetIndex >= COMMENTS_PREVIEW_COUNT && !showAllComments) {
+			setShowAllComments(true);
+		}
+	}, [comments, showAllComments]);
+
+	const maybeScrollToTargetComment = useCallback((targetId) => {
+		if (!targetId || commentsLayoutY === null) return false;
+		const offset = commentOffsets[targetId];
+		if (typeof offset !== 'number' || !scrollRef.current) return false;
+		const targetY = Math.max(0, commentsLayoutY + offset - 12);
+		requestAnimationFrame(() => {
+			scrollRef.current?.scrollTo({y: targetY, animated: true});
+		});
+		return true;
+	}, [commentOffsets, commentsLayoutY]);
+
+	const triggerCommentHighlight = useCallback((targetId) => {
+		setHighlightCommentId(targetId);
+		if (highlightTimeoutRef.current) {
+			clearTimeout(highlightTimeoutRef.current);
+		}
+		highlightTimeoutRef.current = setTimeout(() => {
+			setHighlightCommentId((current) => (current === targetId ? null : current));
+		}, 1500);
+	}, []);
+
+	const handleCommentDeepLink = useCallback(() => {
+		if (!resolvedCommentId) return;
+		if (loading || !commentsLoaded || !contentReady) return;
+		const targetId = String(resolvedCommentId);
+		if (processedCommentIdRef.current === targetId) return;
+		maybeExpandCommentsForTarget(targetId);
+		const didScroll = maybeScrollToTargetComment(targetId);
+		if (!didScroll) return;
+		processedCommentIdRef.current = targetId;
+		triggerCommentHighlight(targetId);
+	}, [
+		commentsLoaded,
+		contentReady,
+		loading,
+		maybeExpandCommentsForTarget,
+		maybeScrollToTargetComment,
+		resolvedCommentId,
+		triggerCommentHighlight,
+	]);
+
+	useEffect(() => {
+		handleCommentDeepLink();
+	}, [handleCommentDeepLink]);
+
+	useEffect(() => () => {
+		if (highlightTimeoutRef.current) {
+			clearTimeout(highlightTimeoutRef.current);
+		}
+		if (contentReadyTimeoutRef.current) {
+			clearTimeout(contentReadyTimeoutRef.current);
+		}
+	}, []);
+
+	const handleCommentLayout = useCallback((commentKey, layoutY) => {
+		const key = String(commentKey);
+		setCommentOffsets((prev) => {
+			if (prev[key] === layoutY) return prev;
+			return {...prev, [key]: layoutY};
+		});
+	}, []);
+
+	const handleContentSizeChange = useCallback((width, height) => {
+		const previous = contentSizeRef.current;
+		if (previous.width === width && previous.height === height) {
+			return;
+		}
+		contentSizeRef.current = {width, height};
+		setContentReady(false);
+		if (contentReadyTimeoutRef.current) {
+			clearTimeout(contentReadyTimeoutRef.current);
+		}
+		contentReadyTimeoutRef.current = setTimeout(() => {
+			setContentReady(true);
+		}, 160);
+	}, []);
 
 	useFocusEffect(
 		useCallback(() => {
@@ -291,7 +398,7 @@ export default function PostDetails() {
 	};
 
 	const scrollToComments = useCallback(() => {
-		if (!scrollRef.current || !commentsLayoutY) return;
+		if (!scrollRef.current || commentsLayoutY === null) return;
 		scrollRef.current.scrollTo({y: commentsLayoutY, animated: true});
 	}, [commentsLayoutY]);
 
@@ -352,6 +459,7 @@ export default function PostDetails() {
 			<ScrollView
 				ref={scrollRef}
 				contentContainerStyle={styles.container}
+				onContentSizeChange={handleContentSizeChange}
 				refreshControl={
 					<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />
 				}
@@ -502,6 +610,8 @@ export default function PostDetails() {
 								onDelete={handleDeleteComment}
 								updatingId={updatingCommentId}
 								deletingId={deletingCommentId}
+								onCommentLayout={handleCommentLayout}
+								highlightedCommentId={highlightCommentId}
 							/>
 						</View>
 						<View style={styles.commentInputSection}>

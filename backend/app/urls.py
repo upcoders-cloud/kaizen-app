@@ -27,7 +27,7 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 # Importujemy widok z folderu 'ideas'
 # Python znajdzie to, bo folder 'ideas' jest obok folderu 'app'
-from ideas.views import PostViewSet, CommentViewSet, LikeViewSet, NotificationViewSet
+from ideas.views import PostViewSet, CommentViewSet, LikeViewSet, NotificationViewSet, CategoryViewSet
 from users.views import UserViewSet
 
 
@@ -36,6 +36,7 @@ router = DefaultRouter()
 # Rejestrujemy endpoint 'posts'.
 # Dzięki temu będziesz miał dostępne: /api/posts/
 router.register(r'posts', PostViewSet, basename='post')
+router.register(r'categories', CategoryViewSet, basename='category')
 router.register(r'users', UserViewSet, basename='user')
 router.register(r'comments', CommentViewSet, basename='comment')
 router.register(r'likes', LikeViewSet, basename='like')

@@ -2,7 +2,7 @@ import logging
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from .models import KaizenPost, Comment, Like, PostSurvey, Notification
+from .models import KaizenPost, Comment, Like, PostSurvey, Notification, Category
 from .serializers import (
     PostSerializer,
     CommentSerializer,
@@ -10,6 +10,7 @@ from .serializers import (
     PostSurveySerializer,
     PostSurveyInputSerializer,
     NotificationSerializer,
+    CategorySerializer,
 )
 from .permissions import IsCommentAuthorOrReadOnly, IsPostAuthorOrReadOnly
 from rest_framework.exceptions import ValidationError
@@ -122,6 +123,14 @@ class PostViewSet(viewsets.ModelViewSet):
             response_status = status.HTTP_201_CREATED
 
         return Response(PostSurveySerializer(survey).data, status=response_status)
+
+
+class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = CategorySerializer
+    permission_classes = [permissions.AllowAny]
+
+    def get_queryset(self):
+        return Category.objects.filter(is_active=True).order_by('name')
 
 
 class CommentViewSet(viewsets.ModelViewSet):

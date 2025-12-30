@@ -43,11 +43,27 @@ const EditPostRoute = () => {
 	}, [resolvedId]);
 
 	const isOwner = post?.author?.id && String(post.author.id) === String(currentUserId);
-	const initialValues = useMemo(() => ({
-		title: post?.title ?? '',
-		content: post?.content ?? '',
-		category: post?.category ?? 'BHP',
-	}), [post?.title, post?.content, post?.category]);
+	const initialValues = useMemo(() => {
+		const imageItems = Array.isArray(post?.image_items) ? post.image_items : [];
+		const fallbackUrls = Array.isArray(post?.image_urls) ? post.image_urls : [];
+		const images = imageItems.length
+			? imageItems.map((item) => ({
+				id: item.id,
+				uri: item.url,
+				isExisting: true,
+			}))
+			: fallbackUrls.map((url) => ({
+				id: url,
+				uri: url,
+				isExisting: false,
+			}));
+		return {
+			title: post?.title ?? '',
+			content: post?.content ?? '',
+			category: post?.category?.id ?? post?.category ?? null,
+			images,
+		};
+	}, [post?.title, post?.content, post?.category, post?.image_items, post?.image_urls]);
 
 	return (
 		<>

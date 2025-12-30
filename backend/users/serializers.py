@@ -10,3 +10,18 @@ class UserPublicSerializer(serializers.ModelSerializer):
         # Wymieniamy tylko te pola, które aplikacja może widzieć.
         # Nie ma tu 'email', 'first_name', 'microsoft_oid'.
         fields = ['id', 'nickname', 'is_staff']
+
+
+class UserMeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = [
+            'id',
+            'nickname',
+            'username',
+            'email',
+            'first_name',
+            'last_name',
+            'gender',
+            'is_staff',
+        ]

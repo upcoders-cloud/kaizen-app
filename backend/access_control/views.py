@@ -17,6 +17,7 @@ LOGIN_RESPONSE_SCHEMA = inline_serializer(
     fields={
         'access': serializers.CharField(),
         'username': serializers.CharField(),
+        'email': serializers.CharField(),
         'first_name': serializers.CharField(),
         'last_name': serializers.CharField(),
         'gender': serializers.CharField(),
@@ -49,6 +50,7 @@ class SecureTokenObtainPairView(TokenObtainPairView):
                 value={
                     "access": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
                     "username": "michal_kaizen",
+                    "email": "michal@example.com",
                     "first_name": "Michal",
                     "last_name": "Nowak",
                     "gender": "male"
@@ -70,10 +72,12 @@ class SecureTokenObtainPairView(TokenObtainPairView):
                 response.data['first_name'] = user.first_name or ''
                 response.data['last_name'] = user.last_name or ''
                 response.data['gender'] = user.gender or ''
+                response.data['email'] = user.email or ''
             else:
                 response.data['first_name'] = ''
                 response.data['last_name'] = ''
                 response.data['gender'] = ''
+                response.data['email'] = ''
 
             # Extract and set Refresh Token as HttpOnly Cookie
             refresh_token = response.data.get('refresh')

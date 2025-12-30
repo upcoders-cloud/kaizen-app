@@ -92,7 +92,7 @@ const Login = () => {
 					<View style={styles.header}>
 						<View style={styles.tag}>
 							<Feather name="zap" size={14} color={colors.primary} />
-							<Text style={styles.tagText}>Mentalność Kaizen</Text>
+							<Text style={styles.tagText}>Mentalność 改善</Text>
 						</View>
 						<Text style={styles.title}>Witaj ponownie</Text>
 						<Text style={styles.subtitle}>

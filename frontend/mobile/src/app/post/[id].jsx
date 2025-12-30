@@ -47,7 +47,7 @@ const COMMENTS_PREVIEW_COUNT = 2;
 
 export default function PostDetails() {
 	const router = useRouter();
-	const {id: resolvedId} = useLocalSearchParams();
+	const {id: resolvedId, backTo} = useLocalSearchParams();
 	const scrollRef = useRef(null);
 	const {width: windowWidth} = useWindowDimensions();
 	// Explicit screen width keeps carousel pages perfectly aligned.
@@ -88,6 +88,11 @@ export default function PostDetails() {
 	}, []);
 
 	const handleBack = () => {
+		const backTarget = Array.isArray(backTo) ? backTo[0] : backTo;
+		if (backTarget === 'home') {
+			router.replace('/');
+			return;
+		}
 		navigateBack(router, '/');
 	};
 
@@ -578,10 +583,9 @@ const styles = StyleSheet.create({
 		borderBottomColor: colors.border,
 	},
 	headerTopRow: {
-		flexDirection: 'row',
-		justifyContent: 'space-between',
-		alignItems: 'center',
-		gap: 12,
+		flexDirection: 'column',
+		alignItems: 'flex-start',
+		gap: 8,
 	},
 	badgesRow: {
 		flexDirection: 'row',

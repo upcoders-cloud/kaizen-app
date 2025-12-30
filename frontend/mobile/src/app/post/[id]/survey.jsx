@@ -37,7 +37,7 @@ const SurveyScreen = () => {
 
 	const handleClose = () => {
 		if (id) {
-			router.replace(`/post/${id}`);
+			router.replace({pathname: '/post/[id]', params: {id, backTo: 'home'}});
 			return;
 		}
 		router.back();
@@ -102,7 +102,7 @@ const SurveyScreen = () => {
 					headerRight: () => (
 						<Pressable onPress={handleClose} style={styles.deferButton}>
 							<TextBase style={styles.deferText}>Zrobię to później</TextBase>
-							<Feather name="x" size={18} color={colors.primary} />
+							{/*<Feather name=">" size={18} color={colors.primary} />*/}
 						</Pressable>
 					),
 				}}

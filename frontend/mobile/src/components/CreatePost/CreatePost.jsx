@@ -1,20 +1,15 @@
-import {useEffect, useState} from 'react';
-import {ScrollView, StyleSheet, View} from 'react-native';
+import {useCallback, useEffect, useMemo, useState} from 'react';
+import {ActivityIndicator, ScrollView, StyleSheet, View} from 'react-native';
+import {useFocusEffect} from '@react-navigation/native';
 import colors from 'theme/colors';
 import postsService from 'src/server/services/postsService';
+import categoriesService from 'src/server/services/categoriesService';
 import Input from 'components/Input/Input';
 import Button from 'components/Button/Button';
 import Text from 'components/Text/Text';
 import ImagePicker from 'components/ImagePicker/ImagePicker';
 import OptionPills from 'components/OptionPills/OptionPills';
 import {CONTENT_IS_REQUIRED, EMPTY_STRING, FAILED_TO_CREATE_POST, TITLE_IS_REQUIRED} from "constants/constans";
-
-const CATEGORIES = [
-	{label: 'BHP', value: 'BHP'},
-	{label: 'Proces', value: 'PROCES'},
-	{label: 'Jakość', value: 'JAKOSC'},
-	{label: 'Inne', value: 'INNE'},
-];
 
 const CreatePost = ({
 	onSubmitSuccess,
@@ -26,36 +21,112 @@ const CreatePost = ({
 }) => {
 	const [title, setTitle] = useState(initialValues?.title ?? EMPTY_STRING);
 	const [content, setContent] = useState(initialValues?.content ?? EMPTY_STRING);
-	const [category, setCategory] = useState(initialValues?.category ?? CATEGORIES[0].value);
+	const [category, setCategory] = useState(initialValues?.category ?? null);
 	const [images, setImages] = useState(initialValues?.images ?? []);
+	const [removedImageIds, setRemovedImageIds] = useState([]);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState(null);
 	const [titleError, setTitleError] = useState(null);
 	const [contentError, setContentError] = useState(null);
+	const [categories, setCategories] = useState([]);
+	const [categoriesLoading, setCategoriesLoading] = useState(false);
+	const [categoriesError, setCategoriesError] = useState(null);
+
+	const categoryOptions = useMemo(
+		() =>
+			categories.map((categoryItem) => ({
+				label: categoryItem.name,
+				value: categoryItem.id,
+			})),
+		[categories]
+	);
+
+	const resolveDefaultCategory = () => initialValues?.category ?? categoryOptions[0]?.value ?? null;
 
 	const resetForm = () => {
 		setTitle(initialValues?.title ?? EMPTY_STRING);
 		setContent(initialValues?.content ?? EMPTY_STRING);
-		setCategory(initialValues?.category ?? CATEGORIES[0].value);
+		setCategory(resolveDefaultCategory());
 		setImages(initialValues?.images ?? []);
+		setRemovedImageIds([]);
 		setError(null);
 		setTitleError(null);
 		setContentError(null);
 	};
 
+	useFocusEffect(
+		useCallback(() => {
+			let isActive = true;
+			const fetchCategories = async () => {
+				setCategoriesLoading(true);
+				setCategoriesError(null);
+				try {
+					const data = await categoriesService.list();
+					const resolved = Array.isArray(data) ? data : data?.results ?? [];
+					if (!isActive) return;
+					setCategories(resolved);
+				} catch (err) {
+					if (!isActive) return;
+					setCategoriesError(err?.message || 'Nie udało się pobrać kategorii');
+				} finally {
+					if (isActive) {
+						setCategoriesLoading(false);
+					}
+				}
+			};
+
+			void fetchCategories();
+			return () => {
+				isActive = false;
+			};
+		}, [])
+	);
+
 	useEffect(() => {
 		if (!initialValues) return;
 		setTitle(initialValues?.title ?? EMPTY_STRING);
 		setContent(initialValues?.content ?? EMPTY_STRING);
-		setCategory(initialValues?.category ?? CATEGORIES[0].value);
+		setCategory(initialValues?.category ?? null);
 		setImages(initialValues?.images ?? []);
+		setRemovedImageIds([]);
 		setTitleError(null);
 		setContentError(null);
 	}, [initialValues?.title, initialValues?.content, initialValues?.category]);
 
+	useEffect(() => {
+		if (mode === 'edit') return;
+		if (!categoryOptions.length) return;
+		const hasMatch = categoryOptions.some((option) => String(option.value) === String(category));
+		if (!hasMatch) {
+			setCategory(categoryOptions[0].value);
+		}
+	}, [categoryOptions, category, mode]);
+
+	const handleImagesChange = useCallback((nextImages = []) => {
+		setImages((prevImages) => {
+			const previous = Array.isArray(prevImages) ? prevImages : [];
+			const next = Array.isArray(nextImages) ? nextImages : [];
+			const removedExistingIds = previous
+				.filter((item) => item?.isExisting)
+				.filter((item) => !next.some((nextItem) => String(nextItem?.id) === String(item?.id)))
+				.map((item) => Number(item.id))
+				.filter((id) => Number.isFinite(id));
+
+			if (removedExistingIds.length) {
+				setRemovedImageIds((current) => {
+					const merged = new Set(current.map((id) => Number(id)));
+					removedExistingIds.forEach((id) => merged.add(id));
+					return Array.from(merged);
+				});
+			}
+
+			return next;
+		});
+	}, []);
+
 	const handleSubmit = () => submitPost(
 		{
-			title, content, category, images,
+			title, content, category, images, removedImageIds,
 			onSubmitSuccess, onSubmitFail,
 			setLoading, setError, resetForm,
 			setTitleError, setContentError,
@@ -100,12 +171,20 @@ const CreatePost = ({
 
 			<View style={styles.sectionCard}>
 				<Text style={styles.sectionTitle}>Kategoria</Text>
-				<OptionPills options={CATEGORIES} value={category} onChange={setCategory} />
+				{categoriesLoading ? (
+					<ActivityIndicator size="small" color={colors.primary} />
+				) : categoriesError ? (
+					<Text style={styles.error}>{categoriesError}</Text>
+				) : categoryOptions.length ? (
+					<OptionPills options={categoryOptions} value={category} onChange={setCategory} />
+				) : (
+					<Text style={styles.muted}>Brak dostępnych kategorii.</Text>
+				)}
 			</View>
 
 			<View style={styles.sectionCard}>
 				<Text style={styles.sectionTitle}>Załączniki</Text>
-				<ImagePicker value={images} onChange={setImages} />
+				<ImagePicker value={images} onChange={handleImagesChange} />
 			</View>
 
 			<Button title={submitLabel} onPress={handleSubmit} loading={loading} style={styles.submitButton} />
@@ -120,6 +199,7 @@ async function submitPost({
 	content,
 	category,
 	images,
+	removedImageIds,
 	onSubmitSuccess,
 	onSubmitFail,
 	setLoading,
@@ -159,6 +239,9 @@ async function submitPost({
 		if (mode === 'edit') {
 			if (!postId) {
 				throw new Error(FAILED_TO_CREATE_POST);
+			}
+			if (removedImageIds?.length) {
+				payload.remove_images = removedImageIds;
 			}
 			const updated = await postsService.update(postId, payload);
 			onSubmitSuccess?.(updated);
@@ -214,6 +297,13 @@ const styles = StyleSheet.create({
 		fontSize: 14,
 		fontWeight: '700',
 		color: colors.text,
+	},
+	muted: {
+		color: colors.muted,
+	},
+	error: {
+		color: colors.danger,
+		fontWeight: '600',
 	},
 	multilineInput: {
 		minHeight: 120,

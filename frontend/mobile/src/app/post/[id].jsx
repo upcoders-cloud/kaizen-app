@@ -35,12 +35,21 @@ import {getPostStatusMeta} from 'utils/postStatus';
 import ImageCarousel from 'components/PostDetail/ImageCarousel';
 import Button from 'components/Button/Button';
 import BackButton from 'components/Navigation/BackButton';
+import Toast from 'react-native-toast-message';
 
 const CATEGORY_STYLES = {
 	BHP: {backgroundColor: '#E6F6FF', color: '#0F5F7F'},
 	PROCES: {backgroundColor: '#E9F7EF', color: '#2E7D32'},
+	'USPRAWNIENIE PROCESU': {backgroundColor: '#E9F7EF', color: '#2E7D32'},
 	JAKOSC: {backgroundColor: '#FFF3E0', color: '#C16A00'},
+	'JAKOŚĆ': {backgroundColor: '#FFF3E0', color: '#C16A00'},
 	INNE: {backgroundColor: '#F2F4F8', color: '#4A5568'},
+};
+
+const resolveCategoryStyle = (value) => {
+	if (!value) return CATEGORY_STYLES.INNE;
+	const normalized = String(value).toUpperCase();
+	return CATEGORY_STYLES[normalized] || CATEGORY_STYLES.INNE;
 };
 
 const COMMENTS_PREVIEW_COUNT = 2;
@@ -117,7 +126,19 @@ export default function PostDetails() {
 					setDeletingPost(true);
 					try {
 						await postsService.remove(resolvedId);
+						Toast.show({
+							type: 'success',
+							text1: 'Post został poprawnie usunięty',
+							visibilityTime: 2000,
+						});
 						router.replace('/');
+					} catch (err) {
+						Toast.show({
+							type: 'error',
+							text1: 'Nie udało się usunąć posta',
+							text2: err?.message || 'Spróbuj ponownie',
+							visibilityTime: 2500,
+						});
 					} finally {
 						setDeletingPost(false);
 					}
@@ -280,7 +301,10 @@ export default function PostDetails() {
 		.join(' ')
 		.trim();
 	const authorName = authorFullName || post?.author?.nickname || post?.author?.username || 'Użytkownik';
-	const categoryStyle = CATEGORY_STYLES[post?.category] || CATEGORY_STYLES.INNE;
+	const categoryLabel = post?.category_name
+		?? post?.category?.name
+		?? (typeof post?.category === 'string' ? post.category : null);
+	const categoryStyle = resolveCategoryStyle(categoryLabel);
 	const imageUrls = Array.isArray(post?.image_urls) ? post.image_urls.filter(Boolean) : [];
 	const formattedDate = post?.created_at
 		? new Date(post.created_at).toLocaleDateString('pl-PL', {
@@ -349,7 +373,7 @@ export default function PostDetails() {
 							<View style={styles.headerTopRow}>
 								<View style={styles.badgesRow}>
 									<TextBase style={[styles.categoryBadge, categoryStyle]}>
-										{post?.category || 'Zgłoszenie'}
+										{categoryLabel || 'Zgłoszenie'}
 									</TextBase>
 									<TextBase
 										style={[

@@ -4,7 +4,7 @@ import uuid
 from PIL import Image
 from django.core.files.base import ContentFile
 from rest_framework import serializers
-from .models import KaizenPost, Comment, Like, PostImage, PostSurvey, Notification
+from .models import KaizenPost, Comment, Like, PostImage, PostSurvey, Notification, Category
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -22,6 +22,13 @@ class UserPublicSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'nickname', 'first_name', 'last_name', 'username']
+
+
+class CategorySerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Category
+        fields = ['id', 'name', 'is_active']
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -67,12 +74,19 @@ class Base64ImageField(serializers.ImageField):
 
 class PostSerializer(serializers.ModelSerializer):
     author = UserPublicSerializer(read_only=True)
+    category_name = serializers.CharField(source='category.name', read_only=True)
+    image_items = serializers.SerializerMethodField(read_only=True)
     likes_count = serializers.IntegerField(read_only=True)
     comments_count = serializers.IntegerField(read_only=True)
     is_liked_by_me = serializers.SerializerMethodField()
     survey = serializers.SerializerMethodField(read_only=True)
     images = serializers.ListField(
         child=Base64ImageField(),
+        write_only=True,
+        required=False
+    )
+    remove_images = serializers.ListField(
+        child=serializers.IntegerField(),
         write_only=True,
         required=False
     )
@@ -86,12 +100,15 @@ class PostSerializer(serializers.ModelSerializer):
             'title',
             'content',
             'category',
+            'category_name',
             'status',
             'created_at',
             'likes_count',
             'comments_count',
             'is_liked_by_me',
             'images',
+            'remove_images',
+            'image_items',
             'image_urls',
             'survey',
         ]
@@ -115,6 +132,18 @@ class PostSerializer(serializers.ModelSerializer):
             urls.append(url)
         return urls
 
+    def get_image_items(self, obj):
+        request = self.context.get('request')
+        items = []
+        for image in obj.images.all():
+            if not image.image:
+                continue
+            url = image.image.url
+            if request:
+                url = request.build_absolute_uri(url)
+            items.append({'id': image.id, 'url': url})
+        return items
+
     def get_survey(self, obj):
         survey = getattr(obj, 'survey', None)
         if not survey:
@@ -123,6 +152,7 @@ class PostSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         images = validated_data.pop('images', [])
+        validated_data.pop('remove_images', None)
         post = super().create(validated_data)
         for image in images:
             PostImage.objects.create(post=post, image=image)
@@ -130,7 +160,10 @@ class PostSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         images = validated_data.pop('images', None)
+        remove_images = validated_data.pop('remove_images', [])
         post = super().update(instance, validated_data)
+        if remove_images:
+            PostImage.objects.filter(post=post, id__in=remove_images).delete()
         if images:
             for image in images:
                 PostImage.objects.create(post=post, image=image)

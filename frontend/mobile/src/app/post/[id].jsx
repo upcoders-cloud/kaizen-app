@@ -36,6 +36,7 @@ import ImageCarousel from 'components/PostDetail/ImageCarousel';
 import Button from 'components/Button/Button';
 import BackButton from 'components/Navigation/BackButton';
 import Toast from 'react-native-toast-message';
+import ExtraImagesBadge from 'components/Badges/ExtraImagesBadge';
 
 const CATEGORY_STYLES = {
 	BHP: {backgroundColor: '#E6F6FF', color: '#0F5F7F'},
@@ -413,6 +414,7 @@ export default function PostDetails() {
 		?? (typeof post?.category === 'string' ? post.category : null);
 	const categoryStyle = resolveCategoryStyle(categoryLabel);
 	const imageUrls = Array.isArray(post?.image_urls) ? post.image_urls.filter(Boolean) : [];
+	const extraImagesCount = Math.max(0, imageUrls.length - 1);
 	const formattedDate = post?.created_at
 		? new Date(post.created_at).toLocaleDateString('pl-PL', {
 			day: '2-digit',
@@ -515,15 +517,19 @@ export default function PostDetails() {
 							{imageUrls.length === 1 ? (
 								<Pressable style={styles.imageWrapper} onPress={() => openPreview(0)}>
 									<Image source={{uri: imageUrls[0]}} style={styles.image} resizeMode="cover" />
+									<ExtraImagesBadge count={extraImagesCount} />
 								</Pressable>
 							) : imageUrls.length > 1 ? (
-								<ImageCarousel
-									images={imageUrls}
-									width={contentWidth}
-									height={240}
-									onImagePress={openPreview}
-									showDots
-								/>
+								<View style={styles.imageWrapper}>
+									<ImageCarousel
+										images={imageUrls}
+										width={contentWidth}
+										height={240}
+										onImagePress={openPreview}
+										showDots
+									/>
+									<ExtraImagesBadge count={extraImagesCount} />
+								</View>
 							) : (
 								<TextBase style={styles.placeholderText}>Brak załączników.</TextBase>
 							)}
@@ -792,6 +798,7 @@ const styles = StyleSheet.create({
 		height: 240,
 		borderRadius: 12,
 		overflow: 'hidden',
+		position: 'relative',
 		backgroundColor: colors.placeholderSurface,
 	},
 	image: {

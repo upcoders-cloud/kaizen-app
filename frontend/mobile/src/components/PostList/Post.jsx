@@ -3,6 +3,7 @@ import {useRef} from 'react';
 import {Feather} from '@expo/vector-icons';
 import colors from 'theme/colors';
 import {getPostStatusMeta} from 'utils/postStatus';
+import ExtraImagesBadge from 'components/Badges/ExtraImagesBadge';
 
 const CATEGORY_STYLES = {
 	BHP: {backgroundColor: '#E6F6FF', color: '#0F5F7F'},
@@ -40,11 +41,12 @@ const Post = ({
 	const isLiked = Boolean(post?.is_liked_by_me);
 	const likeScale = useRef(new Animated.Value(1)).current;
 	const imageUrls = Array.isArray(post?.image_urls)
-		? post.image_urls
+		? post.image_urls.filter(Boolean)
 		: Array.isArray(post?.images)
-			? post.images
+			? post.images.filter(Boolean)
 			: [];
 	const primaryImage = imageUrls[0];
+	const extraImagesCount = Math.max(0, imageUrls.length - 1);
 	const categoryLabel = post?.category_name
 		?? post?.category?.name
 		?? (typeof post?.category === 'string' ? post.category : null);
@@ -123,7 +125,12 @@ const Post = ({
 				<Text style={styles.excerpt} numberOfLines={4} ellipsizeMode="tail">
 					{post?.content || 'Brak treści'}
 				</Text>
-				{primaryImage ? <Image source={{uri: primaryImage}} style={styles.image} /> : null}
+				{primaryImage ? (
+					<View style={styles.imageWrapper}>
+						<Image source={{uri: primaryImage}} style={styles.image} />
+						<ExtraImagesBadge count={extraImagesCount} />
+					</View>
+				) : null}
 			</View>
 
 			{/* Footer */}
@@ -264,10 +271,16 @@ const styles = StyleSheet.create({
 		gap: 6,
 	},
 	image: {
+		width: '100%',
+		height: 180,
+	},
+	imageWrapper: {
 		marginTop: 8,
 		width: '100%',
 		height: 180,
 		borderRadius: 8,
+		overflow: 'hidden',
+		position: 'relative',
 		backgroundColor: colors.border,
 	},
 	footer: {

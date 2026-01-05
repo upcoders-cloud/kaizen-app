@@ -1,7 +1,6 @@
 import {Stack, useLocalSearchParams, useRouter} from 'expo-router';
 import {
 	Animated,
-	ScrollView,
 	Pressable,
 	Text,
 	StyleSheet,
@@ -29,6 +28,7 @@ import {navigateBack} from 'utils/navigation';
 import {getJwtPayload} from 'utils/jwt';
 import CommentsList from 'components/Comments/CommentsList';
 import CommentInput from 'components/Comments/CommentInput';
+import KeyboardAwareScrollView from 'components/KeyboardAwareScrollView/KeyboardAwareScrollView';
 import TextBase from 'components/Text/Text';
 import {CONTENT_IS_REQUIRED, EMPTY_STRING, FAILED_TO_LOAD_POST, FAILED_TO_LOAD_COMMENTS} from 'constants/constans';
 import {getPostStatusMeta} from 'utils/postStatus';
@@ -353,6 +353,12 @@ export default function PostDetails() {
 		}
 	};
 
+	const handleCommentFocus = useCallback(() => {
+		requestAnimationFrame(() => {
+			scrollRef.current?.scrollToEnd({animated: true});
+		});
+	}, []);
+
 	const handleUpdateComment = async (commentId, text) => {
 		if (!commentId) {
 			return {success: false, error: 'Brak komentarza do edycji'};
@@ -458,10 +464,11 @@ export default function PostDetails() {
 						) : null,
 				}}
 			/>
-			<ScrollView
+			<KeyboardAwareScrollView
 				ref={scrollRef}
 				contentContainerStyle={styles.container}
 				onContentSizeChange={handleContentSizeChange}
+				keyboardVerticalOffset={12}
 				refreshControl={
 					<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />
 				}
@@ -627,11 +634,12 @@ export default function PostDetails() {
 								onSubmit={handleSubmitComment}
 								loading={submittingComment}
 								error={commentError}
+								onFocus={handleCommentFocus}
 							/>
 						</View>
 					</>
 				)}
-			</ScrollView>
+			</KeyboardAwareScrollView>
 			<Modal
 				transparent
 				visible={previewVisible}

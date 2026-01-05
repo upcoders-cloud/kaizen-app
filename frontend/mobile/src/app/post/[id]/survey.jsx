@@ -1,9 +1,6 @@
 import {
 	Keyboard,
-	KeyboardAvoidingView,
-	Platform,
 	Pressable,
-	ScrollView,
 	StyleSheet,
 	TouchableWithoutFeedback,
 	View,
@@ -16,6 +13,7 @@ import colors from 'theme/colors';
 import Input from 'components/Input/Input';
 import Button from 'components/Button/Button';
 import TextBase from 'components/Text/Text';
+import KeyboardAwareScrollView from 'components/KeyboardAwareScrollView/KeyboardAwareScrollView';
 import OptionPills from 'components/OptionPills/OptionPills';
 import postsService from 'src/server/services/postsService';
 
@@ -108,17 +106,12 @@ const SurveyScreen = () => {
 				}}
 			/>
 			<SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
-				<KeyboardAvoidingView
-					style={styles.flex}
-					behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-					keyboardVerticalOffset={Platform.OS === 'ios' ? 12 : 0}
-				>
-					<TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-						<ScrollView
-							contentContainerStyle={styles.container}
-							keyboardShouldPersistTaps="handled"
-							showsVerticalScrollIndicator={false}
-						>
+				<TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+					<KeyboardAwareScrollView
+						contentContainerStyle={styles.container}
+						keyboardVerticalOffset={12}
+						showsVerticalScrollIndicator={false}
+					>
 							<TextBase style={styles.title}>Opcjonalna ankieta</TextBase>
 							<TextBase style={styles.subtitle}>
 								Wypełnij krótką ankietę, aby oszacować korzyści z usprawnienia.
@@ -152,9 +145,8 @@ const SurveyScreen = () => {
 
 							{error ? <TextBase style={styles.error}>{error}</TextBase> : null}
 							<Button title="Przelicz" onPress={handleSubmit} loading={loading} />
-						</ScrollView>
-					</TouchableWithoutFeedback>
-				</KeyboardAvoidingView>
+					</KeyboardAwareScrollView>
+				</TouchableWithoutFeedback>
 			</SafeAreaView>
 		</>
 	);
@@ -166,9 +158,6 @@ const styles = StyleSheet.create({
 	safeArea: {
 		flex: 1,
 		backgroundColor: colors.background,
-	},
-	flex: {
-		flex: 1,
 	},
 	container: {
 		paddingHorizontal: 16,

@@ -77,7 +77,7 @@ const Home = () => {
 	};
 	const handleOpenComments = (post) => {
 		if (!post?.id) return;
-		router.push(`/post/${post.id}`);
+		router.push({pathname: `/post/${post.id}`, params: {scrollTo: 'comments'}});
 	};
 	const handleOpenMenu = (post) => {
 		if (!post?.id || deletingPostId) return;

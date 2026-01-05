@@ -57,10 +57,13 @@ const COMMENTS_PREVIEW_COUNT = 2;
 
 export default function PostDetails() {
 	const router = useRouter();
-	const {id: resolvedId, backTo, commentId} = useLocalSearchParams();
+	const {id: resolvedId, backTo, commentId, scrollTo} = useLocalSearchParams();
 	const resolvedCommentId = Array.isArray(commentId) ? commentId[0] : commentId;
+	const resolvedScrollTo = Array.isArray(scrollTo) ? scrollTo[0] : scrollTo;
+	const shouldScrollToComments = resolvedScrollTo === 'comments';
 	const scrollRef = useRef(null);
 	const processedCommentIdRef = useRef(null);
+	const processedScrollToRef = useRef(false);
 	const highlightTimeoutRef = useRef(null);
 	const contentReadyTimeoutRef = useRef(null);
 	const contentSizeRef = useRef({width: 0, height: 0});
@@ -191,6 +194,7 @@ export default function PostDetails() {
 	useEffect(() => {
 		if (!resolvedId) return;
 		processedCommentIdRef.current = null;
+		processedScrollToRef.current = false;
 		setCommentsLoaded(false);
 		setContentReady(false);
 		void fetchPost(resolvedId);
@@ -254,6 +258,17 @@ export default function PostDetails() {
 	useEffect(() => {
 		handleCommentDeepLink();
 	}, [handleCommentDeepLink]);
+
+	useEffect(() => {
+		if (!shouldScrollToComments || resolvedCommentId) return;
+		if (loading || !commentsLoaded || !contentReady) return;
+		if (processedScrollToRef.current) return;
+		if (!scrollRef.current || commentsLayoutY === null) return;
+		processedScrollToRef.current = true;
+		requestAnimationFrame(() => {
+			scrollRef.current?.scrollTo({y: Math.max(0, commentsLayoutY - 12), animated: true});
+		});
+	}, [commentsLayoutY, commentsLoaded, contentReady, loading, resolvedCommentId, shouldScrollToComments]);
 
 	useEffect(() => () => {
 		if (highlightTimeoutRef.current) {

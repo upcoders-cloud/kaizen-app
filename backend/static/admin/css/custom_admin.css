@@ -1,0 +1,67 @@
+/* backend/static/admin/css/custom_admin.css */
+
+:root {
+    --primary-blue: #5271ff;
+    --glass-white: rgba(255, 255, 255, 0.15);
+}
+
+/* THE TOP NAVBAR (Fixing image_4db786.png) */
+.main-header {
+    background-color: var(--primary-blue) !important;
+    border: none !important;
+}
+
+/* Make search text white so you can actually read it */
+.navbar-search .form-control-navbar {
+    background-color: var(--glass-white) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+}
+
+.navbar-search .form-control-navbar::placeholder {
+    color: rgba(255, 255, 255, 0.7) !important;
+}
+
+/* Magnifying glass and Menu icon color */
+.nav-link i, .btn-navbar i {
+    color: #ffffff !important;
+}
+
+/* THE DASHBOARD CARDS (Fixing image_4d468b.png) */
+/* Model Labels (Ankiety, Posty, etc.) - Making them bright blue */
+.card-body td a,
+.card-body th a,
+.model-name a {
+    color: var(--primary-blue) !important;
+    font-weight: bold !important;
+    text-shadow: 0px 0px 1px rgba(255,255,255,0.1); /* Subtle lift */
+}
+
+/* Section Titles (System Kaizen, Users) */
+.card-header {
+    background-color: #2d2d2d !important; /* Dark contrast for the blue text above it */
+    border-bottom: 2px solid var(--primary-blue) !important;
+}
+
+.card-title {
+    color: #ffffff !important;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* SIDEBAR FIXES */
+.brand-link {
+    background-color: var(--primary-blue) !important;
+    color: #ffffff !important;
+}
+
+.nav-sidebar .nav-link p {
+    color: var(--primary-blue) !important;
+}
+
+/* BUTTONS (Add/Change) */
+.btn-primary, .btn-info {
+    background-color: var(--primary-blue) !important;
+    border-color: var(--primary-blue) !important;
+    color: #ffffff !important;
+}

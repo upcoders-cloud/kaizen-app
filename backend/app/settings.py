@@ -86,17 +86,18 @@ SIMPLE_JWT = {
 }
 
 JAZZMIN_SETTINGS = {
-    "site_title": "My Admin",
-    "site_header": "Project X",
+    "site_title": "Kaizen Admin",
+    "site_header": "Kaizen",
     "site_brand": "Admin Dashboard",
     "welcome_sign": "Welcome to the Kaizen App Management Portal",
-    "copyright": "Upcoders sp. z o. o.",
+    "copyright": "Upcoders sp. z o.o",
     "search_model": [
         "ideas.KaizenPost",   # Searches "Posty"
         "ideas.PostSurvey",   # Searches "Ankiety do postów"
         "users.CustomUser",   # Searches "Użytkownicy"
         "ideas.Notification", # Searches "Powiadomienia"
     ],
+    "custom_css": "admin/css/custom_admin.css",
     "show_sidebar": True,
     "navigation_expanded": True,
     "icons": {
@@ -117,22 +118,26 @@ JAZZMIN_UI_TWEAKS = {
     "footer_small_text": False,
     "body_small_text": False,
     "brand_small_text": False,
-    "brand_colour": "navbar-success", # Uses a "Kaizen Green" for the brand
-    "accent": "accent-teal",
-    "navbar": "navbar-dark",
+    "brand_colour": "navbar-primary", # Uses a "Kaizen Green" for the brand
+    "accent": "accent-primary",
+    "navbar": "navbar-primary navbar-dark",
     "no_navbar_border": False,
     "navbar_fixed": True,
     "layout_boxed": False,
     "footer_fixed": False,
     "sidebar_fixed": True,
-    "sidebar": "sidebar-dark-success", # Matching green accents for sidebar
+    "sidebar": "sidebar-light-primary", # Matching green accents for sidebar
     "sidebar_nav_small_text": False,
     "sidebar_disable_expand": False,
     "sidebar_nav_child_indent": True,
     "sidebar_nav_compact_style": False,
     "sidebar_nav_legacy_style": False,
     "sidebar_nav_flat_style": False,
-    "show_ui_builder": True
+    "show_ui_builder": True,
+    "button_classes": {
+            "primary": "btn-primary",          # Standard Bootstrap Blue
+            "success": "btn-info",             # Secondary Blue-ish tone
+    }
 }
 
 # CORS (development)

@@ -2,11 +2,9 @@ from django.contrib import admin
 from django.utils.html import format_html
 from .models import KaizenPost, Comment, Like, PostImage, PostSurvey, Notification, Category
 
-
-# 1. This class allows you to manage images directly inside the KaizenPost form
 class PostImageInline(admin.TabularInline):
     model = PostImage
-    extra = 1  # Number of empty slots for new images
+    extra = 1
     readonly_fields = ['image_preview']
 
     def image_preview(self, obj):
@@ -21,31 +19,15 @@ class PostImageInline(admin.TabularInline):
 class CategoryAdmin(admin.ModelAdmin):
     list_display = ('name', 'is_active')
     list_editable = ('is_active',)
+    search_fields = ('name',)
 
 
 @admin.register(KaizenPost)
 class KaizenPostAdmin(admin.ModelAdmin):
-    # Optymalizacja bazy danych - pobiera autora i kategorię w jednym zapytaniu SQL (JOIN)
     list_select_related = ('author', 'category')
-
-    # Wyświetlane kolumny
     list_display = ('id', 'title', 'author', 'category', 'created_at', 'image_count')
-
-    # Filtry po prawej stronie
     list_filter = ('category', 'created_at', 'status')
-
-    # Wyszukiwarka
     search_fields = ('title', 'content', 'author__username', 'author__first_name', 'author__last_name')
-
-    # Opcjonalnie: jeśli image_count nie jest w modelu, możesz je zdefiniować tutaj:
-    def image_count(self, obj):
-        # Przykład, jeśli masz relację 'images' w modelu
-        # return obj.images.count()
-        return 0  # Wstaw tutaj logiczne zliczanie zdjęć
-
-    image_count.short_description = "Liczba zdjęć"
-
-    # This attaches the image upload rows to the bottom of the Post form
     inlines = [PostImageInline]
 
     def image_count(self, obj):
@@ -57,11 +39,13 @@ class KaizenPostAdmin(admin.ModelAdmin):
 @admin.register(Comment)
 class CommentAdmin(admin.ModelAdmin):
     list_display = ('author', 'post', 'created_at')
+    search_fields = ('author__username', 'content', 'post__title')
 
 
 @admin.register(PostImage)
 class PostImageAdmin(admin.ModelAdmin):
     list_display = ('id', 'post', 'image_preview', 'uploaded_at')
+    search_fields = ('post__title',)
 
     def image_preview(self, obj):
         if obj.image:
@@ -69,16 +53,20 @@ class PostImageAdmin(admin.ModelAdmin):
         return "Brak"
 
 
-# Keep the Like registration as is
-admin.site.register(Like)
+@admin.register(Like)
+class LikeAdmin(admin.ModelAdmin):
+    list_display = ('user', 'post')
+    search_fields = ('user__username', 'post__title')
 
 
 @admin.register(PostSurvey)
 class PostSurveyAdmin(admin.ModelAdmin):
     list_display = ('post', 'frequency_value', 'frequency_unit', 'affected_people', 'time_lost_minutes')
+    search_fields = ('post__title', 'post__content')
 
 
 @admin.register(Notification)
 class NotificationAdmin(admin.ModelAdmin):
     list_display = ('type', 'recipient', 'actor', 'post', 'created_at', 'read_at')
     list_filter = ('type', 'created_at', 'read_at')
+    search_fields = ('recipient__username', 'actor__username', 'post__title', 'type')

@@ -43,6 +43,7 @@ if DEBUG:
     ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
+    'jazzmin',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -82,6 +83,55 @@ SIMPLE_JWT = {
     'ALGORITHM': 'HS256',
     'SIGNING_KEY': SECRET_KEY,
     'AUTH_HEADER_TYPES': ('Bearer',),
+}
+
+JAZZMIN_SETTINGS = {
+    "site_title": "My Admin",
+    "site_header": "Project X",
+    "site_brand": "Admin Dashboard",
+    "welcome_sign": "Welcome to the Management Portal",
+    "copyright": "Acme Ltd",
+    "search_model": [
+        "ideas.KaizenPost",   # Searches "Posty"
+        "ideas.PostSurvey",   # Searches "Ankiety do postów"
+        "users.CustomUser",   # Searches "Użytkownicy"
+        "ideas.Notification", # Searches "Powiadomienia"
+    ],
+    "show_sidebar": True,
+    "navigation_expanded": True,
+    "icons": {
+        "users.CustomUser": "fas fa-user-friends",  # Użytkownicy
+        "ideas.KaizenPost": "fas fa-lightbulb",     # Posty
+        "ideas.PostSurvey": "fas fa-poll-h",        # Ankiety do postów
+        "ideas.Category": "fas fa-folder-open",     # Kategorie
+        "ideas.Notification": "fas fa-bell",        # Powiadomienia
+        "ideas.Comment": "fas fa-comments",         # Komentarze
+        "ideas.Like": "fas fa-thumbs-up",           # Polubienia
+    },
+}
+
+JAZZMIN_UI_TWEAKS = {
+    "theme": "darkly",          # Modern dark theme
+    "dark_mode_theme": "darkly",
+    "navbar_small_text": False,
+    "footer_small_text": False,
+    "body_small_text": False,
+    "brand_small_text": False,
+    "brand_colour": "navbar-success", # Uses a "Kaizen Green" for the brand
+    "accent": "accent-teal",
+    "navbar": "navbar-dark",
+    "no_navbar_border": False,
+    "navbar_fixed": True,
+    "layout_boxed": False,
+    "footer_fixed": False,
+    "sidebar_fixed": True,
+    "sidebar": "sidebar-dark-success", # Matching green accents for sidebar
+    "sidebar_nav_small_text": False,
+    "sidebar_disable_expand": False,
+    "sidebar_nav_child_indent": True,
+    "sidebar_nav_compact_style": False,
+    "sidebar_nav_legacy_style": False,
+    "sidebar_nav_flat_style": False,
 }
 
 # CORS (development)

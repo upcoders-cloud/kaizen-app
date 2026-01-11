@@ -65,3 +65,21 @@
     border-color: var(--primary-blue) !important;
     color: #ffffff !important;
 }
+
+/* Target the logo specifically on the login page */
+.login-box .login-logo img {
+    /* Hard limit the width - 150px to 200px is usually perfect for login screens */
+    max-width: 180px !important;
+
+    /* Ensure the height scales proportionally */
+    height: auto !important;
+
+    /* Space it out from the "Welcome" text below */
+    margin: 0 auto 1.5rem auto !important;
+    display: block;
+}
+
+/* Optional: If you want to hide the "Django Administration" text below your logo */
+.login-box .login-logo a {
+    font-size: 0 !important; /* Hides the text while keeping the link active */
+}

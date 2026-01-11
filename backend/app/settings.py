@@ -89,8 +89,8 @@ JAZZMIN_SETTINGS = {
     "site_title": "My Admin",
     "site_header": "Project X",
     "site_brand": "Admin Dashboard",
-    "welcome_sign": "Welcome to the Management Portal",
-    "copyright": "Acme Ltd",
+    "welcome_sign": "Welcome to the Kaizen App Management Portal",
+    "copyright": "Upcoders sp. z o. o.",
     "search_model": [
         "ideas.KaizenPost",   # Searches "Posty"
         "ideas.PostSurvey",   # Searches "Ankiety do postów"
@@ -111,7 +111,7 @@ JAZZMIN_SETTINGS = {
 }
 
 JAZZMIN_UI_TWEAKS = {
-    "theme": "darkly",          # Modern dark theme
+    "theme": "flatly",          # Modern dark theme
     "dark_mode_theme": "darkly",
     "navbar_small_text": False,
     "footer_small_text": False,
@@ -132,6 +132,7 @@ JAZZMIN_UI_TWEAKS = {
     "sidebar_nav_compact_style": False,
     "sidebar_nav_legacy_style": False,
     "sidebar_nav_flat_style": False,
+    "show_ui_builder": True
 }
 
 # CORS (development)

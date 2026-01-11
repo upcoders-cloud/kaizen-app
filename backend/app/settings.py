@@ -91,6 +91,7 @@ JAZZMIN_SETTINGS = {
     "site_brand": "Admin Dashboard",
     # Login Page Logo
     "site_logo": "admin/img/logo.png",
+    "site_logo_classes": "img-fluid img-circle",
     # Sidebar Logo (Dashboard)
     "site_brand_logo": "admin/img/logo.png",
     # Favicon

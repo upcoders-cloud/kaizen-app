@@ -89,6 +89,12 @@ JAZZMIN_SETTINGS = {
     "site_title": "Kaizen Admin",
     "site_header": "Kaizen",
     "site_brand": "Admin Dashboard",
+    # Login Page Logo
+    "site_logo": "admin/img/logo.png",
+    # Sidebar Logo (Dashboard)
+    "site_brand_logo": "admin/img/logo.png",
+    # Favicon
+    "site_icon": "admin/img/logo.png",
     "welcome_sign": "Welcome to the Kaizen App Management Portal",
     "copyright": "Upcoders sp. z o.o",
     "search_model": [
@@ -233,3 +239,6 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+STATICFILES_DIRS = [
+    os.path.join(Path(__file__).resolve().parents[1], "static"),
+]

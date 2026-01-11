@@ -4,9 +4,13 @@ import Text from 'components/Text/Text';
 import colors from 'theme/colors';
 
 const NotificationItem = ({notification, onPress}) => {
+	const firstName = notification?.actor?.first_name?.trim() || '';
+	const lastName = notification?.actor?.last_name?.trim() || '';
+	const lastInitial = lastName ? `${lastName.charAt(0).toUpperCase()}.` : '';
+	const fullName = firstName ? `${firstName}${lastInitial ? ` ${lastInitial}` : ''}` : '';
 	const actorName =
+		fullName ||
 		notification?.actor?.nickname ||
-		[notification?.actor?.first_name, notification?.actor?.last_name].filter(Boolean).join(' ') ||
 		notification?.actor?.username ||
 		'Użytkownik';
 	const postTitle = notification?.post_title || 'Twój post';

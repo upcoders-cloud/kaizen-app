@@ -12,10 +12,13 @@ const formatDate = (value) => {
 const PostHeader = ({post}) => {
 	if (!post) return null;
 	const statusMeta = getPostStatusMeta(post?.status);
+	const categoryLabel = post?.category_name
+		?? post?.category?.name
+		?? (typeof post?.category === 'string' ? post.category : null);
 	return (
 		<View style={styles.container}>
 			<View style={styles.row}>
-				<Text style={styles.category}>{post.category || 'Zgłoszenie'}</Text>
+				<Text style={styles.category}>{categoryLabel || 'Zgłoszenie'}</Text>
 				<Text
 					style={[
 						styles.statusBadge,

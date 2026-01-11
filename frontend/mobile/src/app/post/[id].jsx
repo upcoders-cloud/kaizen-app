@@ -1,7 +1,6 @@
 import {Stack, useLocalSearchParams, useRouter} from 'expo-router';
 import {
 	Animated,
-	ScrollView,
 	Pressable,
 	Text,
 	StyleSheet,
@@ -29,37 +28,58 @@ import {navigateBack} from 'utils/navigation';
 import {getJwtPayload} from 'utils/jwt';
 import CommentsList from 'components/Comments/CommentsList';
 import CommentInput from 'components/Comments/CommentInput';
+import KeyboardAwareScrollView from 'components/KeyboardAwareScrollView/KeyboardAwareScrollView';
 import TextBase from 'components/Text/Text';
 import {CONTENT_IS_REQUIRED, EMPTY_STRING, FAILED_TO_LOAD_POST, FAILED_TO_LOAD_COMMENTS} from 'constants/constans';
 import {getPostStatusMeta} from 'utils/postStatus';
 import ImageCarousel from 'components/PostDetail/ImageCarousel';
 import Button from 'components/Button/Button';
 import BackButton from 'components/Navigation/BackButton';
+import Toast from 'react-native-toast-message';
+import ExtraImagesBadge from 'components/Badges/ExtraImagesBadge';
 
 const CATEGORY_STYLES = {
 	BHP: {backgroundColor: '#E6F6FF', color: '#0F5F7F'},
 	PROCES: {backgroundColor: '#E9F7EF', color: '#2E7D32'},
+	'USPRAWNIENIE PROCESU': {backgroundColor: '#E9F7EF', color: '#2E7D32'},
 	JAKOSC: {backgroundColor: '#FFF3E0', color: '#C16A00'},
+	'JAKOŚĆ': {backgroundColor: '#FFF3E0', color: '#C16A00'},
 	INNE: {backgroundColor: '#F2F4F8', color: '#4A5568'},
+};
+
+const resolveCategoryStyle = (value) => {
+	if (!value) return CATEGORY_STYLES.INNE;
+	const normalized = String(value).toUpperCase();
+	return CATEGORY_STYLES[normalized] || CATEGORY_STYLES.INNE;
 };
 
 const COMMENTS_PREVIEW_COUNT = 2;
 
 export default function PostDetails() {
 	const router = useRouter();
-	const {id: resolvedId} = useLocalSearchParams();
+	const {id: resolvedId, backTo, commentId, scrollTo} = useLocalSearchParams();
+	const resolvedCommentId = Array.isArray(commentId) ? commentId[0] : commentId;
+	const resolvedScrollTo = Array.isArray(scrollTo) ? scrollTo[0] : scrollTo;
+	const shouldScrollToComments = resolvedScrollTo === 'comments';
 	const scrollRef = useRef(null);
+	const processedCommentIdRef = useRef(null);
+	const processedScrollToRef = useRef(false);
+	const highlightTimeoutRef = useRef(null);
+	const contentReadyTimeoutRef = useRef(null);
+	const contentSizeRef = useRef({width: 0, height: 0});
 	const {width: windowWidth} = useWindowDimensions();
 	// Explicit screen width keeps carousel pages perfectly aligned.
 	const screenWidth = Dimensions.get('window').width;
 	const screenHeight = Dimensions.get('window').height;
 	const contentWidth = windowWidth - 32;
-	const [commentsLayoutY, setCommentsLayoutY] = useState(0);
+	const [commentsLayoutY, setCommentsLayoutY] = useState(null);
 	const [post, setPost] = useState(null);
 	const [comments, setComments] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
 	const [refreshing, setRefreshing] = useState(false);
+	const [commentsLoaded, setCommentsLoaded] = useState(false);
+	const [contentReady, setContentReady] = useState(false);
 	const [liking, setLiking] = useState(false);
 	const [commentValue, setCommentValue] = useState('');
 	const [commentError, setCommentError] = useState(null);
@@ -73,6 +93,8 @@ export default function PostDetails() {
 	const [showAllComments, setShowAllComments] = useState(false);
 	const [previewVisible, setPreviewVisible] = useState(false);
 	const [previewIndex, setPreviewIndex] = useState(0);
+	const [commentOffsets, setCommentOffsets] = useState({});
+	const [highlightCommentId, setHighlightCommentId] = useState(null);
 	const likeScale = useRef(new Animated.Value(1)).current;
 	const accessToken = useAuthStore((state) => state.accessToken);
 	const currentUserId = useMemo(
@@ -88,6 +110,11 @@ export default function PostDetails() {
 	}, []);
 
 	const handleBack = () => {
+		const backTarget = Array.isArray(backTo) ? backTo[0] : backTo;
+		if (backTarget === 'home') {
+			router.replace('/');
+			return;
+		}
 		navigateBack(router, '/');
 	};
 
@@ -112,7 +139,19 @@ export default function PostDetails() {
 					setDeletingPost(true);
 					try {
 						await postsService.remove(resolvedId);
+						Toast.show({
+							type: 'success',
+							text1: 'Post został poprawnie usunięty',
+							visibilityTime: 2000,
+						});
 						router.replace('/');
+					} catch (err) {
+						Toast.show({
+							type: 'error',
+							text1: 'Nie udało się usunąć posta',
+							text2: err?.message || 'Spróbuj ponownie',
+							visibilityTime: 2500,
+						});
 					} finally {
 						setDeletingPost(false);
 					}
@@ -124,6 +163,7 @@ export default function PostDetails() {
 	const fetchPost = async (targetId, {withLoader = true} = {}) => {
 		if (!targetId) return;
 		if (withLoader) setLoading(true);
+		setContentReady(false);
 		setError(null);
 		try {
 			const data = await postsService.get(targetId);
@@ -139,19 +179,128 @@ export default function PostDetails() {
 
 	const fetchComments = async (targetId) => {
 		if (!targetId) return;
+		setCommentsLoaded(false);
+		setContentReady(false);
 		try {
 			const data = await postsService.fetchComments(targetId);
 			setComments(data || []);
 		} catch (err) {
 			console.warn(FAILED_TO_LOAD_COMMENTS, err);
+		} finally {
+			setCommentsLoaded(true);
 		}
 	};
 
 	useEffect(() => {
 		if (!resolvedId) return;
+		processedCommentIdRef.current = null;
+		processedScrollToRef.current = false;
+		setCommentsLoaded(false);
+		setContentReady(false);
 		void fetchPost(resolvedId);
 		void fetchComments(resolvedId);
 	}, [resolvedId]);
+
+	const maybeExpandCommentsForTarget = useCallback((targetId) => {
+		if (!targetId) return;
+		if (comments.length > 3) {
+			if (!showAllComments) setShowAllComments(true);
+			return;
+		}
+		const sorted = [...comments].sort((a, b) => new Date(b?.created_at) - new Date(a?.created_at));
+		const targetIndex = sorted.findIndex((comment) => String(comment?.id) === targetId);
+		if (targetIndex >= COMMENTS_PREVIEW_COUNT && !showAllComments) {
+			setShowAllComments(true);
+		}
+	}, [comments, showAllComments]);
+
+	const maybeScrollToTargetComment = useCallback((targetId) => {
+		if (!targetId || commentsLayoutY === null) return false;
+		const offset = commentOffsets[targetId];
+		if (typeof offset !== 'number' || !scrollRef.current) return false;
+		const targetY = Math.max(0, commentsLayoutY + offset - 12);
+		requestAnimationFrame(() => {
+			scrollRef.current?.scrollTo({y: targetY, animated: true});
+		});
+		return true;
+	}, [commentOffsets, commentsLayoutY]);
+
+	const triggerCommentHighlight = useCallback((targetId) => {
+		setHighlightCommentId(targetId);
+		if (highlightTimeoutRef.current) {
+			clearTimeout(highlightTimeoutRef.current);
+		}
+		highlightTimeoutRef.current = setTimeout(() => {
+			setHighlightCommentId((current) => (current === targetId ? null : current));
+		}, 1500);
+	}, []);
+
+	const handleCommentDeepLink = useCallback(() => {
+		if (!resolvedCommentId) return;
+		if (loading || !commentsLoaded || !contentReady) return;
+		const targetId = String(resolvedCommentId);
+		if (processedCommentIdRef.current === targetId) return;
+		maybeExpandCommentsForTarget(targetId);
+		const didScroll = maybeScrollToTargetComment(targetId);
+		if (!didScroll) return;
+		processedCommentIdRef.current = targetId;
+		triggerCommentHighlight(targetId);
+	}, [
+		commentsLoaded,
+		contentReady,
+		loading,
+		maybeExpandCommentsForTarget,
+		maybeScrollToTargetComment,
+		resolvedCommentId,
+		triggerCommentHighlight,
+	]);
+
+	useEffect(() => {
+		handleCommentDeepLink();
+	}, [handleCommentDeepLink]);
+
+	useEffect(() => {
+		if (!shouldScrollToComments || resolvedCommentId) return;
+		if (loading || !commentsLoaded || !contentReady) return;
+		if (processedScrollToRef.current) return;
+		if (!scrollRef.current || commentsLayoutY === null) return;
+		processedScrollToRef.current = true;
+		requestAnimationFrame(() => {
+			scrollRef.current?.scrollTo({y: Math.max(0, commentsLayoutY - 12), animated: true});
+		});
+	}, [commentsLayoutY, commentsLoaded, contentReady, loading, resolvedCommentId, shouldScrollToComments]);
+
+	useEffect(() => () => {
+		if (highlightTimeoutRef.current) {
+			clearTimeout(highlightTimeoutRef.current);
+		}
+		if (contentReadyTimeoutRef.current) {
+			clearTimeout(contentReadyTimeoutRef.current);
+		}
+	}, []);
+
+	const handleCommentLayout = useCallback((commentKey, layoutY) => {
+		const key = String(commentKey);
+		setCommentOffsets((prev) => {
+			if (prev[key] === layoutY) return prev;
+			return {...prev, [key]: layoutY};
+		});
+	}, []);
+
+	const handleContentSizeChange = useCallback((width, height) => {
+		const previous = contentSizeRef.current;
+		if (previous.width === width && previous.height === height) {
+			return;
+		}
+		contentSizeRef.current = {width, height};
+		setContentReady(false);
+		if (contentReadyTimeoutRef.current) {
+			clearTimeout(contentReadyTimeoutRef.current);
+		}
+		contentReadyTimeoutRef.current = setTimeout(() => {
+			setContentReady(true);
+		}, 160);
+	}, []);
 
 	useFocusEffect(
 		useCallback(() => {
@@ -219,6 +368,12 @@ export default function PostDetails() {
 		}
 	};
 
+	const handleCommentFocus = useCallback(() => {
+		requestAnimationFrame(() => {
+			scrollRef.current?.scrollToEnd({animated: true});
+		});
+	}, []);
+
 	const handleUpdateComment = async (commentId, text) => {
 		if (!commentId) {
 			return {success: false, error: 'Brak komentarza do edycji'};
@@ -265,7 +420,7 @@ export default function PostDetails() {
 	};
 
 	const scrollToComments = useCallback(() => {
-		if (!scrollRef.current || !commentsLayoutY) return;
+		if (!scrollRef.current || commentsLayoutY === null) return;
 		scrollRef.current.scrollTo({y: commentsLayoutY, animated: true});
 	}, [commentsLayoutY]);
 
@@ -275,8 +430,12 @@ export default function PostDetails() {
 		.join(' ')
 		.trim();
 	const authorName = authorFullName || post?.author?.nickname || post?.author?.username || 'Użytkownik';
-	const categoryStyle = CATEGORY_STYLES[post?.category] || CATEGORY_STYLES.INNE;
+	const categoryLabel = post?.category_name
+		?? post?.category?.name
+		?? (typeof post?.category === 'string' ? post.category : null);
+	const categoryStyle = resolveCategoryStyle(categoryLabel);
 	const imageUrls = Array.isArray(post?.image_urls) ? post.image_urls.filter(Boolean) : [];
+	const extraImagesCount = Math.max(0, imageUrls.length - 1);
 	const formattedDate = post?.created_at
 		? new Date(post.created_at).toLocaleDateString('pl-PL', {
 			day: '2-digit',
@@ -320,9 +479,11 @@ export default function PostDetails() {
 						) : null,
 				}}
 			/>
-			<ScrollView
+			<KeyboardAwareScrollView
 				ref={scrollRef}
 				contentContainerStyle={styles.container}
+				onContentSizeChange={handleContentSizeChange}
+				keyboardVerticalOffset={12}
 				refreshControl={
 					<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />
 				}
@@ -344,7 +505,7 @@ export default function PostDetails() {
 							<View style={styles.headerTopRow}>
 								<View style={styles.badgesRow}>
 									<TextBase style={[styles.categoryBadge, categoryStyle]}>
-										{post?.category || 'Zgłoszenie'}
+										{categoryLabel || 'Zgłoszenie'}
 									</TextBase>
 									<TextBase
 										style={[
@@ -378,15 +539,19 @@ export default function PostDetails() {
 							{imageUrls.length === 1 ? (
 								<Pressable style={styles.imageWrapper} onPress={() => openPreview(0)}>
 									<Image source={{uri: imageUrls[0]}} style={styles.image} resizeMode="cover" />
+									<ExtraImagesBadge count={extraImagesCount} />
 								</Pressable>
 							) : imageUrls.length > 1 ? (
-								<ImageCarousel
-									images={imageUrls}
-									width={contentWidth}
-									height={240}
-									onImagePress={openPreview}
-									showDots
-								/>
+								<View style={styles.imageWrapper}>
+									<ImageCarousel
+										images={imageUrls}
+										width={contentWidth}
+										height={240}
+										onImagePress={openPreview}
+										showDots
+									/>
+									<ExtraImagesBadge count={extraImagesCount} />
+								</View>
 							) : (
 								<TextBase style={styles.placeholderText}>Brak załączników.</TextBase>
 							)}
@@ -473,6 +638,8 @@ export default function PostDetails() {
 								onDelete={handleDeleteComment}
 								updatingId={updatingCommentId}
 								deletingId={deletingCommentId}
+								onCommentLayout={handleCommentLayout}
+								highlightedCommentId={highlightCommentId}
 							/>
 						</View>
 						<View style={styles.commentInputSection}>
@@ -482,11 +649,12 @@ export default function PostDetails() {
 								onSubmit={handleSubmitComment}
 								loading={submittingComment}
 								error={commentError}
+								onFocus={handleCommentFocus}
 							/>
 						</View>
 					</>
 				)}
-			</ScrollView>
+			</KeyboardAwareScrollView>
 			<Modal
 				transparent
 				visible={previewVisible}
@@ -578,10 +746,9 @@ const styles = StyleSheet.create({
 		borderBottomColor: colors.border,
 	},
 	headerTopRow: {
-		flexDirection: 'row',
-		justifyContent: 'space-between',
-		alignItems: 'center',
-		gap: 12,
+		flexDirection: 'column',
+		alignItems: 'flex-start',
+		gap: 8,
 	},
 	badgesRow: {
 		flexDirection: 'row',
@@ -654,6 +821,7 @@ const styles = StyleSheet.create({
 		height: 240,
 		borderRadius: 12,
 		overflow: 'hidden',
+		position: 'relative',
 		backgroundColor: colors.placeholderSurface,
 	},
 	image: {

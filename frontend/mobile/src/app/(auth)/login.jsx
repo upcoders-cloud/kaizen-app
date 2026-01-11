@@ -4,21 +4,19 @@ import {Feather} from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import Toast from 'react-native-toast-message';
 import {
-	KeyboardAvoidingView,
-	Platform,
 	Pressable,
-	ScrollView,
 	StyleSheet,
 	useWindowDimensions,
 	View,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useAuthStore} from 'store/authStore'
+import KeyboardAwareScrollView from 'components/KeyboardAwareScrollView/KeyboardAwareScrollView';
 import Input from 'components/Input/Input';
 import Button from 'components/Button/Button';
 import Text from 'components/Text/Text';
 import colors from 'theme/colors';
-import {EMPTY_STRING, PLATFORM_IOS, STRING} from "constants/constans";
+import {EMPTY_STRING, STRING} from "constants/constans";
 
 const Login = () => {
 	const appVersion = Constants.expoConfig?.version ?? '1.0.0';
@@ -80,19 +78,14 @@ const Login = () => {
 	return (
 		<SafeAreaView style={styles.safeArea}>
 			<View style={styles.decorativeBubble} />
-			<KeyboardAvoidingView
-				behavior={Platform.OS === PLATFORM_IOS ? 'padding' : undefined}
-				style={styles.flex}
+			<KeyboardAwareScrollView
+				contentContainerStyle={styles.content}
+				showsVerticalScrollIndicator={false}
 			>
-				<ScrollView
-					contentContainerStyle={styles.content}
-					keyboardShouldPersistTaps="handled"
-					showsVerticalScrollIndicator={false}
-				>
 					<View style={styles.header}>
 						<View style={styles.tag}>
 							<Feather name="zap" size={14} color={colors.primary} />
-							<Text style={styles.tagText}>Mentalność Kaizen</Text>
+							<Text style={styles.tagText}>Mentalność 改善</Text>
 						</View>
 						<Text style={styles.title}>Witaj ponownie</Text>
 						<Text style={styles.subtitle}>
@@ -154,8 +147,7 @@ const Login = () => {
 						</Text>
 						<Text style={styles.footerNote}>Małe usprawnienia, duży efekt.</Text>
 					</View>
-				</ScrollView>
-			</KeyboardAvoidingView>
+			</KeyboardAwareScrollView>
 		</SafeAreaView>
 	);
 };
@@ -166,9 +158,6 @@ const styles = StyleSheet.create({
 	safeArea: {
 		flex: 1,
 		backgroundColor: colors.background,
-	},
-	flex: {
-		flex: 1,
 	},
 	content: {
 		flexGrow: 1,

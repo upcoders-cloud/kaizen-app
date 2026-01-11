@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import KaizenPost, Comment, Like, PostImage, PostSurvey, Notification
+from .models import KaizenPost, Comment, Like, PostImage, PostSurvey, Notification, Category
 
 
 # 1. This class allows you to manage images directly inside the KaizenPost form
@@ -17,12 +17,33 @@ class PostImageInline(admin.TabularInline):
     image_preview.short_description = "Podgląd"
 
 
+@admin.register(Category)
+class CategoryAdmin(admin.ModelAdmin):
+    list_display = ('name', 'is_active')
+    list_editable = ('is_active',)
+
+
 @admin.register(KaizenPost)
 class KaizenPostAdmin(admin.ModelAdmin):
-    # Added 'title' to the display and 'title' to search fields
+    # Optymalizacja bazy danych - pobiera autora i kategorię w jednym zapytaniu SQL (JOIN)
+    list_select_related = ('author', 'category')
+
+    # Wyświetlane kolumny
     list_display = ('id', 'title', 'author', 'category', 'created_at', 'image_count')
-    list_filter = ('category', 'created_at')
-    search_fields = ('title', 'content', 'author__username')  # Adjust 'author__nickname' if needed
+
+    # Filtry po prawej stronie
+    list_filter = ('category', 'created_at', 'status')
+
+    # Wyszukiwarka
+    search_fields = ('title', 'content', 'author__username', 'author__first_name', 'author__last_name')
+
+    # Opcjonalnie: jeśli image_count nie jest w modelu, możesz je zdefiniować tutaj:
+    def image_count(self, obj):
+        # Przykład, jeśli masz relację 'images' w modelu
+        # return obj.images.count()
+        return 0  # Wstaw tutaj logiczne zliczanie zdjęć
+
+    image_count.short_description = "Liczba zdjęć"
 
     # This attaches the image upload rows to the bottom of the Post form
     inlines = [PostImageInline]

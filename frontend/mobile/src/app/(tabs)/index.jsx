@@ -11,6 +11,7 @@ import colors from 'theme/colors';
 import {useAuthStore} from 'store/authStore';
 import {getJwtPayload} from 'utils/jwt';
 import AppHeader from 'components/Navigation/AppHeader';
+import SearchBar from 'components/Search/SearchBar';
 import Toast from 'react-native-toast-message';
 
 const FILTERS = [
@@ -30,6 +31,8 @@ const Home = () => {
 	const [menuVisible, setMenuVisible] = useState(false);
 	const [menuPost, setMenuPost] = useState(null);
 	const [deletingPostId, setDeletingPostId] = useState(null);
+	const [searchQuery, setSearchQuery] = useState('');
+	const [searchVisible, setSearchVisible] = useState(false);
 	const router = useRouter();
 	const accessToken = useAuthStore((state) => state.accessToken);
 	const currentUserId = useMemo(
@@ -48,23 +51,34 @@ const Home = () => {
 
 	const filteredPosts = useMemo(() => {
 		const data = Array.isArray(allPosts) ? [...allPosts] : [];
+		let result = data;
 		switch (activeFilter.key) {
 			case 'mine': {
 				if (!currentUserId) return [];
-				return data.filter((post) => String(post?.author?.id) === String(currentUserId));
+				result = data.filter((post) => String(post?.author?.id) === String(currentUserId));
+				break;
 			}
 			case 'newest':
-				return data.sort((a, b) => new Date(b?.created_at || 0) - new Date(a?.created_at || 0));
+				result = data.sort((a, b) => new Date(b?.created_at || 0) - new Date(a?.created_at || 0));
+				break;
 			case 'likes':
-				return data.sort((a, b) => {
+				result = data.sort((a, b) => {
 					const likesA = a?.likes_count ?? a?.likes?.length ?? 0;
 					const likesB = b?.likes_count ?? b?.likes?.length ?? 0;
 					return likesB - likesA;
 				});
+				break;
 			default:
-				return data;
+				result = data;
 		}
-	}, [allPosts, activeFilter.key, currentUserId]);
+		const query = searchQuery.trim().toLowerCase();
+		if (!query) return result;
+		return result.filter((post) =>
+			String(post?.title ?? '')
+				.toLowerCase()
+				.includes(query)
+		);
+	}, [allPosts, activeFilter.key, currentUserId, searchQuery]);
 
 	const handleOpenFilter = () => setFilterVisible(true);
 	const handleCloseFilter = () => setFilterVisible(false);
@@ -72,12 +86,24 @@ const Home = () => {
 		setActiveFilter(filter);
 		setFilterVisible(false);
 	};
+	const handleToggleSearch = () => {
+		setSearchVisible((prev) => {
+			const next = !prev;
+			if (!next) {
+				setSearchQuery('');
+			}
+			return next;
+		});
+	};
+	const handleClearSearch = () => {
+		setSearchQuery('');
+	};
 	const handleOpenNotifications = () => {
 		router.push('/notifications');
 	};
 	const handleOpenComments = (post) => {
 		if (!post?.id) return;
-		router.push(`/post/${post.id}`);
+		router.push({pathname: `/post/${post.id}`, params: {scrollTo: 'comments'}});
 	};
 	const handleOpenMenu = (post) => {
 		if (!post?.id || deletingPostId) return;
@@ -166,6 +192,10 @@ const Home = () => {
 		}
 	};
 
+	const emptyListText = searchQuery.trim()
+		? 'Brak wyników dla tego wyszukiwania.'
+		: 'Brak postów do wyświetlenia.';
+
 	return (
 		<SafeAreaProvider>
 			<SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
@@ -174,19 +204,28 @@ const Home = () => {
 					title="Główna"
 					onFilterPress={handleOpenFilter}
 					onNotificationsPress={handleOpenNotifications}
+					onSearchPress={handleToggleSearch}
+					isSearchActive={searchVisible}
 				/>
-					<PostList
-						posts={filteredPosts}
-						loading={loading}
-						error={error}
-						onRefresh={loadPosts}
-						onPressItem={(item) => router.push(`/post/${item.id}`)}
-						onToggleLike={handleToggleLike}
-						onPressComment={handleOpenComments}
-						onPressMore={handleOpenMenu}
-						currentUserId={currentUserId}
-						isDeleting={Boolean(deletingPostId)}
-					/>
+				<SearchBar
+					value={searchQuery}
+					onChangeText={setSearchQuery}
+					visible={searchVisible}
+					onClear={handleClearSearch}
+				/>
+				<PostList
+					posts={filteredPosts}
+					loading={loading}
+					error={error}
+					emptyText={emptyListText}
+					onRefresh={loadPosts}
+					onPressItem={(item) => router.push(`/post/${item.id}`)}
+					onToggleLike={handleToggleLike}
+					onPressComment={handleOpenComments}
+					onPressMore={handleOpenMenu}
+					currentUserId={currentUserId}
+					isDeleting={Boolean(deletingPostId)}
+				/>
 				<Modal transparent visible={filterVisible} animationType="fade" onRequestClose={handleCloseFilter}>
 					<Pressable style={styles.filterOverlay} onPress={handleCloseFilter}>
 						<Pressable style={styles.filterMenu} onPress={(event) => event.stopPropagation()}>

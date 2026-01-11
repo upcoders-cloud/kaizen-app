@@ -3,12 +3,21 @@ import {useRef} from 'react';
 import {Feather} from '@expo/vector-icons';
 import colors from 'theme/colors';
 import {getPostStatusMeta} from 'utils/postStatus';
+import ExtraImagesBadge from 'components/Badges/ExtraImagesBadge';
 
 const CATEGORY_STYLES = {
 	BHP: {backgroundColor: '#E6F6FF', color: '#0F5F7F'},
 	PROCES: {backgroundColor: '#E9F7EF', color: '#2E7D32'},
+	'USPRAWNIENIE PROCESU': {backgroundColor: '#E9F7EF', color: '#2E7D32'},
 	JAKOSC: {backgroundColor: '#FFF3E0', color: '#C16A00'},
+	'JAKOŚĆ': {backgroundColor: '#FFF3E0', color: '#C16A00'},
 	INNE: {backgroundColor: '#F2F4F8', color: '#4A5568'},
+};
+
+const resolveCategoryStyle = (value) => {
+	if (!value) return CATEGORY_STYLES.INNE;
+	const normalized = String(value).toUpperCase();
+	return CATEGORY_STYLES[normalized] || CATEGORY_STYLES.INNE;
 };
 
 const Post = ({
@@ -32,13 +41,16 @@ const Post = ({
 	const isLiked = Boolean(post?.is_liked_by_me);
 	const likeScale = useRef(new Animated.Value(1)).current;
 	const imageUrls = Array.isArray(post?.image_urls)
-		? post.image_urls
+		? post.image_urls.filter(Boolean)
 		: Array.isArray(post?.images)
-			? post.images
+			? post.images.filter(Boolean)
 			: [];
 	const primaryImage = imageUrls[0];
-	const categoryKey = post?.category || 'INNE';
-	const categoryStyle = CATEGORY_STYLES[categoryKey] || CATEGORY_STYLES.INNE;
+	const extraImagesCount = Math.max(0, imageUrls.length - 1);
+	const categoryLabel = post?.category_name
+		?? post?.category?.name
+		?? (typeof post?.category === 'string' ? post.category : null);
+	const categoryStyle = resolveCategoryStyle(categoryLabel);
 
 	const initials = authorName
 		.split(' ')
@@ -106,14 +118,19 @@ const Post = ({
 
 			{/* Body */}
 			<View style={styles.body}>
-				<Text style={[styles.category, categoryStyle]}>{post?.category || 'Zgłoszenie'}</Text>
+				<Text style={[styles.category, categoryStyle]}>{categoryLabel || 'Zgłoszenie'}</Text>
 				<Text style={styles.title} numberOfLines={2}>
 					{post?.title || 'Bez tytułu'}
 				</Text>
 				<Text style={styles.excerpt} numberOfLines={4} ellipsizeMode="tail">
 					{post?.content || 'Brak treści'}
 				</Text>
-				{primaryImage ? <Image source={{uri: primaryImage}} style={styles.image} /> : null}
+				{primaryImage ? (
+					<View style={styles.imageWrapper}>
+						<Image source={{uri: primaryImage}} style={styles.image} />
+						<ExtraImagesBadge count={extraImagesCount} />
+					</View>
+				) : null}
 			</View>
 
 			{/* Footer */}
@@ -254,10 +271,16 @@ const styles = StyleSheet.create({
 		gap: 6,
 	},
 	image: {
+		width: '100%',
+		height: 180,
+	},
+	imageWrapper: {
 		marginTop: 8,
 		width: '100%',
 		height: 180,
 		borderRadius: 8,
+		overflow: 'hidden',
+		position: 'relative',
 		backgroundColor: colors.border,
 	},
 	footer: {

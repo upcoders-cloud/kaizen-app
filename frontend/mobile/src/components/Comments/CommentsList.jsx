@@ -10,6 +10,8 @@ const CommentsList = ({
 	onDelete,
 	updatingId,
 	deletingId,
+	onCommentLayout,
+	highlightedCommentId,
 }) => {
 	if (!comments.length) {
 		return (
@@ -22,10 +24,22 @@ const CommentsList = ({
 	return (
 		<View style={styles.list}>
 			{comments.map((comment, index) => {
-				const key = comment.id ?? `${comment.created_at}-${index}`;
+				const commentId = comment?.id;
+				const key = commentId ?? `${comment.created_at}-${index}`;
 				const isLast = index === comments.length - 1;
+				const isHighlighted =
+					highlightedCommentId != null && commentId != null
+						? String(commentId) === String(highlightedCommentId)
+						: false;
 				return (
-					<View key={key}>
+					<View
+						key={key}
+						onLayout={
+							onCommentLayout && commentId != null
+								? (event) => onCommentLayout(commentId, event.nativeEvent.layout.y)
+								: undefined
+						}
+					>
 						<CommentItem
 							comment={comment}
 							isOwner={String(comment?.author?.id) === String(currentUserId)}
@@ -33,6 +47,7 @@ const CommentsList = ({
 							onDelete={onDelete}
 							isUpdating={updatingId === comment?.id}
 							isDeleting={deletingId === comment?.id}
+							isHighlighted={isHighlighted}
 						/>
 						{!isLast ? <View style={styles.separator} /> : null}
 					</View>

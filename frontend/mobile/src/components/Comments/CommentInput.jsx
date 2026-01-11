@@ -4,7 +4,7 @@ import Input from 'components/Input/Input';
 import Button from 'components/Button/Button';
 import colors from 'theme/colors';
 
-const CommentInput = ({value, onChangeText, onSubmit, loading = false, error}) => {
+const CommentInput = ({value, onChangeText, onSubmit, loading = false, error, onFocus}) => {
 	return (
 		<View style={styles.container}>
 			<Input
@@ -17,6 +17,7 @@ const CommentInput = ({value, onChangeText, onSubmit, loading = false, error}) =
 				style={styles.inputWrapper}
 				inputStyle={styles.input}
 				error={error}
+				onFocus={onFocus}
 			/>
 			<Button
 				title="Dodaj komentarz"

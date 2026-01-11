@@ -6,6 +6,7 @@ const PostList = ({
 	posts = [],
 	loading = false,
 	error = null,
+	emptyText = 'Brak postów do wyświetlenia.',
 	onRefresh,
 	onPressItem,
 	onToggleLike,
@@ -49,7 +50,7 @@ const PostList = ({
 				/>
 			)}
 			contentContainerStyle={posts.length ? styles.listContent : styles.centered}
-			ListEmptyComponent={<Text style={styles.muted}>Brak postów do wyświetlenia.</Text>}
+			ListEmptyComponent={<Text style={styles.muted}>{emptyText}</Text>}
 			showsVerticalScrollIndicator={false}
 			refreshControl={
 				onRefresh ? (

@@ -1,11 +1,32 @@
-import {Pressable, StyleSheet, View} from 'react-native';
+import {useEffect, useRef} from 'react';
+import {Animated, Pressable, StyleSheet, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {Feather} from '@expo/vector-icons';
 import Text from 'components/Text/Text';
 import colors from 'theme/colors';
 import NotificationsBell from 'components/Notifications/NotificationsBell';
 
-const AppHeader = ({title = 'Główna', onFilterPress, onNotificationsPress}) => {
+const AppHeader = ({
+	title = 'Główna',
+	onFilterPress,
+	onNotificationsPress,
+	onSearchPress,
+	isSearchActive = false,
+}) => {
+	const searchScale = useRef(new Animated.Value(1)).current;
+	const hasMounted = useRef(false);
+
+	useEffect(() => {
+		if (!hasMounted.current) {
+			hasMounted.current = true;
+			return;
+		}
+		Animated.sequence([
+			Animated.spring(searchScale, {toValue: 1.08, useNativeDriver: true, speed: 30, bounciness: 6}),
+			Animated.spring(searchScale, {toValue: 1, useNativeDriver: true, speed: 30, bounciness: 6}),
+		]).start();
+	}, [isSearchActive, searchScale]);
+
 	return (
 		<SafeAreaView edges={['top']} style={styles.safeArea}>
 			<View style={styles.container}>
@@ -14,8 +35,13 @@ const AppHeader = ({title = 'Główna', onFilterPress, onNotificationsPress}) =>
 					<Pressable style={styles.iconButton} onPress={onFilterPress}>
 						<Feather name="sliders" size={18} color={colors.primary} />
 					</Pressable>
-					<Pressable style={styles.iconButton}>
-						<Feather name="search" size={18} color={colors.primary} />
+					<Pressable
+						style={[styles.iconButton, isSearchActive ? styles.iconButtonActive : null]}
+						onPress={onSearchPress}
+					>
+						<Animated.View style={{transform: [{scale: searchScale}]}}>
+							<Feather name={isSearchActive ? 'x' : 'search'} size={18} color={colors.primary} />
+						</Animated.View>
 					</Pressable>
 					<NotificationsBell
 						onPress={onNotificationsPress}
@@ -63,6 +89,10 @@ const styles = StyleSheet.create({
 		backgroundColor: '#f4f6fb',
 		borderWidth: 1,
 		borderColor: '#e3e9f7',
+	},
+	iconButtonActive: {
+		backgroundColor: '#e8efff',
+		borderColor: colors.primary,
 	},
 	badgeDot: {
 		position: 'absolute',

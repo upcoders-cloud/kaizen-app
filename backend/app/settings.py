@@ -24,6 +24,7 @@ load_dotenv()
 SECRET_KEY = os.getenv('DJANGO_SECRET')
 ACCESS_SECONDS = int(os.getenv('ACCESS_TOKEN_SECONDS', 900)) # Default 5 mins
 REFRESH_SECONDS = int(os.getenv('REFRESH_TOKEN_SECONDS', 86400))
+ACCESS_CODE_PEPPER = os.getenv('ACCESS_CODE_PEPPER', SECRET_KEY)
 SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', 'False') == 'True'
 
 CSRF_COOKIE_SECURE = SESSION_COOKIE_SECURE
@@ -71,6 +72,9 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticatedOrReadOnly',
     ),
+    'DEFAULT_THROTTLE_RATES': {
+        'access_code_login': '5/min',
+    },
 }
 
 SIMPLE_JWT = {
@@ -104,7 +108,8 @@ JAZZMIN_SETTINGS = {
         "users.CustomUser",   # Searches "Użytkownicy"
         "ideas.Notification", # Searches "Powiadomienia"
     ],
-    "custom_css": "admin/css/custom_admin.css",
+    # Minimal custom styles only for logo sizing.
+    "custom_css": "admin/css/logo_fix.css",
     "show_sidebar": True,
     "navigation_expanded": True,
     "icons": {
@@ -119,31 +124,34 @@ JAZZMIN_SETTINGS = {
 }
 
 JAZZMIN_UI_TWEAKS = {
-    "theme": "flatly",          # Modern dark theme
-    "dark_mode_theme": "darkly",
-    "navbar_small_text": False,
+    "theme": "default",
+    # Disable dark mode variant to keep one consistent classic theme.
+    "dark_mode_theme": None,    "navbar_small_text": False,
     "footer_small_text": False,
     "body_small_text": False,
     "brand_small_text": False,
-    "brand_colour": "navbar-primary", # Uses a "Kaizen Green" for the brand
+    "brand_colour": "navbar-light",
     "accent": "accent-primary",
-    "navbar": "navbar-primary navbar-dark",
+    "navbar": "navbar-white navbar-light",
     "no_navbar_border": False,
     "navbar_fixed": True,
     "layout_boxed": False,
     "footer_fixed": False,
     "sidebar_fixed": True,
-    "sidebar": "sidebar-light-primary", # Matching green accents for sidebar
+    "sidebar": "sidebar-light-primary",
     "sidebar_nav_small_text": False,
     "sidebar_disable_expand": False,
     "sidebar_nav_child_indent": True,
     "sidebar_nav_compact_style": False,
     "sidebar_nav_legacy_style": False,
     "sidebar_nav_flat_style": False,
-    "show_ui_builder": True,
+    "show_ui_builder": False,
     "button_classes": {
-            "primary": "btn-primary",          # Standard Bootstrap Blue
-            "success": "btn-info",             # Secondary Blue-ish tone
+        "primary": "btn-primary",
+        "success": "btn-success",
+        "info": "btn-info",
+        "warning": "btn-warning",
+        "danger": "btn-danger",
     }
 }
 

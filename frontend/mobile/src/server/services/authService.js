@@ -6,6 +6,9 @@ const authService = {
 	login(body, options) {
 		return httpClient.post(ensureTrailingSlash(`${basePath}/token`), body, options);
 	},
+	loginWithAccessCode(body, options) {
+		return httpClient.post(ensureTrailingSlash(`${basePath}/token/code`), body, options);
+	},
 	refresh(body, options) {
 		return httpClient.post(ensureTrailingSlash(`${basePath}/token/refresh`), body, options);
 	}

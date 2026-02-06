@@ -1,0 +1,16 @@
+/* Keep classic Jazzmin theme. This file only fixes oversized logos. */
+
+.login-page .login-logo img,
+.login-box .login-logo img {
+    width: 240px !important;
+    max-width: 70vw !important;
+    height: auto !important;
+    display: block;
+    margin: 0 auto 1.25rem auto !important;
+    object-fit: contain;
+}
+
+.login-page .login-logo,
+.login-box .login-logo {
+    margin-bottom: 1rem !important;
+}

@@ -1,85 +1,130 @@
 /* backend/static/admin/css/custom_admin.css */
 
 :root {
-    --primary-blue: #5271ff;
-    --glass-white: rgba(255, 255, 255, 0.15);
+    --kaizen-primary: #2563eb;
+    --kaizen-primary-dark: #1e40af;
+    --kaizen-primary-soft: #dbeafe;
+    --kaizen-bg: #f8fafc;
+    --kaizen-surface: #ffffff;
+    --kaizen-border: #e2e8f0;
+    --kaizen-text: #0f172a;
+    --kaizen-muted: #475569;
 }
 
-/* THE TOP NAVBAR (Fixing image_4db786.png) */
+body,
+.content-wrapper,
+.main-footer {
+    background: var(--kaizen-bg) !important;
+    color: var(--kaizen-text) !important;
+}
+
 .main-header {
-    background-color: var(--primary-blue) !important;
-    border: none !important;
+    background: var(--kaizen-surface) !important;
+    border-bottom: 1px solid var(--kaizen-border) !important;
 }
 
-/* Make search text white so you can actually read it */
+.main-header .nav-link,
+.main-header .btn-navbar,
+.main-header .nav-link i,
+.main-header .btn-navbar i {
+    color: var(--kaizen-primary-dark) !important;
+}
+
 .navbar-search .form-control-navbar {
-    background-color: var(--glass-white) !important;
-    color: #ffffff !important;
-    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    background: #f1f5f9 !important;
+    border: 1px solid var(--kaizen-border) !important;
+    color: var(--kaizen-text) !important;
 }
 
 .navbar-search .form-control-navbar::placeholder {
-    color: rgba(255, 255, 255, 0.7) !important;
+    color: #64748b !important;
 }
 
-/* Magnifying glass and Menu icon color */
-.nav-link i, .btn-navbar i {
-    color: #ffffff !important;
-}
-
-/* THE DASHBOARD CARDS (Fixing image_4d468b.png) */
-/* Model Labels (Ankiety, Posty, etc.) - Making them bright blue */
-.card-body td a,
-.card-body th a,
-.model-name a {
-    color: var(--primary-blue) !important;
-    font-weight: bold !important;
-    text-shadow: 0px 0px 1px rgba(255,255,255,0.1); /* Subtle lift */
-}
-
-/* Section Titles (System Kaizen, Users) */
-.card-header {
-    background-color: #2d2d2d !important; /* Dark contrast for the blue text above it */
-    border-bottom: 2px solid var(--primary-blue) !important;
-}
-
-.card-title {
-    color: #ffffff !important;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
-
-/* SIDEBAR FIXES */
 .brand-link {
-    background-color: var(--primary-blue) !important;
+    background: linear-gradient(135deg, var(--kaizen-primary-dark), var(--kaizen-primary)) !important;
     color: #ffffff !important;
 }
 
-.nav-sidebar .nav-link p {
-    color: var(--primary-blue) !important;
+.nav-sidebar .nav-link {
+    color: var(--kaizen-muted) !important;
+    border-radius: 8px;
+    margin: 2px 8px;
 }
 
-/* BUTTONS (Add/Change) */
-.btn-primary, .btn-info {
-    background-color: var(--primary-blue) !important;
-    border-color: var(--primary-blue) !important;
-    color: #ffffff !important;
+.nav-sidebar .nav-link.active,
+.nav-sidebar .nav-link:hover {
+    background: var(--kaizen-primary-soft) !important;
+    color: var(--kaizen-primary-dark) !important;
 }
 
-/* Target the logo specifically on the login page */
+.card,
+.small-box,
+.info-box {
+    background: var(--kaizen-surface) !important;
+    border: 1px solid var(--kaizen-border) !important;
+    border-radius: 10px !important;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05) !important;
+}
+
+.card-header {
+    background: #f1f5f9 !important;
+    border-bottom: 1px solid var(--kaizen-border) !important;
+}
+
+.card-title,
+.content-header h1 {
+    color: var(--kaizen-text) !important;
+}
+
+.table,
+.table thead th,
+.table td,
+.table th {
+    background: var(--kaizen-surface) !important;
+    color: var(--kaizen-text) !important;
+    border-color: var(--kaizen-border) !important;
+}
+
+.table thead th {
+    background: #eff6ff !important;
+    color: var(--kaizen-primary-dark) !important;
+}
+
+.table-striped tbody tr:nth-of-type(odd) {
+    background-color: #f8fbff !important;
+}
+
+.btn-primary,
+.btn-info {
+    background: var(--kaizen-primary) !important;
+    border-color: var(--kaizen-primary) !important;
+}
+
+.btn-primary:hover,
+.btn-info:hover {
+    background: var(--kaizen-primary-dark) !important;
+    border-color: var(--kaizen-primary-dark) !important;
+}
+
+input[type="checkbox"] {
+    accent-color: var(--kaizen-primary);
+}
+
+.login-page .login-logo,
+.login-box .login-logo {
+    text-align: center;
+}
+
+.login-page .login-logo img,
 .login-box .login-logo img {
-    /* Hard limit the width - 150px to 200px is usually perfect for login screens */
-    max-width: 180px !important;
-
-    /* Ensure the height scales proportionally */
+    width: 240px !important;
+    max-width: 70vw !important;
     height: auto !important;
-
-    /* Space it out from the "Welcome" text below */
-    margin: 0 auto 1.5rem auto !important;
+    margin: 0 auto 1.25rem auto !important;
     display: block;
+    object-fit: contain;
 }
 
-/* Optional: If you want to hide the "Django Administration" text below your logo */
 .login-box .login-logo a {
-    font-size: 0 !important; /* Hides the text while keeping the link active */
+    font-size: 0 !important;
 }

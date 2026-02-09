@@ -44,6 +44,7 @@ def build_login_response_payload(*, user, access_token: str) -> dict:
         'first_name': user.first_name or '',
         'last_name': user.last_name or '',
         'gender': user.gender or '',
+        'role': getattr(user, 'role', 'EMPLOYEE'),
     }
 
 

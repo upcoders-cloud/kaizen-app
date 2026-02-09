@@ -15,6 +15,10 @@ export const REQUEST_FAILED_WITH_STATUS = 'Request failed with status';
 export const CONTENT_IS_REQUIRED = 'Content is required';
 export const TITLE_IS_REQUIRED = 'Title is required';
 export const FAILED_TO_CREATE_POST = 'Failed to create post';
+export const FAILED_TO_LOAD_MANAGERS = 'Failed to load managers';
+export const FAILED_TO_APPROVE_POST = 'Failed to approve post';
+export const FAILED_TO_REJECT_POST = 'Failed to reject post';
+export const REJECTION_REASON_REQUIRED = 'Podaj powód odrzucenia';
 export const LOGIN_FAILED = 'Login failed';
 export const REFRESH_FAILED = 'Refresh failed';
 

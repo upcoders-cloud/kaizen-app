@@ -24,9 +24,9 @@ class CategoryAdmin(admin.ModelAdmin):
 
 @admin.register(KaizenPost)
 class KaizenPostAdmin(admin.ModelAdmin):
-    list_select_related = ('author', 'category')
-    list_display = ('id', 'title', 'author', 'category', 'created_at', 'image_count')
-    list_filter = ('category', 'created_at', 'status')
+    list_select_related = ('author', 'category', 'assigned_manager')
+    list_display = ('id', 'title', 'author', 'category', 'status', 'assigned_manager', 'created_at', 'image_count')
+    list_filter = ('category', 'created_at', 'status', 'assigned_manager')
     search_fields = ('title', 'content', 'author__username', 'author__first_name', 'author__last_name')
     inlines = [PostImageInline]
 

@@ -8,6 +8,10 @@ class CustomUser(AbstractUser):
         verbose_name = "Użytkownik"
         verbose_name_plural = "Użytkownicy"
 
+    class Role(models.TextChoices):
+        EMPLOYEE = 'EMPLOYEE', 'Pracownik'
+        MANAGER = 'MANAGER', 'Kierownik'
+
     GENDER_CHOICES = [
         ('male', 'Male'),
         ('female', 'Female'),
@@ -20,6 +24,12 @@ class CustomUser(AbstractUser):
     nickname = models.CharField(max_length=50, unique=True)
     is_verified = models.BooleanField(default=True) # Domyślnie aktywny
     gender = models.CharField(max_length=20, choices=GENDER_CHOICES, default='unspecified')
+    role = models.CharField(
+        max_length=20,
+        choices=Role.choices,
+        default=Role.EMPLOYEE,
+        verbose_name="Rola",
+    )
 
     def save(self, *args, **kwargs):
         if not self.nickname:

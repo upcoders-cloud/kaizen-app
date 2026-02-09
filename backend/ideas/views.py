@@ -1,7 +1,12 @@
 import logging
+from django.db.models import Q
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.exceptions import ValidationError, PermissionDenied
+from django.db import IntegrityError, transaction
+from django.utils import timezone
+
 from .models import KaizenPost, Comment, Like, PostSurvey, Notification, Category
 from .serializers import (
     PostSerializer,
@@ -13,10 +18,7 @@ from .serializers import (
     CategorySerializer,
 )
 from .permissions import IsCommentAuthorOrReadOnly, IsPostAuthorOrReadOnly
-from rest_framework.exceptions import ValidationError
-from django.db import IntegrityError, transaction
 from .services.post_survey_calculator import calculate_survey_results
-from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -32,10 +34,33 @@ def create_notification(notification_type, recipient, actor, post, comment=None)
         comment=comment,
     )
 
+
 class PostViewSet(viewsets.ModelViewSet):
-    queryset = KaizenPost.objects.all().order_by('-created_at')
     serializer_class = PostSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsPostAuthorOrReadOnly]  # IsAuthenticated jeśli zamknąć apkę
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsPostAuthorOrReadOnly]
+
+    def get_queryset(self):
+        qs = KaizenPost.objects.all().order_by('-created_at')
+        user = self.request.user
+
+        if self.action == 'list':
+            if user.is_authenticated:
+                qs = qs.filter(
+                    Q(status__in=[
+                        KaizenPost.Status.SUBMITTED,
+                        KaizenPost.Status.IN_PROGRESS,
+                        KaizenPost.Status.IMPLEMENTED,
+                    ])
+                    | Q(status=KaizenPost.Status.TO_VERIFY, author=user)
+                    | Q(status=KaizenPost.Status.TO_VERIFY, assigned_manager=user)
+                    | Q(status=KaizenPost.Status.CANCELLED, author=user)
+                )
+            else:
+                qs = qs.exclude(
+                    status__in=[KaizenPost.Status.TO_VERIFY, KaizenPost.Status.CANCELLED]
+                )
+
+        return qs
 
     def get_permissions(self):
         if self.action == 'like':
@@ -48,10 +73,113 @@ class PostViewSet(viewsets.ModelViewSet):
             if self.request.method in ['POST', 'PUT']:
                 return [permissions.IsAuthenticated()]
             return [permissions.AllowAny()]
+        if self.action in ('approve', 'reject', 'resubmit', 'my_cases'):
+            return [permissions.IsAuthenticated()]
         return super().get_permissions()
 
     def perform_create(self, serializer):
-        serializer.save(author=self.request.user)
+        post = serializer.save(author=self.request.user)
+        if post.assigned_manager:
+            create_notification(
+                Notification.Type.ASSIGNED,
+                post.assigned_manager,
+                self.request.user,
+                post,
+            )
+
+    def perform_update(self, serializer):
+        post = self.get_object()
+        if post.status not in (KaizenPost.Status.TO_VERIFY, KaizenPost.Status.CANCELLED):
+            raise PermissionDenied('Nie można edytować postów o tym statusie.')
+        serializer.save()
+
+    @action(detail=True, methods=['post'])
+    def approve(self, request, pk=None):
+        post = self.get_object()
+        if post.assigned_manager != request.user:
+            return Response(
+                {'detail': 'Nie jesteś przypisanym kierownikiem.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if post.status != KaizenPost.Status.TO_VERIFY:
+            return Response(
+                {'detail': 'Tylko posty do weryfikacji mogą zostać zatwierdzone.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        post.status = KaizenPost.Status.SUBMITTED
+        post.rejection_reason = None
+        post.save(update_fields=['status', 'rejection_reason'])
+        create_notification(Notification.Type.APPROVED, post.author, request.user, post)
+        serializer = self.get_serializer(post)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def reject(self, request, pk=None):
+        post = self.get_object()
+        if post.assigned_manager != request.user:
+            return Response(
+                {'detail': 'Nie jesteś przypisanym kierownikiem.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if post.status != KaizenPost.Status.TO_VERIFY:
+            return Response(
+                {'detail': 'Tylko posty do weryfikacji mogą zostać odrzucone.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        rejection_reason = request.data.get('rejection_reason', '').strip()
+        if not rejection_reason:
+            return Response(
+                {'detail': 'Powód odrzucenia jest wymagany.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        post.status = KaizenPost.Status.CANCELLED
+        post.rejection_reason = rejection_reason
+        post.save(update_fields=['status', 'rejection_reason'])
+        create_notification(Notification.Type.REJECTED, post.author, request.user, post)
+        serializer = self.get_serializer(post)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def resubmit(self, request, pk=None):
+        post = self.get_object()
+        if post.author != request.user:
+            return Response(
+                {'detail': 'Tylko autor może ponownie zgłosić post.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if post.status != KaizenPost.Status.CANCELLED:
+            return Response(
+                {'detail': 'Tylko odrzucone posty mogą zostać ponownie zgłoszone.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        post.status = KaizenPost.Status.TO_VERIFY
+        post.rejection_reason = None
+        post.save(update_fields=['status', 'rejection_reason'])
+        if post.assigned_manager:
+            create_notification(
+                Notification.Type.ASSIGNED,
+                post.assigned_manager,
+                request.user,
+                post,
+            )
+        serializer = self.get_serializer(post)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
+    def my_cases(self, request):
+        if getattr(request.user, 'role', None) != 'MANAGER':
+            return Response(
+                {'detail': 'Dostęp tylko dla kierowników.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        qs = KaizenPost.objects.filter(
+            assigned_manager=request.user,
+        ).order_by('-created_at')
+        status_filter = request.query_params.get('status')
+        if status_filter:
+            qs = qs.filter(status=status_filter)
+        serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data)
 
     @action(detail=True, methods=['post'])
     def like(self, request, pk=None):
@@ -60,7 +188,7 @@ class PostViewSet(viewsets.ModelViewSet):
         like_obj, created = Like.objects.get_or_create(post=post, user=user)
 
         if not created:
-            like_obj.delete()  # Jeśli już był like, to go usuwamy (toggle)
+            like_obj.delete()
             return Response({
                 'status': 'unliked',
                 'likes_count': post.likes.count(),
@@ -134,15 +262,10 @@ class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class CommentViewSet(viewsets.ModelViewSet):
-    # Pobieramy wszystkie komentarze, najnowsze na górze
     queryset = Comment.objects.all().order_by('-created_at')
     serializer_class = CommentSerializer
-
-    # Opcjonalnie: Tylko zalogowani mogą widzieć/pisać
     permission_classes = [permissions.IsAuthenticated, IsCommentAuthorOrReadOnly]
 
-    # To jest KLUCZOWE przy dodawaniu komentarza:
-    # Automatycznie przypisujemy autora jako osobę zalogowaną
     def perform_create(self, serializer):
         comment = serializer.save(author=self.request.user)
         create_notification(
@@ -154,7 +277,6 @@ class CommentViewSet(viewsets.ModelViewSet):
         )
 
 
-
 class LikeViewSet(viewsets.ModelViewSet):
     queryset = Like.objects.all()
     serializer_class = LikeSerializer
@@ -162,12 +284,10 @@ class LikeViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         try:
-            # Próba zapisania
             with transaction.atomic():
                 like = serializer.save(user=self.request.user)
                 create_notification(Notification.Type.LIKE, like.post.author, self.request.user, like.post)
         except IntegrityError:
-            # Jeśli baza krzyknie, że duplikat ->  HTTP 400 dla Frontendu
             raise ValidationError({
                 "detail": "Już polubiłeś ten post! (Duplikat)"
             })

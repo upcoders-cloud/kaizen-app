@@ -35,6 +35,7 @@ import {getPostStatusMeta} from 'utils/postStatus';
 import ImageCarousel from 'components/PostDetail/ImageCarousel';
 import Button from 'components/Button/Button';
 import BackButton from 'components/Navigation/BackButton';
+import RejectionReasonModal from 'components/RejectionReasonModal/RejectionReasonModal';
 import Toast from 'react-native-toast-message';
 import ExtraImagesBadge from 'components/Badges/ExtraImagesBadge';
 
@@ -95,13 +96,18 @@ export default function PostDetails() {
 	const [previewIndex, setPreviewIndex] = useState(0);
 	const [commentOffsets, setCommentOffsets] = useState({});
 	const [highlightCommentId, setHighlightCommentId] = useState(null);
+	const [approvingPost, setApprovingPost] = useState(false);
+	const [rejectModalVisible, setRejectModalVisible] = useState(false);
+	const [rejectLoading, setRejectLoading] = useState(false);
 	const likeScale = useRef(new Animated.Value(1)).current;
 	const accessToken = useAuthStore((state) => state.accessToken);
+	const user = useAuthStore((state) => state.user);
 	const currentUserId = useMemo(
 		() => getJwtPayload(accessToken)?.user_id ?? null,
 		[accessToken]
 	);
 	const isOwner = post?.author?.id && String(post.author.id) === String(currentUserId);
+	const isAssignedManager = post?.assigned_manager_detail?.id && String(post.assigned_manager_detail.id) === String(currentUserId);
 
 	useEffect(() => {
 		if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -158,6 +164,35 @@ export default function PostDetails() {
 				},
 			},
 		]);
+	};
+
+	const handleApprovePost = async () => {
+		if (!resolvedId || approvingPost) return;
+		setApprovingPost(true);
+		try {
+			const updated = await postsService.approve(resolvedId);
+			setPost((prev) => ({...prev, ...updated}));
+			Toast.show({type: 'success', text1: 'Zgłoszenie zatwierdzone', visibilityTime: 2000});
+		} catch (err) {
+			Toast.show({type: 'error', text1: 'Nie udało się zatwierdzić', text2: err?.message, visibilityTime: 2500});
+		} finally {
+			setApprovingPost(false);
+		}
+	};
+
+	const handleRejectPost = async (reason) => {
+		if (!resolvedId) return;
+		setRejectLoading(true);
+		try {
+			const updated = await postsService.reject(resolvedId, {rejection_reason: reason});
+			setPost((prev) => ({...prev, ...updated}));
+			setRejectModalVisible(false);
+			Toast.show({type: 'success', text1: 'Zgłoszenie odrzucone', visibilityTime: 2000});
+		} catch (err) {
+			Toast.show({type: 'error', text1: 'Nie udało się odrzucić', text2: err?.message, visibilityTime: 2500});
+		} finally {
+			setRejectLoading(false);
+		}
 	};
 
 	const fetchPost = async (targetId, {withLoader = true} = {}) => {
@@ -533,6 +568,51 @@ export default function PostDetails() {
 							</TextBase>
 						</View>
 
+						{/* Rejection reason */}
+						{post?.status === 'CANCELLED' && post?.rejection_reason && isOwner ? (
+							<View style={styles.section}>
+								<View style={styles.rejectionCard}>
+									<Feather name="alert-circle" size={16} color={colors.danger} />
+									<View style={{flex: 1, gap: 4}}>
+										<TextBase style={styles.rejectionLabel}>Powód odrzucenia</TextBase>
+										<TextBase style={styles.rejectionText}>{post.rejection_reason}</TextBase>
+									</View>
+								</View>
+								<Button
+									title="Edytuj i zgłoś ponownie"
+									variant="outline"
+									onPress={() => router.push(`/post/${resolvedId}/edit`)}
+									leftIcon={<Feather name="edit-2" size={14} color={colors.primary} />}
+									style={styles.resubmitButton}
+								/>
+							</View>
+						) : null}
+
+						{/* Manager actions */}
+						{post?.status === 'TO_VERIFY' && isAssignedManager ? (
+							<View style={styles.section}>
+								<TextBase style={styles.sectionTitle}>Akcje kierownika</TextBase>
+								<View style={styles.managerActionsRow}>
+									<Button
+										title="Zatwierdź"
+										onPress={handleApprovePost}
+										loading={approvingPost}
+										leftIcon={<Feather name="check" size={16} color="#fff" />}
+										style={styles.approveButton}
+										textStyle={styles.approveButtonText}
+									/>
+									<Button
+										title="Odrzuć"
+										variant="outline"
+										onPress={() => setRejectModalVisible(true)}
+										leftIcon={<Feather name="x" size={16} color={colors.danger} />}
+										style={styles.rejectButtonDetail}
+										textStyle={styles.rejectButtonText}
+									/>
+								</View>
+							</View>
+						) : null}
+
 						{/* Attachments section */}
 						<View style={styles.section}>
 							<TextBase style={styles.sectionTitle}>Załączniki</TextBase>
@@ -691,6 +771,12 @@ export default function PostDetails() {
 					</Pressable>
 				</Pressable>
 			</Modal>
+			<RejectionReasonModal
+				visible={rejectModalVisible}
+				onClose={() => setRejectModalVisible(false)}
+				onSubmit={handleRejectPost}
+				loading={rejectLoading}
+			/>
 		</>
 	);
 }
@@ -950,6 +1036,51 @@ const styles = StyleSheet.create({
 		color: colors.text,
 	},
 	menuTextDanger: {
+		color: colors.danger,
+	},
+	rejectionCard: {
+		flexDirection: 'row',
+		alignItems: 'flex-start',
+		gap: 10,
+		padding: 14,
+		borderRadius: 12,
+		backgroundColor: '#fef2f2',
+		borderWidth: 1,
+		borderColor: '#fecaca',
+	},
+	rejectionLabel: {
+		fontSize: 13,
+		fontWeight: '700',
+		color: colors.danger,
+	},
+	rejectionText: {
+		fontSize: 14,
+		lineHeight: 20,
+		color: colors.text,
+	},
+	resubmitButton: {
+		alignSelf: 'flex-start',
+		marginTop: 4,
+	},
+	managerActionsRow: {
+		flexDirection: 'row',
+		gap: 10,
+	},
+	approveButton: {
+		flex: 1,
+		minHeight: 44,
+		backgroundColor: '#16a34a',
+		borderColor: '#16a34a',
+	},
+	approveButtonText: {
+		color: '#fff',
+	},
+	rejectButtonDetail: {
+		flex: 1,
+		minHeight: 44,
+		borderColor: colors.danger,
+	},
+	rejectButtonText: {
 		color: colors.danger,
 	},
 });

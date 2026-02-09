@@ -2,6 +2,7 @@ import {Tabs} from 'expo-router';
 import {Pressable, StyleSheet, View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import colors from 'theme/colors';
+import {useAuthStore} from 'store/authStore';
 
 const CreateTabButton = ({children, onPress, accessibilityState}) => (
 	<View style={styles.createButtonSlot}>
@@ -19,6 +20,9 @@ const CreateTabButton = ({children, onPress, accessibilityState}) => (
 );
 
 const TabsLayout = () => {
+	const user = useAuthStore((state) => state.user);
+	const isManager = user?.role === 'MANAGER';
+
 	return (
 		<Tabs
 			backBehavior="initialRoute"
@@ -46,6 +50,14 @@ const TabsLayout = () => {
 					tabBarLabel: () => null,
 					tabBarButton: (props) => <CreateTabButton {...props} />,
 					tabBarIcon: () => <Feather name="plus" size={28} color={colors.surface} />,
+				}}
+			/>
+			<Tabs.Screen
+				name="my-cases"
+				options={{
+					title: 'Moje sprawy',
+					href: isManager ? '/my-cases' : null,
+					tabBarIcon: ({color, size}) => <Feather name="clipboard" size={size} color={color} />,
 				}}
 			/>
 			<Tabs.Screen

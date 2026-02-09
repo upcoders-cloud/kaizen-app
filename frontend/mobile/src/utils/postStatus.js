@@ -19,6 +19,11 @@ const STATUS_MAP = {
 		color: '#065f46',
 		backgroundColor: '#d1fae5',
 	},
+	CANCELLED: {
+		label: 'Odrzucony',
+		color: '#991b1b',
+		backgroundColor: '#fee2e2',
+	},
 };
 
 export const getPostStatusMeta = (status) =>

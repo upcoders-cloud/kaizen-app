@@ -9,6 +9,7 @@ import Button from 'components/Button/Button';
 import Text from 'components/Text/Text';
 import ImagePicker from 'components/ImagePicker/ImagePicker';
 import OptionPills from 'components/OptionPills/OptionPills';
+import ManagerPicker from 'components/ManagerPicker/ManagerPicker';
 import {CONTENT_IS_REQUIRED, EMPTY_STRING, FAILED_TO_CREATE_POST, TITLE_IS_REQUIRED} from "constants/constans";
 
 const CreatePost = ({
@@ -22,6 +23,7 @@ const CreatePost = ({
 	const [title, setTitle] = useState(initialValues?.title ?? EMPTY_STRING);
 	const [content, setContent] = useState(initialValues?.content ?? EMPTY_STRING);
 	const [category, setCategory] = useState(initialValues?.category ?? null);
+	const [assignedManager, setAssignedManager] = useState(initialValues?.assigned_manager ?? null);
 	const [images, setImages] = useState(initialValues?.images ?? []);
 	const [removedImageIds, setRemovedImageIds] = useState([]);
 	const [loading, setLoading] = useState(false);
@@ -47,6 +49,7 @@ const CreatePost = ({
 		setTitle(initialValues?.title ?? EMPTY_STRING);
 		setContent(initialValues?.content ?? EMPTY_STRING);
 		setCategory(resolveDefaultCategory());
+		setAssignedManager(initialValues?.assigned_manager ?? null);
 		setImages(initialValues?.images ?? []);
 		setRemovedImageIds([]);
 		setError(null);
@@ -87,11 +90,12 @@ const CreatePost = ({
 		setTitle(initialValues?.title ?? EMPTY_STRING);
 		setContent(initialValues?.content ?? EMPTY_STRING);
 		setCategory(initialValues?.category ?? null);
+		setAssignedManager(initialValues?.assigned_manager ?? null);
 		setImages(initialValues?.images ?? []);
 		setRemovedImageIds([]);
 		setTitleError(null);
 		setContentError(null);
-	}, [initialValues?.title, initialValues?.content, initialValues?.category]);
+	}, [initialValues?.title, initialValues?.content, initialValues?.category, initialValues?.assigned_manager]);
 
 	useEffect(() => {
 		if (mode === 'edit') return;
@@ -126,7 +130,7 @@ const CreatePost = ({
 
 	const handleSubmit = () => submitPost(
 		{
-			title, content, category, images, removedImageIds,
+			title, content, category, assignedManager, images, removedImageIds,
 			onSubmitSuccess, onSubmitFail,
 			setLoading, setError, resetForm,
 			setTitleError, setContentError,
@@ -183,6 +187,11 @@ const CreatePost = ({
 			</View>
 
 			<View style={styles.sectionCard}>
+				<Text style={styles.sectionTitle}>Kierownik</Text>
+				<ManagerPicker value={assignedManager} onChange={setAssignedManager} />
+			</View>
+
+			<View style={styles.sectionCard}>
 				<Text style={styles.sectionTitle}>Załączniki</Text>
 				<ImagePicker value={images} onChange={handleImagesChange} />
 			</View>
@@ -198,6 +207,7 @@ async function submitPost({
 	title,
 	content,
 	category,
+	assignedManager,
 	images,
 	removedImageIds,
 	onSubmitSuccess,
@@ -233,6 +243,7 @@ async function submitPost({
 			title: title.trim(),
 			content: content.trim(),
 			category,
+			assigned_manager: assignedManager || null,
 			images: normalizedImages,
 		};
 

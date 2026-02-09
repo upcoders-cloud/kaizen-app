@@ -113,6 +113,11 @@ const Post = ({
 						{statusMeta.label}
 					</Text>
 					<Text style={styles.dateText}>{formatDate(post?.created_at)}</Text>
+					{post?.assigned_manager_detail ? (
+						<Text style={styles.managerText} numberOfLines={1}>
+							Kier.: {[post.assigned_manager_detail.first_name, post.assigned_manager_detail.last_name].filter(Boolean).join(' ') || post.assigned_manager_detail.nickname}
+						</Text>
+					) : null}
 				</View>
 			</View>
 
@@ -265,6 +270,10 @@ const styles = StyleSheet.create({
 	dateText: {
 		fontSize: 11,
 		color: colors.muted,
+	},
+	managerText: {
+		fontSize: 10,
+		color: colors.mutedAlt,
 	},
 	body: {
 		marginTop: 12,

@@ -24,7 +24,7 @@ class KaizenPost(models.Model):
         SUBMITTED = "SUBMITTED", "Zgłoszony"
         IN_PROGRESS = "IN_PROGRESS", "W trakcie wdrożenia"
         IMPLEMENTED = "IMPLEMENTED", "Wdrożone"
-
+        CANCELLED = "CANCELLED", "Odrzucony"
 
     title = models.CharField(max_length=200, verbose_name="Tytuł")
 
@@ -32,9 +32,17 @@ class KaizenPost(models.Model):
     content = models.TextField(verbose_name="Treść")
     category = models.ForeignKey(
         Category,
-        on_delete=models.PROTECT,  # Zabezpiecza przed usunięciem kategorii, która ma posty
+        on_delete=models.PROTECT,
         verbose_name="Kategoria",
-        limit_choices_to={'is_active': True}  # To kluczowy element Twojej prośby
+        limit_choices_to={'is_active': True}
+    )
+    assigned_manager = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='managed_posts',
+        verbose_name="Przypisany kierownik",
     )
 
     status = models.CharField(
@@ -42,6 +50,11 @@ class KaizenPost(models.Model):
         choices=Status.choices,
         default=Status.TO_VERIFY,
         verbose_name="Status",
+    )
+    rejection_reason = models.TextField(
+        null=True,
+        blank=True,
+        verbose_name="Powód odrzucenia",
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -141,6 +154,9 @@ class Notification(models.Model):
     class Type(models.TextChoices):
         LIKE = "LIKE", "Like"
         COMMENT = "COMMENT", "Comment"
+        APPROVED = "APPROVED", "Post approved"
+        REJECTED = "REJECTED", "Post rejected"
+        ASSIGNED = "ASSIGNED", "Assigned for review"
 
     recipient = models.ForeignKey(
         settings.AUTH_USER_MODEL,

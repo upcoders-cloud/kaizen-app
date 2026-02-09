@@ -1,39 +1,31 @@
 import {Tabs} from 'expo-router';
-import {Pressable, StyleSheet, View} from 'react-native';
+import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import colors from 'theme/colors';
 import {useAuthStore} from 'store/authStore';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
-const CreateTabButton = ({children, onPress, accessibilityState}) => (
-	<View style={styles.createButtonSlot}>
-		<Pressable onPress={onPress} style={styles.createButtonWrapper}>
-			<View
-				style={[
-					styles.createButton,
-					accessibilityState?.selected ? styles.createButtonActive : null,
-				]}
-			>
-				{children}
-			</View>
-		</Pressable>
-	</View>
-);
+const LEFT_TAB_NAMES = ['index'];
+const RIGHT_TAB_NAMES_MANAGER = ['my-cases', 'profile'];
+const RIGHT_TAB_NAMES_USER = ['profile'];
 
 const TabsLayout = () => {
 	const user = useAuthStore((state) => state.user);
 	const isManager = user?.role === 'MANAGER';
+	const insets = useSafeAreaInsets();
 
 	return (
 		<Tabs
 			backBehavior="initialRoute"
+			tabBar={(props) => (
+				<DynamicTabBar
+					{...props}
+					isManager={isManager}
+					bottomInset={insets.bottom}
+				/>
+			)}
 			screenOptions={{
 				headerShown: false,
-				tabBarActiveTintColor: colors.primary,
-				tabBarInactiveTintColor: colors.muted,
-				tabBarStyle: {
-					backgroundColor: colors.surface,
-					borderTopColor: colors.border,
-				},
 			}}
 		>
 			<Tabs.Screen
@@ -47,8 +39,6 @@ const TabsLayout = () => {
 				name="create"
 				options={{
 					title: 'Dodaj',
-					tabBarLabel: () => null,
-					tabBarButton: (props) => <CreateTabButton {...props} />,
 					tabBarIcon: () => <Feather name="plus" size={28} color={colors.surface} />,
 				}}
 			/>
@@ -71,18 +61,115 @@ const TabsLayout = () => {
 	);
 };
 
+const DynamicTabBar = ({state, descriptors, navigation, isManager, bottomInset}) => {
+	const rightNames = isManager ? RIGHT_TAB_NAMES_MANAGER : RIGHT_TAB_NAMES_USER;
+	const leftTabs = LEFT_TAB_NAMES
+		.map((name) => state.routes.find((route) => route.name === name))
+		.filter(Boolean);
+	const rightTabs = rightNames
+		.map((name) => state.routes.find((route) => route.name === name))
+		.filter(Boolean);
+	const createRoute = state.routes.find((route) => route.name === 'create');
+
+	const renderSideTab = (route) => {
+		const routeIndex = state.routes.findIndex((item) => item.key === route.key);
+		const isFocused = state.index === routeIndex;
+		const descriptor = descriptors[route.key];
+		const options = descriptor?.options || {};
+		const color = isFocused ? colors.primary : colors.muted;
+		const icon = options.tabBarIcon?.({focused: isFocused, color, size: 22});
+		const label = options.title || route.name;
+
+		const onPress = () => {
+			const event = navigation.emit({
+				type: 'tabPress',
+				target: route.key,
+				canPreventDefault: true,
+			});
+			if (!isFocused && !event.defaultPrevented) {
+				navigation.navigate(route.name);
+			}
+		};
+
+		return (
+			<Pressable key={route.key} onPress={onPress} style={styles.sideButton}>
+				{icon}
+				<Text style={[styles.sideLabel, isFocused ? styles.sideLabelActive : null]}>{label}</Text>
+			</Pressable>
+		);
+	};
+
+	const onPressCreate = () => {
+		if (!createRoute) return;
+		const routeIndex = state.routes.findIndex((item) => item.key === createRoute.key);
+		const isFocused = state.index === routeIndex;
+		const event = navigation.emit({
+			type: 'tabPress',
+			target: createRoute.key,
+			canPreventDefault: true,
+		});
+		if (!isFocused && !event.defaultPrevented) {
+			navigation.navigate(createRoute.name);
+		}
+	};
+
+	return (
+		<View style={[styles.tabBarContainer, {paddingBottom: Math.max(6, bottomInset)}]}>
+			<View style={styles.tabBarRow}>
+				<View style={styles.sideZone}>
+					{leftTabs.map(renderSideTab)}
+				</View>
+				<View style={styles.centerSlot}>
+					<Pressable onPress={onPressCreate} style={styles.createButton}>
+						<Feather name="plus" size={28} color={colors.surface} />
+					</Pressable>
+				</View>
+				<View style={styles.sideZone}>
+					{rightTabs.map(renderSideTab)}
+				</View>
+			</View>
+		</View>
+	);
+};
+
 export default TabsLayout;
 
 const styles = StyleSheet.create({
-	createButtonSlot: {
+	tabBarContainer: {
+		backgroundColor: colors.surface,
+		borderTopWidth: 1,
+		borderTopColor: colors.border,
+		paddingTop: 8,
+		paddingHorizontal: 10,
+	},
+	tabBarRow: {
+		flexDirection: 'row',
+		alignItems: 'flex-end',
+	},
+	sideZone: {
 		flex: 1,
+		minHeight: 48,
+		flexDirection: 'row',
+		alignItems: 'flex-end',
+		justifyContent: 'center',
+		gap: 24,
+	},
+	sideButton: {
+		minWidth: 72,
 		alignItems: 'center',
 		justifyContent: 'center',
+		gap: 2,
 	},
-	createButtonWrapper: {
-		top: -10,
-		width: 56,
-		height: 56,
+	sideLabel: {
+		fontSize: 11,
+		fontWeight: '600',
+		color: colors.muted,
+	},
+	sideLabelActive: {
+		color: colors.primary,
+	},
+	centerSlot: {
+		width: 74,
 		alignItems: 'center',
 		justifyContent: 'center',
 	},
@@ -98,8 +185,6 @@ const styles = StyleSheet.create({
 		shadowRadius: 10,
 		shadowOffset: {width: 0, height: 6},
 		elevation: 6,
-	},
-	createButtonActive: {
-		backgroundColor: colors.primary,
+		transform: [{translateY: -10}],
 	},
 });

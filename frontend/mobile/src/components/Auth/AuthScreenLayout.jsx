@@ -11,6 +11,7 @@ const AuthScreenLayout = ({
 	subtitle,
 	children,
 	footerAction,
+	footerNote,
 	onBackPress,
 	backLabel = 'Wybór logowania',
 	cardStyle,
@@ -49,6 +50,12 @@ const AuthScreenLayout = ({
 					<View style={styles.footer}>
 						<Text style={styles.footerTitle}>Kaizen App</Text>
 						<Text style={styles.footerText}>Wersja {appVersion}</Text>
+						{footerNote ? (
+							<>
+								<View style={styles.footerDivider} />
+								<Text style={styles.footerNote}>{footerNote}</Text>
+							</>
+						) : null}
 					</View>
 				</View>
 			</KeyboardAwareScrollView>
@@ -141,6 +148,19 @@ const styles = StyleSheet.create({
 	},
 	footerText: {
 		fontSize: 12,
+		color: colors.muted,
+	},
+	footerDivider: {
+		width: 42,
+		height: 1,
+		marginTop: 3,
+		marginBottom: 1,
+		backgroundColor: colors.borderMuted,
+	},
+	footerNote: {
+		fontSize: 12,
+		lineHeight: 17,
+		textAlign: 'center',
 		color: colors.muted,
 	},
 	decorativeBubble: {

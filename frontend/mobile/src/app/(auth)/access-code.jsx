@@ -90,6 +90,7 @@ const AccessCode = () => {
 			title="Kod dostępu"
 			subtitle="Wpisz kod otrzymany od administratora"
 			onBackPress={() => router.replace(AUTH_ROUTES.selector)}
+			footerNote="Tworzone i rozwijane przez Upcoders"
 			footerAction={(
 				<View style={styles.switchContainer}>
 					<Text style={styles.switchHint}>Nie wiesz jak się zalogować?</Text>

@@ -75,6 +75,7 @@ const LoginPassword = () => {
 			title="Login i hasło"
 			subtitle="Wpisz dane konta"
 			onBackPress={() => router.replace(AUTH_ROUTES.selector)}
+			footerNote="Tworzone i rozwijane przez Upcoders"
 			footerAction={(
 				<View style={styles.switchContainer}>
 					<Text style={styles.switchHint}>Chcesz użyć innej metody?</Text>
@@ -88,7 +89,7 @@ const LoginPassword = () => {
 		>
 			<Input
 				label="Login"
-				placeholder="np. emilys"
+				placeholder="Wprowadź login"
 				autoCapitalize="none"
 				value={username}
 				onChangeText={handleUsernameChange}
@@ -96,7 +97,7 @@ const LoginPassword = () => {
 			/>
 			<Input
 				label="Hasło"
-				placeholder="••••••••"
+				placeholder="Wprowadź hasło"
 				secureTextEntry
 				textContentType="password"
 				value={password}

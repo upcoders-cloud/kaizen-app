@@ -54,6 +54,7 @@ const Login = () => {
 			subtitle="Wybierz metodę logowania"
 			centerCard
 			cardStyle={styles.methodsCard}
+			footerNote="Tworzone i rozwijane przez Upcoders"
 		>
 			<View style={styles.filler}>
 				<Feather name="shield" size={14} color={colors.primary} />

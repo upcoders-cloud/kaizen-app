@@ -1,15 +1,24 @@
 import {Image, ScrollView, StyleSheet, View} from 'react-native';
+import {Feather} from '@expo/vector-icons';
 import colors from 'theme/colors';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import Button from 'components/Button/Button';
 import Text from 'components/Text/Text';
 import {useAuthStore} from 'store/authStore';
-import {SPACE} from "constants/constans";
+import {SPACE} from 'constants/constans';
 
-const InfoRow = ({label, value}) => (
+const ROLE_CONFIG = {
+	MANAGER: {label: 'Kierownik', icon: 'shield', bg: '#ede9fe', border: '#c4b5fd', color: '#5b21b6'},
+	EMPLOYEE: {label: 'Pracownik', icon: 'user', bg: '#dbeafe', border: '#93c5fd', color: '#1e40af'},
+};
+
+const InfoRow = ({label, value, icon}) => (
 	<View style={styles.infoRow}>
-		<Text style={styles.infoLabel}>{label}</Text>
+		<View style={styles.infoLeft}>
+			{icon ? <Feather name={icon} size={14} color={colors.muted} /> : null}
+			<Text style={styles.infoLabel}>{label}</Text>
+		</View>
 		<Text style={styles.infoValue}>{value || '—'}</Text>
 	</View>
 );
@@ -33,6 +42,7 @@ const Profile = () => {
 	const initials =
 		(fullName && fullName.split(SPACE).map((part) => part[0]).join('').slice(0, 2).toUpperCase()) ||
 		(user?.username ? user.username[0]?.toUpperCase() : 'U');
+	const role = ROLE_CONFIG[user?.role] || ROLE_CONFIG.EMPLOYEE;
 
 	return (
 		<SafeAreaView style={styles.safeArea}>
@@ -40,7 +50,6 @@ const Profile = () => {
 			<ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 				<View style={styles.header}>
 					<Text style={styles.screenTitle}>Profil</Text>
-					<Text style={styles.screenSubtitle}>Twoje dane i ustawienia konta</Text>
 				</View>
 
 				<View style={styles.card}>
@@ -56,39 +65,42 @@ const Profile = () => {
 						</View>
 						<View style={styles.headerText}>
 							<Text style={styles.name}>{fullName || user?.username || 'Użytkownik'}</Text>
-							<Text style={styles.subtext}>{user?.email || 'Brak emaila'}</Text>
-							<Text style={styles.username}>@{user?.username || 'anonim'}</Text>
+							{user?.nickname ? (
+								<Text style={styles.nickname}>@{user.nickname}</Text>
+							) : null}
 						</View>
 					</View>
 					<View style={styles.badges}>
-						<View style={styles.badge}>
-							<Text style={styles.badgeText}>
-								Status: {isAuthenticated ? 'Zalogowany' : 'Gość'}
-							</Text>
+						<View style={[styles.roleBadge, {backgroundColor: role.bg, borderColor: role.border}]}>
+							<Feather name={role.icon} size={13} color={role.color} />
+							<Text style={[styles.roleBadgeText, {color: role.color}]}>{role.label}</Text>
 						</View>
-						{user?.id ? (
-							<View style={styles.badgeMuted}>
-								<Text style={styles.badgeTextMuted}>ID: {user.id}</Text>
+						{isAuthenticated ? (
+							<View style={styles.statusBadge}>
+								<View style={styles.statusDot} />
+								<Text style={styles.statusBadgeText}>Aktywny</Text>
 							</View>
 						) : null}
 					</View>
 				</View>
 
 				<View style={styles.card}>
-					<Text style={styles.sectionTitle}>Dane użytkownika</Text>
+					<Text style={styles.sectionTitle}>Dane konta</Text>
 					<View style={styles.infoList}>
-						<InfoRow label="Email" value={user?.email} />
-						<InfoRow label="Login" value={user?.username} />
-						<InfoRow label="Imię i nazwisko" value={fullName || '—'} />
-						<InfoRow label="Płeć" value={user?.gender} />
+						<InfoRow icon="mail" label="Email" value={user?.email} />
+						<InfoRow icon="at-sign" label="Login" value={user?.username} />
+						<InfoRow icon="user" label="Imię i nazwisko" value={fullName || '—'} />
+						<InfoRow icon="users" label="Płeć" value={user?.gender} />
 					</View>
 				</View>
 
 				<Button
-					title="Wyloguj"
+					title="Wyloguj się"
 					onPress={handleLogout}
-					variant="primary"
+					variant="outline"
+					leftIcon={<Feather name="log-out" size={16} color={colors.danger} />}
 					style={styles.logoutButton}
+					textStyle={styles.logoutText}
 				/>
 			</ScrollView>
 		</SafeAreaView>
@@ -124,9 +136,6 @@ const styles = StyleSheet.create({
 		fontSize: 24,
 		fontWeight: '800',
 		color: colors.text,
-	},
-	screenSubtitle: {
-		color: colors.muted,
 	},
 	card: {
 		backgroundColor: colors.surface,
@@ -179,40 +188,49 @@ const styles = StyleSheet.create({
 		fontWeight: '700',
 		color: colors.text,
 	},
-	subtext: {
-		color: colors.muted,
-	},
-	username: {
+	nickname: {
 		color: colors.primary,
 		fontWeight: '600',
+		fontSize: 14,
 	},
 	badges: {
 		flexDirection: 'row',
 		gap: 8,
 		flexWrap: 'wrap',
 	},
-	badge: {
-		paddingHorizontal: 10,
+	roleBadge: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		gap: 6,
+		paddingHorizontal: 12,
 		paddingVertical: 6,
 		borderRadius: 999,
-		backgroundColor: '#22c55e22',
 		borderWidth: 1,
-		borderColor: '#22c55e55',
 	},
-	badgeMuted: {
-		paddingHorizontal: 10,
+	roleBadgeText: {
+		fontSize: 13,
+		fontWeight: '700',
+	},
+	statusBadge: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		gap: 6,
+		paddingHorizontal: 12,
 		paddingVertical: 6,
 		borderRadius: 999,
-		backgroundColor: '#e2e8f0',
+		backgroundColor: '#f0fdf4',
 		borderWidth: 1,
-		borderColor: colors.border,
+		borderColor: '#bbf7d0',
 	},
-	badgeText: {
+	statusDot: {
+		width: 8,
+		height: 8,
+		borderRadius: 4,
+		backgroundColor: '#22c55e',
+	},
+	statusBadgeText: {
 		color: '#166534',
-		fontWeight: '600',
-	},
-	badgeTextMuted: {
-		color: colors.text,
+		fontSize: 13,
 		fontWeight: '600',
 	},
 	sectionTitle: {
@@ -221,27 +239,37 @@ const styles = StyleSheet.create({
 		color: colors.text,
 	},
 	infoList: {
-		gap: 12,
+		gap: 0,
 	},
 	infoRow: {
 		flexDirection: 'row',
 		justifyContent: 'space-between',
 		alignItems: 'center',
+		paddingVertical: 12,
 		borderBottomWidth: 1,
 		borderBottomColor: colors.border,
-		paddingBottom: 10,
+	},
+	infoLeft: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		gap: 8,
 	},
 	infoLabel: {
 		color: colors.muted,
 		fontWeight: '600',
+		fontSize: 14,
 	},
 	infoValue: {
 		color: colors.text,
 		fontWeight: '700',
+		fontSize: 14,
 		textAlign: 'right',
 	},
 	logoutButton: {
 		marginTop: 4,
-		minWidth: '100%',
+		borderColor: colors.danger,
+	},
+	logoutText: {
+		color: colors.danger,
 	},
 });

@@ -69,7 +69,6 @@ export default function PostDetails() {
 	const contentReadyTimeoutRef = useRef(null);
 	const contentSizeRef = useRef({width: 0, height: 0});
 	const {width: windowWidth} = useWindowDimensions();
-	// Explicit screen width keeps carousel pages perfectly aligned.
 	const screenWidth = Dimensions.get('window').width;
 	const screenHeight = Dimensions.get('window').height;
 	const contentWidth = windowWidth - 32;
@@ -465,6 +464,18 @@ export default function PostDetails() {
 		.join(' ')
 		.trim();
 	const authorName = authorFullName || post?.author?.nickname || post?.author?.username || 'Użytkownik';
+	const authorInitials =
+		(authorFullName && authorFullName.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase()) ||
+		(authorName ? authorName[0]?.toUpperCase() : 'U');
+	const managerDetail = post?.assigned_manager_detail;
+	const managerFullName = [managerDetail?.first_name, managerDetail?.last_name]
+		.filter(Boolean)
+		.join(' ')
+		.trim();
+	const managerName = managerFullName || managerDetail?.nickname || null;
+	const managerInitials = managerFullName
+		? managerFullName.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase()
+		: managerName ? managerName[0]?.toUpperCase() : 'K';
 	const categoryLabel = post?.category_name
 		?? post?.category?.name
 		?? (typeof post?.category === 'string' ? post.category : null);
@@ -482,10 +493,10 @@ export default function PostDetails() {
 	const hasSurvey = Boolean(survey);
 	const surveyHours = Number(survey?.estimated_time_savings_hours ?? 0);
 	const surveySavings = Number(survey?.estimated_financial_savings ?? 0);
-	const surveyHoursLabel = Number.isFinite(surveyHours) ? surveyHours.toFixed(2) : '0.00';
+	const surveyHoursLabel = Number.isFinite(surveyHours) ? surveyHours.toFixed(1) : '0.0';
 	const surveySavingsLabel = Number.isFinite(surveySavings)
-		? surveySavings.toLocaleString('pl-PL', {minimumFractionDigits: 2, maximumFractionDigits: 2})
-		: '0.00';
+		? surveySavings.toLocaleString('pl-PL', {minimumFractionDigits: 0, maximumFractionDigits: 0})
+		: '0';
 	const sortedComments = useMemo(
 		() =>
 			[...comments].sort((a, b) => new Date(b?.created_at) - new Date(a?.created_at)),
@@ -499,9 +510,10 @@ export default function PostDetails() {
 		<>
 			<Stack.Screen
 				options={{
-					title: 'Post details',
+					title: '',
 					headerShown: true,
 					headerTitleAlign: 'center',
+					contentStyle: {backgroundColor: colors.background},
 					headerLeft: () => (
 						<BackButton onPress={handleBack} />
 					),
@@ -525,6 +537,7 @@ export default function PostDetails() {
 			>
 				{error ? (
 					<View style={styles.centered}>
+						<Feather name="wifi-off" size={32} color={colors.muted} />
 						<Text style={styles.error}>{typeof error === 'string' ? error : error?.message}</Text>
 						<Text style={styles.muted}>Przeciągnij w dół aby spróbować ponownie.</Text>
 					</View>
@@ -535,49 +548,74 @@ export default function PostDetails() {
 					</View>
 				) : (
 					<>
-						{/* Header section */}
-						<View style={styles.headerSection}>
-							<View style={styles.headerTopRow}>
-								<View style={styles.badgesRow}>
-									<TextBase style={[styles.categoryBadge, categoryStyle]}>
-										{categoryLabel || 'Zgłoszenie'}
-									</TextBase>
-									<TextBase
-										style={[
-											styles.statusBadge,
-											{color: statusMeta.color, backgroundColor: statusMeta.backgroundColor},
-										]}
-									>
-										{statusMeta.label}
-									</TextBase>
-									{post?.id ? <TextBase style={styles.postId}>#{post.id}</TextBase> : null}
-								</View>
-								<View style={styles.metaRow}>
-									<TextBase style={styles.authorName}>{authorName}</TextBase>
-									<TextBase style={styles.metaSeparator}>•</TextBase>
-									<TextBase style={styles.metaText}>{formattedDate}</TextBase>
-								</View>
+						{/* Main card: header + description */}
+						<View style={styles.headerCard}>
+							<View style={styles.badgesRow}>
+								<TextBase style={[styles.categoryBadge, categoryStyle]}>
+									{categoryLabel || 'Zgłoszenie'}
+								</TextBase>
+								<TextBase
+									style={[
+										styles.statusBadge,
+										{color: statusMeta.color, backgroundColor: statusMeta.backgroundColor},
+									]}
+								>
+									{statusMeta.label}
+								</TextBase>
+								{post?.id ? <TextBase style={styles.postId}>#{post.id}</TextBase> : null}
 							</View>
-							<TextBase style={styles.postTitle}>{post?.title || 'Bez tytułu'}</TextBase>
-						</View>
 
-						{/* Description section */}
-						<View style= {[styles.section, styles.descriptionSection]}>
+							<TextBase style={styles.postTitle}>{post?.title || 'Bez tytułu'}</TextBase>
+
+							<View style={styles.headerDivider} />
+
 							<TextBase style={styles.descriptionText}>
 								{post?.content || 'Brak treści.'}
 							</TextBase>
+
+							<View style={styles.headerDivider} />
+
+							<View style={styles.metaGrid}>
+								<View style={styles.metaItem}>
+									<View style={styles.metaAvatar}>
+										<TextBase style={styles.metaAvatarText}>{authorInitials}</TextBase>
+									</View>
+									<View style={styles.metaInfo}>
+										<TextBase style={styles.metaLabel}>Autor</TextBase>
+										<TextBase style={styles.metaValue}>{authorName}</TextBase>
+									</View>
+								</View>
+								{managerName ? (
+									<View style={styles.metaItem}>
+										<View style={[styles.metaAvatar, styles.metaAvatarManager]}>
+											<TextBase style={[styles.metaAvatarText, styles.metaAvatarManagerText]}>{managerInitials}</TextBase>
+										</View>
+										<View style={styles.metaInfo}>
+											<TextBase style={styles.metaLabel}>Kierownik</TextBase>
+											<TextBase style={styles.metaValue}>{managerName}</TextBase>
+										</View>
+									</View>
+								) : null}
+								<View style={styles.metaItem}>
+									<View style={styles.metaIconCircle}>
+										<Feather name="calendar" size={13} color={colors.muted} />
+									</View>
+									<View style={styles.metaInfo}>
+										<TextBase style={styles.metaLabel}>Data</TextBase>
+										<TextBase style={styles.metaValue}>{formattedDate}</TextBase>
+									</View>
+								</View>
+							</View>
 						</View>
 
 						{/* Rejection reason */}
 						{post?.status === 'CANCELLED' && post?.rejection_reason && isOwner ? (
-							<View style={styles.section}>
-								<View style={styles.rejectionCard}>
+							<View style={styles.rejectionCard}>
+								<View style={styles.rejectionHeader}>
 									<Feather name="alert-circle" size={16} color={colors.danger} />
-									<View style={{flex: 1, gap: 4}}>
-										<TextBase style={styles.rejectionLabel}>Powód odrzucenia</TextBase>
-										<TextBase style={styles.rejectionText}>{post.rejection_reason}</TextBase>
-									</View>
+									<TextBase style={styles.rejectionLabel}>Powód odrzucenia</TextBase>
 								</View>
+								<TextBase style={styles.rejectionText}>{post.rejection_reason}</TextBase>
 								<Button
 									title="Edytuj i zgłoś ponownie"
 									variant="outline"
@@ -590,8 +628,13 @@ export default function PostDetails() {
 
 						{/* Manager actions */}
 						{post?.status === 'TO_VERIFY' && isAssignedManager ? (
-							<View style={styles.section}>
-								<TextBase style={styles.sectionTitle}>Akcje kierownika</TextBase>
+							<View style={styles.card}>
+								<View style={styles.cardHeader}>
+									<View style={[styles.cardIconCircle, {backgroundColor: '#fef3c7'}]}>
+										<Feather name="shield" size={14} color="#92400e" />
+									</View>
+									<TextBase style={styles.cardTitle}>Akcje kierownika</TextBase>
+								</View>
 								<View style={styles.managerActionsRow}>
 									<Button
 										title="Zatwierdź"
@@ -613,9 +656,19 @@ export default function PostDetails() {
 							</View>
 						) : null}
 
-						{/* Attachments section */}
-						<View style={styles.section}>
-							<TextBase style={styles.sectionTitle}>Załączniki</TextBase>
+						{/* Attachments card */}
+						<View style={styles.card}>
+							<View style={styles.cardHeader}>
+								<View style={styles.cardIconCircle}>
+									<Feather name="image" size={14} color={colors.primary} />
+								</View>
+								<TextBase style={styles.cardTitle}>Załączniki</TextBase>
+								{imageUrls.length > 0 ? (
+									<View style={styles.countBadge}>
+										<TextBase style={styles.countBadgeText}>{imageUrls.length}</TextBase>
+									</View>
+								) : null}
+							</View>
 							{imageUrls.length === 1 ? (
 								<Pressable style={styles.imageWrapper} onPress={() => openPreview(0)}>
 									<Image source={{uri: imageUrls[0]}} style={styles.image} resizeMode="cover" />
@@ -637,76 +690,99 @@ export default function PostDetails() {
 							)}
 						</View>
 
-						{/* Survey results section */}
+						{/* Survey results card */}
 						{hasSurvey ? (
-							<View style={styles.section}>
-								<TextBase style={styles.sectionTitle}>Przewidywane usprawnienia</TextBase>
-								<View style={styles.surveyCard}>
-									<TextBase style={styles.surveyLabel}>Szacowany czas oszczędności</TextBase>
-									<TextBase style={styles.surveyValue}>{surveyHoursLabel} h</TextBase>
+							<View style={styles.surveyResultsCard}>
+								<View style={styles.cardHeader}>
+									<View style={[styles.cardIconCircle, {backgroundColor: '#dcfce7'}]}>
+										<Feather name="bar-chart-2" size={14} color="#16a34a" />
+									</View>
+									<TextBase style={styles.cardTitle}>Przewidywane usprawnienia</TextBase>
 								</View>
-								<View style={styles.surveyCard}>
-									<TextBase style={styles.surveyLabel}>Szacowane oszczędności finansowe</TextBase>
-									<TextBase style={styles.surveyValue}>{surveySavingsLabel} PLN</TextBase>
+								<View style={styles.surveyRow}>
+									<View style={styles.surveyItem}>
+										<Feather name="clock" size={18} color={colors.primary} />
+										<TextBase style={styles.surveyValue}>{surveyHoursLabel} h</TextBase>
+										<TextBase style={styles.surveyLabel}>Czas / miesiąc</TextBase>
+									</View>
+									<View style={styles.surveyDivider} />
+									<View style={styles.surveyItem}>
+										<Feather name="trending-up" size={18} color="#16a34a" />
+										<TextBase style={[styles.surveyValue, {color: '#16a34a'}]}>
+											{surveySavingsLabel} PLN
+										</TextBase>
+										<TextBase style={styles.surveyLabel}>Oszczędności</TextBase>
+									</View>
 								</View>
 							</View>
 						) : isOwner ? (
-							<View style={styles.section}>
-								<TextBase style={styles.sectionTitle}>Przewidywane usprawnienia</TextBase>
+							<View style={styles.card}>
+								<View style={styles.cardHeader}>
+									<View style={[styles.cardIconCircle, {backgroundColor: '#dcfce7'}]}>
+										<Feather name="bar-chart-2" size={14} color="#16a34a" />
+									</View>
+									<TextBase style={styles.cardTitle}>Przewidywane usprawnienia</TextBase>
+								</View>
 								<TextBase style={styles.placeholderText}>
 									Dodaj ankietę, aby oszacować korzyści z usprawnienia.
 								</TextBase>
 								<Button
 									title="Uzupełnij ankietę"
 									onPress={() => router.push(`/post/${resolvedId}/survey`)}
+									leftIcon={<Feather name="bar-chart-2" size={14} color="#fff" />}
 									style={styles.surveyCta}
 								/>
 							</View>
 						) : null}
 
-						{/* Actions section (single source of interaction counts) */}
-						<View style={styles.section}>
-							<View style={styles.actionsRow}>
-								<Animated.View style={[styles.actionButtonWrapper, {transform: [{scale: likeScale}]}]}>
-									<Pressable
-										onPress={handleToggleLike}
-										disabled={liking || loading}
-										style={({pressed}) => [
-											styles.actionButton,
-											isLiked ? styles.actionButtonActive : null,
-											pressed && !(liking || loading) ? styles.actionButtonPressed : null,
-										]}
-									>
-										<Feather name="thumbs-up" size={16} color={isLiked ? '#fff' : colors.primary} />
-										<TextBase style={[styles.actionButtonText, isLiked ? styles.actionButtonTextActive : null]}>
-											Mam to samo
-										</TextBase>
-										<TextBase style={[styles.actionCount, isLiked ? styles.actionButtonTextActive : null]}>
-											{likesCount}
-										</TextBase>
-									</Pressable>
-								</Animated.View>
-								<Pressable style={styles.actionButton} onPress={scrollToComments}>
-									<Feather name="message-circle" size={16} color={colors.primary} />
-									<TextBase style={styles.actionButtonText}>Komentarze</TextBase>
-									<TextBase style={styles.actionCount}>{comments.length}</TextBase>
+						{/* Actions row */}
+						<View style={styles.actionsRow}>
+							<Animated.View style={[styles.actionButtonWrapper, {transform: [{scale: likeScale}]}]}>
+								<Pressable
+									onPress={handleToggleLike}
+									disabled={liking || loading}
+									style={({pressed}) => [
+										styles.actionButton,
+										isLiked ? styles.actionButtonActive : null,
+										pressed && !(liking || loading) ? styles.actionButtonPressed : null,
+									]}
+								>
+									<Feather name="thumbs-up" size={16} color={isLiked ? '#fff' : colors.primary} />
+									<TextBase style={[styles.actionButtonText, isLiked ? styles.actionButtonTextActive : null]}>
+										Mam to samo
+									</TextBase>
+									<TextBase style={[styles.actionCount, isLiked ? styles.actionButtonTextActive : null]}>
+										{likesCount}
+									</TextBase>
 								</Pressable>
-							</View>
+							</Animated.View>
+							<Pressable style={styles.actionButton} onPress={scrollToComments}>
+								<Feather name="message-circle" size={16} color={colors.primary} />
+								<TextBase style={styles.actionButtonText}>Komentarze</TextBase>
+								<TextBase style={styles.actionCount}>{comments.length}</TextBase>
+							</Pressable>
 						</View>
 
-						{/* Comments section */}
+						{/* Comments card */}
 						<View
-							style={styles.section}
+							style={styles.commentsCard}
 							onLayout={(event) => setCommentsLayoutY(event.nativeEvent.layout.y)}
 						>
-							<View style={styles.sectionHeader}>
-								<TextBase style={styles.sectionTitle}>Komentarze</TextBase>
+							<View style={styles.cardHeader}>
+								<View style={styles.cardIconCircle}>
+									<Feather name="message-circle" size={14} color={colors.primary} />
+								</View>
+								<TextBase style={styles.cardTitle}>Komentarze</TextBase>
+								{comments.length > 0 ? (
+									<View style={styles.countBadge}>
+										<TextBase style={styles.countBadgeText}>{comments.length}</TextBase>
+									</View>
+								) : null}
+								<View style={{flex: 1}} />
 								{comments.length > COMMENTS_PREVIEW_COUNT ? (
 									<Pressable onPress={handleToggleComments}>
 										<TextBase style={styles.showAllText}>
-											{showAllComments
-												? 'Pokaż mniej'
-												: `Pokaż wszystkie komentarze (${comments.length})`}
+											{showAllComments ? 'Mniej' : `Wszystkie (${comments.length})`}
 										</TextBase>
 									</Pressable>
 								) : null}
@@ -721,8 +797,6 @@ export default function PostDetails() {
 								onCommentLayout={handleCommentLayout}
 								highlightedCommentId={highlightCommentId}
 							/>
-						</View>
-						<View style={styles.commentInputSection}>
 							<CommentInput
 								value={commentValue}
 								onChangeText={setCommentValue}
@@ -743,7 +817,7 @@ export default function PostDetails() {
 			>
 				<View style={styles.previewOverlay}>
 					<Pressable style={styles.previewBackdrop} onPress={closePreview} />
-					<View style={styles.previewCard}>
+					<View style={styles.previewModalCard}>
 						<ImageCarousel
 							images={imageUrls}
 							width={screenWidth}
@@ -784,8 +858,9 @@ export default function PostDetails() {
 const styles = StyleSheet.create({
 	container: {
 		padding: 16,
+		paddingBottom: 32,
 		gap: 14,
-		backgroundColor: colors.surface,
+		backgroundColor: colors.background,
 	},
 	menuButton: {
 		flexDirection: 'row',
@@ -802,39 +877,34 @@ const styles = StyleSheet.create({
 	centered: {
 		flex: 1,
 		alignItems: 'center',
-		gap: 6,
-		padding: 24,
+		gap: 10,
+		padding: 32,
 	},
 	error: {
 		color: colors.danger,
 		fontWeight: '700',
 		fontSize: 16,
+		textAlign: 'center',
 	},
 	muted: {
 		color: colors.muted,
 		textAlign: 'center',
+		fontSize: 14,
 	},
-	sectionHeader: {
-		flexDirection: 'row',
-		alignItems: 'center',
-		justifyContent: 'space-between',
-		gap: 4,
-	},
-	sectionTitle: {
-		fontSize: 18,
-		fontWeight: '700',
-		color: colors.text,
-	},
-	headerSection: {
-		gap: 8,
-		paddingBottom: 16,
-		borderBottomWidth: 1,
-		borderBottomColor: colors.border,
-	},
-	headerTopRow: {
-		flexDirection: 'column',
-		alignItems: 'flex-start',
-		gap: 8,
+
+	/* Header card */
+	headerCard: {
+		gap: 14,
+		padding: 18,
+		borderRadius: 16,
+		backgroundColor: colors.surface,
+		borderWidth: 1,
+		borderColor: colors.border,
+		shadowColor: '#000',
+		shadowOpacity: 0.03,
+		shadowOffset: {width: 0, height: 4},
+		shadowRadius: 12,
+		elevation: 2,
 	},
 	badgesRow: {
 		flexDirection: 'row',
@@ -845,7 +915,7 @@ const styles = StyleSheet.create({
 	categoryBadge: {
 		fontSize: 11,
 		fontWeight: '700',
-		paddingHorizontal: 8,
+		paddingHorizontal: 10,
 		paddingVertical: 4,
 		borderRadius: 999,
 		textTransform: 'uppercase',
@@ -853,7 +923,7 @@ const styles = StyleSheet.create({
 	statusBadge: {
 		fontSize: 11,
 		fontWeight: '700',
-		paddingHorizontal: 8,
+		paddingHorizontal: 10,
 		paddingVertical: 4,
 		borderRadius: 999,
 	},
@@ -864,35 +934,105 @@ const styles = StyleSheet.create({
 	},
 	postTitle: {
 		fontSize: 22,
+		fontWeight: '800',
+		color: colors.text,
+		lineHeight: 28,
+	},
+	headerDivider: {
+		height: 1,
+		backgroundColor: colors.border,
+	},
+	metaGrid: {
+		gap: 12,
+	},
+	metaItem: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		gap: 10,
+	},
+	metaAvatar: {
+		width: 32,
+		height: 32,
+		borderRadius: 16,
+		backgroundColor: '#e0e7ff',
+		alignItems: 'center',
+		justifyContent: 'center',
+	},
+	metaAvatarText: {
+		fontSize: 12,
+		fontWeight: '700',
+		color: colors.primary,
+	},
+	metaAvatarManager: {
+		backgroundColor: '#ede9fe',
+	},
+	metaAvatarManagerText: {
+		color: '#5b21b6',
+	},
+	metaIconCircle: {
+		width: 32,
+		height: 32,
+		borderRadius: 16,
+		backgroundColor: colors.placeholderSurface,
+		alignItems: 'center',
+		justifyContent: 'center',
+	},
+	metaInfo: {
+		gap: 1,
+	},
+	metaLabel: {
+		fontSize: 11,
+		fontWeight: '600',
+		color: colors.muted,
+		textTransform: 'uppercase',
+		letterSpacing: 0.3,
+	},
+	metaValue: {
+		fontSize: 14,
 		fontWeight: '700',
 		color: colors.text,
 	},
-	metaRow: {
+
+	/* Shared card */
+	card: {
+		gap: 12,
+		padding: 16,
+		borderRadius: 14,
+		backgroundColor: colors.surface,
+		borderWidth: 1,
+		borderColor: colors.border,
+	},
+	cardHeader: {
 		flexDirection: 'row',
 		alignItems: 'center',
-		gap: 6,
+		gap: 10,
 	},
-	authorName: {
-		fontSize: 14,
-		fontWeight: '600',
+	cardIconCircle: {
+		width: 28,
+		height: 28,
+		borderRadius: 14,
+		backgroundColor: '#e0e7ff',
+		alignItems: 'center',
+		justifyContent: 'center',
+	},
+	cardTitle: {
+		fontSize: 15,
+		fontWeight: '700',
 		color: colors.text,
 	},
-	metaSeparator: {
+	countBadge: {
+		backgroundColor: colors.border,
+		paddingHorizontal: 8,
+		paddingVertical: 2,
+		borderRadius: 10,
+	},
+	countBadgeText: {
+		fontSize: 11,
+		fontWeight: '700',
 		color: colors.muted,
 	},
-	metaText: {
-		fontSize: 13,
-		color: colors.muted,
-	},
-	section: {
-		paddingVertical: 12,
-		gap: 8,
-		borderBottomWidth: 1,
-		borderBottomColor: colors.border,
-	},
-	descriptionSection: {
-		paddingTop: 0,
-	},
+
+	/* Description */
 	descriptionText: {
 		fontSize: 15,
 		lineHeight: 22,
@@ -902,6 +1042,60 @@ const styles = StyleSheet.create({
 		color: colors.muted,
 		fontSize: 13,
 	},
+
+	/* Rejection */
+	rejectionCard: {
+		gap: 10,
+		padding: 16,
+		borderRadius: 14,
+		backgroundColor: '#fef2f2',
+		borderWidth: 1,
+		borderColor: '#fecaca',
+	},
+	rejectionHeader: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		gap: 8,
+	},
+	rejectionLabel: {
+		fontSize: 14,
+		fontWeight: '700',
+		color: colors.danger,
+	},
+	rejectionText: {
+		fontSize: 14,
+		lineHeight: 20,
+		color: colors.text,
+	},
+	resubmitButton: {
+		alignSelf: 'flex-start',
+		marginTop: 2,
+	},
+
+	/* Manager actions */
+	managerActionsRow: {
+		flexDirection: 'row',
+		gap: 10,
+	},
+	approveButton: {
+		flex: 1,
+		minHeight: 44,
+		backgroundColor: '#16a34a',
+		borderColor: '#16a34a',
+	},
+	approveButtonText: {
+		color: '#fff',
+	},
+	rejectButtonDetail: {
+		flex: 1,
+		minHeight: 44,
+		borderColor: colors.danger,
+	},
+	rejectButtonText: {
+		color: colors.danger,
+	},
+
+	/* Images */
 	imageWrapper: {
 		width: '100%',
 		height: 240,
@@ -914,41 +1108,60 @@ const styles = StyleSheet.create({
 		width: '100%',
 		height: '100%',
 	},
-	previewOverlay: {
+
+	/* Survey */
+	surveyResultsCard: {
+		gap: 14,
+		padding: 16,
+		borderRadius: 14,
+		backgroundColor: '#f0f4ff',
+		borderWidth: 1,
+		borderColor: '#c7d2fe',
+	},
+	surveyRow: {
+		flexDirection: 'row',
+		alignItems: 'center',
+	},
+	surveyItem: {
 		flex: 1,
-		backgroundColor: 'rgba(0,0,0,0.7)',
-		alignItems: 'stretch',
-		justifyContent: 'center',
+		alignItems: 'center',
+		gap: 6,
 	},
-	previewBackdrop: {
-		position: 'absolute',
-		top: 0,
-		right: 0,
-		bottom: 0,
-		left: 0,
+	surveyDivider: {
+		width: 1,
+		height: 48,
+		backgroundColor: '#c7d2fe',
 	},
-	previewCard: {
-		width: '100%',
+	surveyValue: {
+		fontSize: 22,
+		fontWeight: '800',
+		color: colors.primary,
 	},
-	previewCarousel: {
-		borderRadius: 0,
+	surveyLabel: {
+		fontSize: 12,
+		fontWeight: '600',
+		color: colors.muted,
 	},
+	surveyCta: {
+		alignSelf: 'flex-start',
+	},
+
+	/* Actions */
 	actionsRow: {
 		flexDirection: 'row',
 		alignItems: 'center',
-		justifyContent: 'space-between',
 		gap: 12,
 	},
 	actionButton: {
 		flexDirection: 'row',
 		alignItems: 'center',
 		gap: 8,
-		paddingHorizontal: 12,
-		paddingVertical: 8,
-		borderRadius: 10,
+		paddingHorizontal: 14,
+		paddingVertical: 10,
+		borderRadius: 12,
 		borderWidth: 1,
 		borderColor: colors.border,
-		backgroundColor: colors.placeholderSurface,
+		backgroundColor: colors.surface,
 	},
 	actionButtonWrapper: {
 		alignSelf: 'flex-start',
@@ -973,35 +1186,44 @@ const styles = StyleSheet.create({
 	actionButtonTextActive: {
 		color: '#fff',
 	},
+
+	/* Comments */
+	commentsCard: {
+		gap: 12,
+		padding: 16,
+		borderRadius: 14,
+		backgroundColor: colors.surface,
+		borderWidth: 1,
+		borderColor: colors.border,
+	},
 	showAllText: {
 		fontSize: 13,
 		fontWeight: '600',
 		color: colors.primary,
 	},
-	surveyCard: {
-		borderWidth: 1,
-		borderColor: colors.border,
-		borderRadius: 12,
-		padding: 14,
-		backgroundColor: colors.surface,
-		gap: 6,
+
+	/* Preview modal */
+	previewOverlay: {
+		flex: 1,
+		backgroundColor: 'rgba(0,0,0,0.7)',
+		alignItems: 'stretch',
+		justifyContent: 'center',
 	},
-	surveyLabel: {
-		color: colors.muted,
-		fontSize: 13,
+	previewBackdrop: {
+		position: 'absolute',
+		top: 0,
+		right: 0,
+		bottom: 0,
+		left: 0,
 	},
-	surveyValue: {
-		fontSize: 18,
-		fontWeight: '700',
-		color: colors.text,
+	previewModalCard: {
+		width: '100%',
 	},
-	surveyCta: {
-		alignSelf: 'flex-start',
-		marginTop: 6,
+	previewCarousel: {
+		borderRadius: 0,
 	},
-	commentInputSection: {
-		paddingTop: 8,
-	},
+
+	/* Menu modal */
 	menuOverlay: {
 		flex: 1,
 		backgroundColor: 'rgba(15, 23, 42, 0.2)',
@@ -1036,51 +1258,6 @@ const styles = StyleSheet.create({
 		color: colors.text,
 	},
 	menuTextDanger: {
-		color: colors.danger,
-	},
-	rejectionCard: {
-		flexDirection: 'row',
-		alignItems: 'flex-start',
-		gap: 10,
-		padding: 14,
-		borderRadius: 12,
-		backgroundColor: '#fef2f2',
-		borderWidth: 1,
-		borderColor: '#fecaca',
-	},
-	rejectionLabel: {
-		fontSize: 13,
-		fontWeight: '700',
-		color: colors.danger,
-	},
-	rejectionText: {
-		fontSize: 14,
-		lineHeight: 20,
-		color: colors.text,
-	},
-	resubmitButton: {
-		alignSelf: 'flex-start',
-		marginTop: 4,
-	},
-	managerActionsRow: {
-		flexDirection: 'row',
-		gap: 10,
-	},
-	approveButton: {
-		flex: 1,
-		minHeight: 44,
-		backgroundColor: '#16a34a',
-		borderColor: '#16a34a',
-	},
-	approveButtonText: {
-		color: '#fff',
-	},
-	rejectButtonDetail: {
-		flex: 1,
-		minHeight: 44,
-		borderColor: colors.danger,
-	},
-	rejectButtonText: {
 		color: colors.danger,
 	},
 });

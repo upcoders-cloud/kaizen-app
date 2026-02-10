@@ -1,3 +1,4 @@
+import {useMemo, useState} from 'react';
 import {
 	Keyboard,
 	Pressable,
@@ -7,21 +8,23 @@ import {
 } from 'react-native';
 import {Stack, useLocalSearchParams, useRouter} from 'expo-router';
 import {SafeAreaView} from 'react-native-safe-area-context';
-import {useState} from 'react';
 import {Feather} from '@expo/vector-icons';
 import colors from 'theme/colors';
 import Input from 'components/Input/Input';
 import Button from 'components/Button/Button';
-import TextBase from 'components/Text/Text';
+import Text from 'components/Text/Text';
 import KeyboardAwareScrollView from 'components/KeyboardAwareScrollView/KeyboardAwareScrollView';
 import OptionPills from 'components/OptionPills/OptionPills';
 import postsService from 'src/server/services/postsService';
 
 const UNITS = [
-	{label: 'Dzień', value: 'DAY'},
-	{label: 'Tydzień', value: 'WEEK'},
-	{label: 'Miesiąc', value: 'MONTH'},
+	{label: 'Dziennie', value: 'DAY'},
+	{label: 'Tygodniowo', value: 'WEEK'},
+	{label: 'Miesięcznie', value: 'MONTH'},
 ];
+
+const UNIT_MULTIPLIERS = {DAY: 22, WEEK: 4, MONTH: 1};
+const HOURLY_RATE = 60;
 
 const SurveyScreen = () => {
 	const router = useRouter();
@@ -32,6 +35,23 @@ const SurveyScreen = () => {
 	const [timeLostMinutes, setTimeLostMinutes] = useState('');
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState(null);
+
+	const preview = useMemo(() => {
+		const freq = Number(frequencyValue) || 0;
+		const people = Number(affectedPeople) || 0;
+		const minutes = Number(timeLostMinutes) || 0;
+		const multiplier = UNIT_MULTIPLIERS[frequencyUnit] || 1;
+
+		const totalMinutes = freq * people * minutes * multiplier;
+		const hours = totalMinutes / 60;
+		const savings = hours * HOURLY_RATE;
+
+		return {
+			hours: Math.round(hours * 100) / 100,
+			savings: Math.round(savings * 100) / 100,
+			hasData: freq > 0 && people > 0 && minutes > 0,
+		};
+	}, [frequencyValue, frequencyUnit, affectedPeople, timeLostMinutes]);
 
 	const handleClose = () => {
 		if (id) {
@@ -53,11 +73,11 @@ const SurveyScreen = () => {
 		};
 
 		if (
-			Number.isNaN(payload.frequency_value) ||
-			Number.isNaN(payload.affected_people) ||
-			Number.isNaN(payload.time_lost_minutes)
+			!Number.isFinite(payload.frequency_value) || payload.frequency_value <= 0 ||
+			!Number.isFinite(payload.affected_people) || payload.affected_people <= 0 ||
+			!Number.isFinite(payload.time_lost_minutes) || payload.time_lost_minutes <= 0
 		) {
-			setError('Uzupełnij wszystkie pola liczbowe.');
+			setError('Uzupełnij wszystkie pola wartościami większymi od 0.');
 			return;
 		}
 
@@ -79,6 +99,10 @@ const SurveyScreen = () => {
 				params: {
 					hours: response?.estimated_time_savings_hours,
 					savings: response?.estimated_financial_savings,
+					frequency: frequencyValue,
+					unit: frequencyUnit,
+					people: affectedPeople,
+					minutes: timeLostMinutes,
 				},
 			});
 		} catch (err) {
@@ -99,8 +123,7 @@ const SurveyScreen = () => {
 					headerLeft: () => null,
 					headerRight: () => (
 						<Pressable onPress={handleClose} style={styles.deferButton}>
-							<TextBase style={styles.deferText}>Zrobię to później</TextBase>
-							{/*<Feather name=">" size={18} color={colors.primary} />*/}
+							<Text style={styles.deferText}>Pomiń</Text>
 						</Pressable>
 					),
 				}}
@@ -112,39 +135,94 @@ const SurveyScreen = () => {
 						keyboardVerticalOffset={12}
 						showsVerticalScrollIndicator={false}
 					>
-							<TextBase style={styles.title}>Opcjonalna ankieta</TextBase>
-							<TextBase style={styles.subtitle}>
-								Wypełnij krótką ankietę, aby oszacować korzyści z usprawnienia.
-							</TextBase>
+						<View style={styles.header}>
+							<Text style={styles.title}>Oszacuj korzyści</Text>
+							<Text style={styles.subtitle}>
+								Podaj dane o problemie, a wyliczymy ile czasu i pieniędzy można zaoszczędzić miesięcznie.
+							</Text>
+						</View>
 
-							<Input
-								label="Częstotliwość problemu"
-								placeholder="np. 3"
-								value={frequencyValue}
-								onChangeText={setFrequencyValue}
-								keyboardType="numeric"
-								returnKeyType="done"
-							/>
+						<View style={styles.card}>
+							<View style={styles.fieldHeader}>
+								<Feather name="repeat" size={14} color={colors.primary} />
+								<Text style={styles.fieldLabel}>Jak często występuje problem?</Text>
+							</View>
+							<View style={styles.frequencyRow}>
+								<View style={styles.frequencyInput}>
+									<Input
+										placeholder="np. 3"
+										value={frequencyValue}
+										onChangeText={setFrequencyValue}
+										keyboardType="numeric"
+										returnKeyType="done"
+									/>
+								</View>
+								<Text style={styles.frequencyXLabel}>razy</Text>
+							</View>
 							<OptionPills options={UNITS} value={frequencyUnit} onChange={setFrequencyUnit} />
+						</View>
+
+						<View style={styles.card}>
+							<View style={styles.fieldHeader}>
+								<Feather name="users" size={14} color={colors.primary} />
+								<Text style={styles.fieldLabel}>Ile osób dotyczy ten problem?</Text>
+							</View>
 							<Input
-								label="Liczba osób dotkniętych"
 								placeholder="np. 5"
 								value={affectedPeople}
 								onChangeText={setAffectedPeople}
 								keyboardType="numeric"
 								returnKeyType="done"
 							/>
+						</View>
+
+						<View style={styles.card}>
+							<View style={styles.fieldHeader}>
+								<Feather name="clock" size={14} color={colors.primary} />
+								<Text style={styles.fieldLabel}>Ile minut traci każda osoba na jedno zdarzenie?</Text>
+							</View>
 							<Input
-								label="Strata czasu na zdarzenie (min)"
 								placeholder="np. 15"
 								value={timeLostMinutes}
 								onChangeText={setTimeLostMinutes}
 								keyboardType="numeric"
 								returnKeyType="done"
 							/>
+						</View>
 
-							{error ? <TextBase style={styles.error}>{error}</TextBase> : null}
-							<Button title="Przelicz" onPress={handleSubmit} loading={loading} />
+						{preview.hasData ? (
+							<View style={styles.previewCard}>
+								<Text style={styles.previewTitle}>Podgląd oszczędności / miesiąc</Text>
+								<View style={styles.previewRow}>
+									<View style={styles.previewItem}>
+										<Feather name="clock" size={18} color={colors.primary} />
+										<Text style={styles.previewValue}>{preview.hours.toFixed(1)} h</Text>
+									</View>
+									<View style={styles.previewDivider} />
+									<View style={styles.previewItem}>
+										<Feather name="trending-up" size={18} color="#16a34a" />
+										<Text style={[styles.previewValue, styles.previewValueGreen]}>
+											{preview.savings.toLocaleString('pl-PL', {minimumFractionDigits: 0, maximumFractionDigits: 0})} PLN
+										</Text>
+									</View>
+								</View>
+							</View>
+						) : null}
+
+						{error ? (
+							<View style={styles.errorBanner}>
+								<Feather name="alert-circle" size={14} color={colors.danger} />
+								<Text style={styles.errorText}>{error}</Text>
+							</View>
+						) : null}
+
+						<Button
+							title="Przelicz i zapisz"
+							onPress={handleSubmit}
+							loading={loading}
+							leftIcon={<Feather name="bar-chart-2" size={16} color="#fff" />}
+							style={styles.submitButton}
+						/>
 					</KeyboardAwareScrollView>
 				</TouchableWithoutFeedback>
 			</SafeAreaView>
@@ -161,27 +239,115 @@ const styles = StyleSheet.create({
 	},
 	container: {
 		paddingHorizontal: 16,
-		paddingBottom: 24,
+		paddingBottom: 32,
 		paddingTop: 8,
 		gap: 14,
 	},
+	header: {
+		gap: 4,
+	},
 	title: {
-		fontSize: 20,
-		fontWeight: '700',
+		fontSize: 22,
+		fontWeight: '800',
 		color: colors.text,
 	},
 	subtitle: {
 		color: colors.muted,
-		marginBottom: 8,
+		fontSize: 14,
+		lineHeight: 20,
 	},
-	error: {
-		color: colors.danger,
-		fontWeight: '600',
+	card: {
+		gap: 10,
+		padding: 16,
+		borderRadius: 14,
+		backgroundColor: colors.surface,
+		borderWidth: 1,
+		borderColor: colors.border,
 	},
-	deferButton: {
+	fieldHeader: {
 		flexDirection: 'row',
 		alignItems: 'center',
-		gap: 6,
+		gap: 8,
+	},
+	fieldLabel: {
+		flex: 1,
+		fontSize: 14,
+		fontWeight: '700',
+		color: colors.text,
+	},
+	frequencyRow: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		gap: 10,
+	},
+	frequencyInput: {
+		flex: 1,
+	},
+	frequencyXLabel: {
+		fontSize: 14,
+		fontWeight: '600',
+		color: colors.muted,
+		paddingBottom: 4,
+	},
+	previewCard: {
+		gap: 12,
+		padding: 16,
+		borderRadius: 14,
+		backgroundColor: '#f0f4ff',
+		borderWidth: 1,
+		borderColor: '#c7d2fe',
+	},
+	previewTitle: {
+		fontSize: 13,
+		fontWeight: '700',
+		color: colors.primary,
+		textTransform: 'uppercase',
+		letterSpacing: 0.5,
+	},
+	previewRow: {
+		flexDirection: 'row',
+		alignItems: 'center',
+	},
+	previewItem: {
+		flex: 1,
+		flexDirection: 'row',
+		alignItems: 'center',
+		gap: 8,
+		justifyContent: 'center',
+	},
+	previewDivider: {
+		width: 1,
+		height: 28,
+		backgroundColor: '#c7d2fe',
+	},
+	previewValue: {
+		fontSize: 20,
+		fontWeight: '800',
+		color: colors.primary,
+	},
+	previewValueGreen: {
+		color: '#16a34a',
+	},
+	errorBanner: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		gap: 8,
+		padding: 12,
+		borderRadius: 10,
+		backgroundColor: '#fef2f2',
+		borderWidth: 1,
+		borderColor: '#fecaca',
+	},
+	errorText: {
+		flex: 1,
+		color: colors.danger,
+		fontSize: 13,
+		fontWeight: '600',
+	},
+	submitButton: {
+		marginTop: 4,
+	},
+	deferButton: {
 		paddingHorizontal: 12,
 		paddingVertical: 6,
 	},

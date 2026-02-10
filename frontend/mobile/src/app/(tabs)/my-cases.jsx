@@ -21,6 +21,12 @@ import RejectionReasonModal from 'components/RejectionReasonModal/RejectionReaso
 import {FAILED_TO_LOAD_POSTS} from 'constants/constans';
 import AppHeader from 'components/Navigation/AppHeader';
 import SearchBar from 'components/Search/SearchBar';
+import {useAuthStore} from 'store/authStore';
+
+const STATUS_LABELS = {
+	TO_VERIFY: 'Do weryfikacji',
+	CANCELLED: 'Odrzucony',
+};
 
 const MyCases = () => {
 	const [allPosts, setAllPosts] = useState([]);
@@ -33,6 +39,8 @@ const MyCases = () => {
 	const [searchVisible, setSearchVisible] = useState(false);
 	const [searchQuery, setSearchQuery] = useState('');
 	const router = useRouter();
+	const user = useAuthStore((state) => state.user);
+	const isManager = user?.role === 'MANAGER';
 
 	const fetchCases = useCallback(async ({withLoader = true} = {}) => {
 		if (withLoader) setLoading(true);
@@ -40,7 +48,7 @@ const MyCases = () => {
 		try {
 			const data = await postsService.myCases();
 			const resolved = Array.isArray(data) ? data : data?.results ?? [];
-			setAllPosts(resolved.filter((post) => post?.status === 'TO_VERIFY'));
+			setAllPosts(resolved);
 		} catch (err) {
 			setError(err?.message || FAILED_TO_LOAD_POSTS);
 		} finally {
@@ -64,18 +72,12 @@ const MyCases = () => {
 	const handleToggleSearch = () => {
 		setSearchVisible((prev) => {
 			const next = !prev;
-			if (!next) {
-				setSearchQuery('');
-			}
+			if (!next) setSearchQuery('');
 			return next;
 		});
 	};
-	const handleOpenNotifications = () => {
-		router.push('/notifications');
-	};
-	const handleClearSearch = () => {
-		setSearchQuery('');
-	};
+	const handleOpenNotifications = () => router.push('/notifications');
+	const handleClearSearch = () => setSearchQuery('');
 
 	const handleRefresh = () => {
 		setRefreshing(true);
@@ -121,36 +123,98 @@ const MyCases = () => {
 		}
 	};
 
-	const renderItem = ({item}) => {
+	const handleResubmit = async (postId) => {
+		try {
+			await postsService.resubmit(postId);
+			setAllPosts((prev) => prev.map((p) =>
+				String(p?.id) === String(postId) ? {...p, status: 'TO_VERIFY', rejection_reason: null} : p
+			));
+			Toast.show({type: 'success', text1: 'Zgłoszenie wysłane ponownie', visibilityTime: 2000});
+		} catch (err) {
+			Toast.show({
+				type: 'error',
+				text1: 'Nie udało się ponownie zgłosić',
+				text2: err?.message || 'Spróbuj ponownie',
+				visibilityTime: 2500,
+			});
+		}
+	};
+
+	const renderManagerItem = ({item}) => {
 		const isApproving = String(approvingId) === String(item?.id);
+		const isCancelled = item?.status === 'CANCELLED';
 
 		return (
 			<View style={styles.cardWrapper}>
-				<Post
-					post={item}
-					onPress={() => router.push(`/post/${item.id}`)}
-				/>
-				<View style={styles.caseActions}>
-					<Button
-						title="Zatwierdź"
-						onPress={() => handleApprove(item.id)}
-						loading={isApproving}
-						leftIcon={<Feather name="check" size={16} color="#fff" />}
-						style={styles.approveButton}
-						textStyle={styles.approveText}
-					/>
-					<Button
-						title="Odrzuć"
-						variant="outline"
-						onPress={() => setRejectingPost(item)}
-						leftIcon={<Feather name="x" size={16} color={colors.danger} />}
-						style={styles.rejectButton}
-						textStyle={styles.rejectText}
-					/>
+				<Post post={item} onPress={() => router.push(`/post/${item.id}`)} />
+				{!isCancelled ? (
+					<View style={styles.caseActions}>
+						<Button
+							title="Zatwierdź"
+							onPress={() => handleApprove(item.id)}
+							loading={isApproving}
+							leftIcon={<Feather name="check" size={16} color="#fff" />}
+							style={styles.approveButton}
+							textStyle={styles.approveText}
+						/>
+						<Button
+							title="Odrzuć"
+							variant="outline"
+							onPress={() => setRejectingPost(item)}
+							leftIcon={<Feather name="x" size={16} color={colors.danger} />}
+							style={styles.rejectButton}
+							textStyle={styles.rejectText}
+						/>
+					</View>
+				) : null}
+			</View>
+		);
+	};
+
+	const renderEmployeeItem = ({item}) => {
+		const isCancelled = item?.status === 'CANCELLED';
+
+		return (
+			<View style={styles.cardWrapper}>
+				<Post post={item} onPress={() => router.push(`/post/${item.id}`)} />
+				<View style={styles.statusBar}>
+					<View style={[styles.statusBadge, isCancelled ? styles.statusCancelled : styles.statusPending]}>
+						<Text style={[styles.statusBadgeText, isCancelled ? styles.statusCancelledText : styles.statusPendingText]}>
+							{STATUS_LABELS[item?.status] || item?.status}
+						</Text>
+					</View>
+					{isCancelled ? (
+						<View style={styles.employeeActions}>
+							<Button
+								title="Edytuj"
+								variant="outline"
+								onPress={() => router.push(`/post/${item.id}/edit`)}
+								leftIcon={<Feather name="edit-2" size={14} color={colors.primary} />}
+								style={styles.smallButton}
+								textStyle={styles.smallButtonText}
+							/>
+							<Button
+								title="Zgłoś ponownie"
+								onPress={() => handleResubmit(item.id)}
+								leftIcon={<Feather name="refresh-cw" size={14} color="#fff" />}
+								style={styles.smallButton}
+								textStyle={styles.smallButtonTextWhite}
+							/>
+						</View>
+					) : null}
+					{isCancelled && item?.rejection_reason ? (
+						<Text style={styles.rejectionReason} numberOfLines={2}>
+							Powód: {item.rejection_reason}
+						</Text>
+					) : null}
 				</View>
 			</View>
 		);
 	};
+
+	const emptyText = isManager
+		? 'Brak spraw do weryfikacji.'
+		: 'Nie masz zgłoszeń oczekujących na weryfikację.';
 
 	return (
 		<SafeAreaProvider>
@@ -181,7 +245,7 @@ const MyCases = () => {
 					<FlatList
 						data={filteredPosts}
 						keyExtractor={(item) => String(item?.id)}
-						renderItem={renderItem}
+						renderItem={isManager ? renderManagerItem : renderEmployeeItem}
 						contentContainerStyle={
 							filteredPosts.length ? styles.listContent : styles.listContentEmpty
 						}
@@ -194,17 +258,19 @@ const MyCases = () => {
 						}
 						ListEmptyComponent={
 							<View style={styles.emptyState}>
-								<Text style={styles.emptyText}>Brak spraw do zatwierdzenia.</Text>
+								<Text style={styles.emptyText}>{emptyText}</Text>
 							</View>
 						}
 					/>
 				)}
-				<RejectionReasonModal
-					visible={Boolean(rejectingPost)}
-					onClose={() => setRejectingPost(null)}
-					onSubmit={handleRejectSubmit}
-					loading={rejectLoading}
-				/>
+				{isManager ? (
+					<RejectionReasonModal
+						visible={Boolean(rejectingPost)}
+						onClose={() => setRejectingPost(null)}
+						onSubmit={handleRejectSubmit}
+						loading={rejectLoading}
+					/>
+				) : null}
 			</SafeAreaView>
 		</SafeAreaProvider>
 	);
@@ -238,6 +304,59 @@ const styles = StyleSheet.create({
 		borderColor: colors.border,
 		borderBottomLeftRadius: 10,
 		borderBottomRightRadius: 10,
+	},
+	statusBar: {
+		gap: 8,
+		paddingHorizontal: 14,
+		paddingVertical: 10,
+		backgroundColor: colors.surface,
+		borderWidth: 1,
+		borderTopWidth: 0,
+		borderColor: colors.border,
+		borderBottomLeftRadius: 10,
+		borderBottomRightRadius: 10,
+	},
+	statusBadge: {
+		alignSelf: 'flex-start',
+		paddingHorizontal: 10,
+		paddingVertical: 4,
+		borderRadius: 6,
+	},
+	statusPending: {
+		backgroundColor: '#fef3c7',
+	},
+	statusPendingText: {
+		color: '#92400e',
+	},
+	statusCancelled: {
+		backgroundColor: '#fee2e2',
+	},
+	statusCancelledText: {
+		color: '#991b1b',
+	},
+	statusBadgeText: {
+		fontSize: 12,
+		fontWeight: '700',
+	},
+	employeeActions: {
+		flexDirection: 'row',
+		gap: 10,
+	},
+	smallButton: {
+		minHeight: 36,
+		paddingHorizontal: 12,
+	},
+	smallButtonText: {
+		fontSize: 13,
+	},
+	smallButtonTextWhite: {
+		fontSize: 13,
+		color: '#fff',
+	},
+	rejectionReason: {
+		fontSize: 12,
+		color: colors.danger,
+		fontStyle: 'italic',
 	},
 	approveButton: {
 		flex: 1,

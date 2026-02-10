@@ -41,24 +41,15 @@ class PostViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = KaizenPost.objects.all().order_by('-created_at')
-        user = self.request.user
 
         if self.action == 'list':
-            if user.is_authenticated:
-                qs = qs.filter(
-                    Q(status__in=[
-                        KaizenPost.Status.SUBMITTED,
-                        KaizenPost.Status.IN_PROGRESS,
-                        KaizenPost.Status.IMPLEMENTED,
-                    ])
-                    | Q(status=KaizenPost.Status.TO_VERIFY, author=user)
-                    | Q(status=KaizenPost.Status.TO_VERIFY, assigned_manager=user)
-                    | Q(status=KaizenPost.Status.CANCELLED, author=user)
-                )
-            else:
-                qs = qs.exclude(
-                    status__in=[KaizenPost.Status.TO_VERIFY, KaizenPost.Status.CANCELLED]
-                )
+            qs = qs.filter(
+                status__in=[
+                    KaizenPost.Status.SUBMITTED,
+                    KaizenPost.Status.IN_PROGRESS,
+                    KaizenPost.Status.IMPLEMENTED,
+                ]
+            )
 
         return qs
 
@@ -167,17 +158,21 @@ class PostViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def my_cases(self, request):
-        if getattr(request.user, 'role', None) != 'MANAGER':
-            return Response(
-                {'detail': 'Dostęp tylko dla kierowników.'},
-                status=status.HTTP_403_FORBIDDEN,
+        user = request.user
+        pending_statuses = [KaizenPost.Status.TO_VERIFY, KaizenPost.Status.CANCELLED]
+
+        if getattr(user, 'role', None) == 'MANAGER':
+            qs = KaizenPost.objects.filter(
+                assigned_manager=user,
+                status__in=pending_statuses,
             )
-        qs = KaizenPost.objects.filter(
-            assigned_manager=request.user,
-        ).order_by('-created_at')
-        status_filter = request.query_params.get('status')
-        if status_filter:
-            qs = qs.filter(status=status_filter)
+        else:
+            qs = KaizenPost.objects.filter(
+                author=user,
+                status__in=pending_statuses,
+            )
+
+        qs = qs.order_by('-created_at')
         serializer = self.get_serializer(qs, many=True)
         return Response(serializer.data)
 

@@ -1,7 +1,8 @@
-import {Animated, Image, Pressable, StyleSheet, Text, View} from 'react-native';
+import {Animated, Image, Pressable, StyleSheet, View} from 'react-native';
 import {useRef} from 'react';
 import {Feather} from '@expo/vector-icons';
 import colors from 'theme/colors';
+import Text from 'components/Text/Text';
 import {getPostStatusMeta} from 'utils/postStatus';
 import ExtraImagesBadge from 'components/Badges/ExtraImagesBadge';
 
@@ -30,13 +31,12 @@ const Post = ({
 	isDeleting = false,
 }) => {
 	const likes = post?.likes_count ?? post?.likes?.length ?? 0;
-	const comments = post?.comments_count ?? post?.comments?.length ?? 0;
+	const commentsCount = post?.comments_count ?? post?.comments?.length ?? 0;
 	const authorFullName = [post?.author?.first_name, post?.author?.last_name]
 		.filter(Boolean)
 		.join(' ')
 		.trim();
 	const authorName = authorFullName || post?.author?.nickname || post?.author?.username || 'Użytkownik';
-	const department = post?.author?.department || '—';
 	const statusMeta = getPostStatusMeta(post?.status);
 	const isLiked = Boolean(post?.is_liked_by_me);
 	const likeScale = useRef(new Animated.Value(1)).current;
@@ -59,6 +59,12 @@ const Post = ({
 		.join('')
 		.slice(0, 2)
 		.toUpperCase();
+
+	const managerDetail = post?.assigned_manager_detail;
+	const managerName = [managerDetail?.first_name, managerDetail?.last_name]
+		.filter(Boolean)
+		.join(' ')
+		.trim() || managerDetail?.nickname || null;
 
 	const formatDate = (value) => {
 		if (!value) return '—';
@@ -92,72 +98,76 @@ const Post = ({
 			onPress={onPress}
 			style={({pressed}) => [styles.card, pressed && styles.cardPressed]}
 		>
-			{/* Header */}
-			<View style={styles.headerRow}>
-				<View style={styles.authorRow}>
+			{/* Badges row */}
+			<View style={styles.badgesRow}>
+				<Text style={[styles.categoryBadge, categoryStyle]}>
+					{categoryLabel || 'Zgłoszenie'}
+				</Text>
+				<Text
+					style={[
+						styles.statusBadge,
+						{color: statusMeta.color, backgroundColor: statusMeta.backgroundColor},
+					]}
+				>
+					{statusMeta.label}
+				</Text>
+				{post?.id ? <Text style={styles.postId}>#{post.id}</Text> : null}
+			</View>
+
+			{/* Title */}
+			<Text style={styles.title} numberOfLines={2}>
+				{post?.title || 'Bez tytułu'}
+			</Text>
+
+			{/* Excerpt */}
+			<Text style={styles.excerpt} numberOfLines={3} ellipsizeMode="tail">
+				{post?.content || 'Brak treści'}
+			</Text>
+
+			{/* Image */}
+			{primaryImage ? (
+				<View style={styles.imageWrapper}>
+					<Image source={{uri: primaryImage}} style={styles.image} />
+					<ExtraImagesBadge count={extraImagesCount} />
+				</View>
+			) : null}
+
+			{/* Meta row */}
+			<View style={styles.metaRow}>
+				<View style={styles.metaAuthor}>
 					<View style={styles.avatar}>
 						<Text style={styles.avatarText}>{initials || 'U'}</Text>
 					</View>
-					<View style={styles.authorInfo}>
-						<Text style={styles.authorName}>{authorName}</Text>
-						<Text style={styles.authorDept}>Dział: {department}</Text>
-					</View>
+					<Text style={styles.authorName} numberOfLines={1}>{authorName}</Text>
 				</View>
-				<View style={styles.headerMeta}>
-					<Text
-						style={[
-							styles.statusBadge,
-							{color: statusMeta.color, backgroundColor: statusMeta.backgroundColor},
-						]}
-					>
-						{statusMeta.label}
-					</Text>
-					<Text style={styles.dateText}>{formatDate(post?.created_at)}</Text>
-					{post?.assigned_manager_detail ? (
-						<Text style={styles.managerText} numberOfLines={1}>
-							Kier.: {[post.assigned_manager_detail.first_name, post.assigned_manager_detail.last_name].filter(Boolean).join(' ') || post.assigned_manager_detail.nickname}
-						</Text>
-					) : null}
-				</View>
-			</View>
-
-			{/* Body */}
-			<View style={styles.body}>
-				<Text style={[styles.category, categoryStyle]}>{categoryLabel || 'Zgłoszenie'}</Text>
-				<Text style={styles.title} numberOfLines={2}>
-					{post?.title || 'Bez tytułu'}
-				</Text>
-				<Text style={styles.excerpt} numberOfLines={4} ellipsizeMode="tail">
-					{post?.content || 'Brak treści'}
-				</Text>
-				{primaryImage ? (
-					<View style={styles.imageWrapper}>
-						<Image source={{uri: primaryImage}} style={styles.image} />
-						<ExtraImagesBadge count={extraImagesCount} />
-					</View>
+				<Text style={styles.dot}>·</Text>
+				<Text style={styles.dateText}>{formatDate(post?.created_at)}</Text>
+				{managerName ? (
+					<>
+						<Text style={styles.dot}>·</Text>
+						<Feather name="shield" size={11} color={colors.mutedAlt} />
+						<Text style={styles.managerText} numberOfLines={1}>{managerName}</Text>
+					</>
 				) : null}
 			</View>
 
-			{/* Footer */}
+			{/* Footer actions */}
 			<View style={styles.footer}>
-				<Text style={styles.footerMeta}>
-					{likes} reakcji • {comments} komentarzy
-				</Text>
 				<View style={styles.footerActions}>
 					<Animated.View style={[styles.footerButtonWrapper, {transform: [{scale: likeScale}]}]}>
 						<Pressable
 							style={[styles.footerButton, isLiked ? styles.footerButtonActive : null]}
 							onPress={handleLikePress}
 						>
-							<Feather name="thumbs-up" size={14} color={isLiked ? '#fff' : colors.primary} />
+							<Feather name="thumbs-up" size={13} color={isLiked ? '#fff' : colors.primary} />
 							<Text style={[styles.footerButtonText, isLiked ? styles.footerButtonTextActive : null]}>
-								Mam to samo
+								{likes}
 							</Text>
 						</Pressable>
 					</Animated.View>
 					<Pressable style={styles.footerButton} onPress={handleCommentPress}>
-						<Feather name="plus-circle" size={14} color={colors.primary} />
-						<Text style={styles.footerButtonText}>Dodaj komentarz</Text>
+						<Feather name="message-circle" size={13} color={colors.primary} />
+						<Text style={styles.footerButtonText}>{commentsCount}</Text>
 					</Pressable>
 					{canManage ? (
 						<Pressable
@@ -165,8 +175,7 @@ const Post = ({
 							onPress={handleMorePress}
 							disabled={isDeleting}
 						>
-							<Feather name="more-horizontal" size={14} color={colors.primary} />
-							<Text style={styles.footerButtonText}>Więcej</Text>
+							<Feather name="more-horizontal" size={13} color={colors.primary} />
 						</Pressable>
 					) : null}
 				</View>
@@ -179,149 +188,143 @@ export default Post;
 
 const styles = StyleSheet.create({
 	card: {
-		position: 'relative',
-		margin: 0,
-		borderRadius: 10,
+		gap: 10,
+		padding: 16,
+		borderRadius: 14,
 		borderColor: colors.border,
 		borderWidth: 1,
 		backgroundColor: colors.surface,
-		padding: 14,
-	},
-	category: {
-		fontSize: 11,
-		fontWeight: '700',
-		color: colors.muted,
-		letterSpacing: 0.3,
-		textTransform: 'uppercase',
-		paddingHorizontal: 8,
-		paddingVertical: 4,
-		borderRadius: 10,
-		backgroundColor: colors.badgeBackground,
-		alignSelf: 'flex-start',
-	},
-	title: {
-		marginTop: 8,
-		fontSize: 16,
-		fontWeight: '600',
-		color: colors.text,
-	},
-	excerpt: {
-		fontSize: 14,
-		lineHeight: 21,
-		color: '#4b5563',
 	},
 	cardPressed: {
-		transform: [{scale: 0.995}],
+		transform: [{scale: 0.985}],
+		opacity: 0.95,
 	},
-	headerRow: {
+
+	/* Badges */
+	badgesRow: {
 		flexDirection: 'row',
-		justifyContent: 'space-between',
-		alignItems: 'flex-start',
-		gap: 10,
-	},
-	authorRow: {
-		flexDirection: 'row',
+		flexWrap: 'wrap',
+		gap: 8,
 		alignItems: 'center',
-		gap: 10,
-		flex: 1,
 	},
-	avatar: {
-		width: 40,
-		height: 40,
-		borderRadius: 20,
-		alignItems: 'center',
-		justifyContent: 'center',
-		backgroundColor: colors.border,
-		borderWidth: 1,
-		borderColor: colors.primary,
-	},
-	avatarText: {
-		fontSize: 14,
+	categoryBadge: {
+		fontSize: 11,
 		fontWeight: '700',
-		color: colors.primary,
-	},
-	authorInfo: {
-		flex: 1,
-		minWidth: 0,
-		gap: 2,
-	},
-	authorName: {
-		fontSize: 14,
-		fontWeight: '700',
-		color: colors.text,
-	},
-	authorDept: {
-		fontSize: 12,
-		color: colors.muted,
-	},
-	headerMeta: {
-		alignItems: 'flex-end',
-		gap: 6,
+		paddingHorizontal: 10,
+		paddingVertical: 3,
+		borderRadius: 999,
+		textTransform: 'uppercase',
 	},
 	statusBadge: {
 		fontSize: 11,
 		fontWeight: '700',
-		color: '#0f5132',
-		backgroundColor: '#d1e7dd',
-		paddingHorizontal: 8,
-		paddingVertical: 4,
-		borderRadius: 10,
+		paddingHorizontal: 10,
+		paddingVertical: 3,
+		borderRadius: 999,
 	},
-	dateText: {
+	postId: {
 		fontSize: 11,
 		color: colors.muted,
+		fontWeight: '600',
 	},
-	managerText: {
-		fontSize: 10,
-		color: colors.mutedAlt,
+
+	/* Content */
+	title: {
+		fontSize: 17,
+		fontWeight: '800',
+		color: colors.text,
+		lineHeight: 22,
 	},
-	body: {
-		marginTop: 12,
-		gap: 6,
+	excerpt: {
+		fontSize: 14,
+		lineHeight: 20,
+		color: colors.muted,
+	},
+
+	/* Image */
+	imageWrapper: {
+		width: '100%',
+		height: 180,
+		borderRadius: 10,
+		overflow: 'hidden',
+		position: 'relative',
+		backgroundColor: colors.placeholderSurface,
 	},
 	image: {
 		width: '100%',
-		height: 180,
+		height: '100%',
 	},
-	imageWrapper: {
-		marginTop: 8,
-		width: '100%',
-		height: 180,
-		borderRadius: 8,
-		overflow: 'hidden',
-		position: 'relative',
-		backgroundColor: colors.border,
+
+	/* Meta */
+	metaRow: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		gap: 6,
+		paddingTop: 2,
 	},
-	footer: {
-		marginTop: 12,
-		paddingTop: 10,
-		borderTopWidth: 1,
-		borderTopColor: colors.border,
-		gap: 10,
+	metaAuthor: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		gap: 6,
+		flexShrink: 1,
 	},
-	footerMeta: {
+	avatar: {
+		width: 22,
+		height: 22,
+		borderRadius: 11,
+		alignItems: 'center',
+		justifyContent: 'center',
+		backgroundColor: '#e0e7ff',
+	},
+	avatarText: {
+		fontSize: 10,
+		fontWeight: '700',
+		color: colors.primary,
+	},
+	authorName: {
+		fontSize: 13,
+		fontWeight: '700',
+		color: colors.text,
+		flexShrink: 1,
+	},
+	dot: {
 		fontSize: 12,
 		color: colors.muted,
 	},
+	dateText: {
+		fontSize: 12,
+		color: colors.muted,
+	},
+	managerText: {
+		fontSize: 12,
+		color: colors.mutedAlt,
+		flexShrink: 1,
+	},
+
+	/* Footer */
+	footer: {
+		paddingTop: 8,
+		borderTopWidth: 1,
+		borderTopColor: colors.border,
+	},
 	footerActions: {
 		flexDirection: 'row',
-		flexWrap: 'wrap',
-		gap: 12,
+		gap: 8,
 	},
 	footerButton: {
 		flexDirection: 'row',
 		alignItems: 'center',
-		gap: 6,
+		gap: 5,
 		paddingVertical: 6,
-		paddingHorizontal: 8,
-		borderRadius: 8,
-		backgroundColor: '#f8fafc',
+		paddingHorizontal: 10,
+		borderRadius: 10,
+		backgroundColor: colors.placeholderSurface,
 		borderWidth: 1,
 		borderColor: colors.border,
 	},
 	footerButtonText: {
-		fontSize: 12,
-		fontWeight: '600',
+		fontSize: 13,
+		fontWeight: '700',
 		color: colors.primary,
 	},
 	footerButtonWrapper: {

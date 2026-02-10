@@ -2,20 +2,16 @@ import {Tabs} from 'expo-router';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import colors from 'theme/colors';
-import {useAuthStore} from 'store/authStore';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 const LEFT_TAB_NAMES = ['index'];
-const RIGHT_TAB_NAMES_MANAGER = ['my-cases', 'profile'];
-const RIGHT_TAB_NAMES_USER = ['profile'];
+const RIGHT_TAB_NAMES = ['my-cases', 'profile'];
 
 const ICON_SIZE = 24;
 const CREATE_ICON_SIZE = 26;
 const CREATE_BUTTON_SIZE = 56;
 
 const TabsLayout = () => {
-	const user = useAuthStore((state) => state.user);
-	const isManager = user?.role === 'MANAGER';
 	const insets = useSafeAreaInsets();
 
 	return (
@@ -24,7 +20,6 @@ const TabsLayout = () => {
 			tabBar={(props) => (
 				<DynamicTabBar
 					{...props}
-					isManager={isManager}
 					bottomInset={insets.bottom}
 				/>
 			)}
@@ -50,7 +45,7 @@ const TabsLayout = () => {
 				name="my-cases"
 				options={{
 					title: 'Moje sprawy',
-					href: isManager ? '/my-cases' : null,
+					href: '/my-cases',
 					tabBarIcon: ({color}) => <Feather name="clipboard" size={ICON_SIZE} color={color} />,
 				}}
 			/>
@@ -65,8 +60,8 @@ const TabsLayout = () => {
 	);
 };
 
-const DynamicTabBar = ({state, descriptors, navigation, isManager, bottomInset}) => {
-	const rightNames = isManager ? RIGHT_TAB_NAMES_MANAGER : RIGHT_TAB_NAMES_USER;
+const DynamicTabBar = ({state, descriptors, navigation, bottomInset}) => {
+	const rightNames = RIGHT_TAB_NAMES;
 	const leftTabs = LEFT_TAB_NAMES
 		.map((name) => state.routes.find((route) => route.name === name))
 		.filter(Boolean);

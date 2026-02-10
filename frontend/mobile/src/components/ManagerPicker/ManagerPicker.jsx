@@ -2,7 +2,9 @@ import {useCallback, useEffect, useRef, useState} from 'react';
 import {
 	ActivityIndicator,
 	FlatList,
+	KeyboardAvoidingView,
 	Modal,
+	Platform,
 	Pressable,
 	StyleSheet,
 	TextInput,
@@ -15,6 +17,7 @@ import usersService from 'src/server/services/usersService';
 import {FAILED_TO_LOAD_MANAGERS} from 'constants/constans';
 
 const DEBOUNCE_MS = 300;
+const INITIAL_LIMIT = 3;
 
 const getInitials = (manager) => {
 	const first = manager?.first_name?.[0] || '';
@@ -44,7 +47,11 @@ const ManagerPicker = ({value, onChange, style}) => {
 			const params = query ? {search: query} : undefined;
 			const data = await usersService.listManagers(params);
 			const resolved = Array.isArray(data) ? data : data?.results ?? [];
-			setManagers(resolved);
+			if (!query) {
+				setManagers(resolved.slice(0, INITIAL_LIMIT));
+			} else {
+				setManagers(resolved);
+			}
 		} catch (err) {
 			setError(err?.message || FAILED_TO_LOAD_MANAGERS);
 		} finally {
@@ -98,9 +105,6 @@ const ManagerPicker = ({value, onChange, style}) => {
 					<Text style={[styles.managerName, isSelected ? styles.managerNameActive : null]}>
 						{getDisplayName(item)}
 					</Text>
-					{item.nickname ? (
-						<Text style={styles.managerNickname}>@{item.nickname}</Text>
-					) : null}
 				</View>
 				{isSelected ? (
 					<Feather name="check" size={18} color={colors.primary} />
@@ -131,11 +135,13 @@ const ManagerPicker = ({value, onChange, style}) => {
 			<Modal
 				transparent
 				visible={visible}
-				animationType="slide"
+				animationType="fade"
 				onRequestClose={handleClose}
 			>
-				<View style={styles.modalOverlay}>
-					<Pressable style={styles.modalBackdrop} onPress={handleClose} />
+				<KeyboardAvoidingView
+					style={styles.modalOverlay}
+					behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+				>
 					<View style={styles.modalContent}>
 						<View style={styles.modalHeader}>
 							<Text style={styles.modalTitle}>Wybierz kierownika</Text>
@@ -147,13 +153,18 @@ const ManagerPicker = ({value, onChange, style}) => {
 							<Feather name="search" size={16} color={colors.muted} />
 							<TextInput
 								style={styles.searchInput}
-								placeholder="Szukaj po imieniu..."
+								placeholder="Szukaj po imieniu lub nazwisku..."
 								placeholderTextColor={colors.muted}
 								value={search}
 								onChangeText={handleSearchChange}
 								autoFocus
 							/>
 						</View>
+						{!search && !loading && !error && managers.length > 0 ? (
+							<View style={styles.hintRow}>
+								<Text style={styles.hintText}>Wpisz, aby wyszukać więcej</Text>
+							</View>
+						) : null}
 						{loading ? (
 							<View style={styles.centered}>
 								<ActivityIndicator size="small" color={colors.primary} />
@@ -176,7 +187,8 @@ const ManagerPicker = ({value, onChange, style}) => {
 							/>
 						)}
 					</View>
-				</View>
+					<Pressable style={styles.modalBackdrop} onPress={handleClose} />
+				</KeyboardAvoidingView>
 			</Modal>
 		</>
 	);
@@ -210,7 +222,6 @@ const styles = StyleSheet.create({
 	},
 	modalOverlay: {
 		flex: 1,
-		justifyContent: 'flex-end',
 		backgroundColor: 'rgba(15, 23, 42, 0.3)',
 	},
 	modalBackdrop: {
@@ -218,17 +229,22 @@ const styles = StyleSheet.create({
 	},
 	modalContent: {
 		backgroundColor: colors.surface,
-		borderTopLeftRadius: 20,
-		borderTopRightRadius: 20,
-		maxHeight: '70%',
-		paddingBottom: 34,
+		borderBottomLeftRadius: 20,
+		borderBottomRightRadius: 20,
+		maxHeight: '60%',
+		paddingTop: 54,
+		paddingBottom: 16,
+		shadowColor: '#000',
+		shadowOffset: {width: 0, height: 4},
+		shadowOpacity: 0.15,
+		shadowRadius: 12,
+		elevation: 8,
 	},
 	modalHeader: {
 		flexDirection: 'row',
 		alignItems: 'center',
 		justifyContent: 'space-between',
 		paddingHorizontal: 16,
-		paddingTop: 16,
 		paddingBottom: 12,
 	},
 	modalTitle: {
@@ -254,6 +270,14 @@ const styles = StyleSheet.create({
 		fontSize: 15,
 		color: colors.text,
 		padding: 0,
+	},
+	hintRow: {
+		paddingHorizontal: 16,
+		paddingBottom: 6,
+	},
+	hintText: {
+		fontSize: 12,
+		color: colors.muted,
 	},
 	listContent: {
 		paddingHorizontal: 8,
@@ -293,7 +317,6 @@ const styles = StyleSheet.create({
 	},
 	managerInfo: {
 		flex: 1,
-		gap: 2,
 	},
 	managerName: {
 		fontSize: 14,
@@ -302,10 +325,6 @@ const styles = StyleSheet.create({
 	},
 	managerNameActive: {
 		color: colors.primary,
-	},
-	managerNickname: {
-		fontSize: 12,
-		color: colors.muted,
 	},
 	centered: {
 		padding: 24,

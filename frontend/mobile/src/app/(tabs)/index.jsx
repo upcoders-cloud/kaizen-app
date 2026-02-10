@@ -50,9 +50,7 @@ const Home = () => {
 	);
 
 	const filteredPosts = useMemo(() => {
-		const data = (Array.isArray(allPosts) ? [...allPosts] : []).filter(
-			(post) => post?.status !== 'TO_VERIFY'
-		);
+		const data = Array.isArray(allPosts) ? [...allPosts] : [];
 		let result = data;
 		switch (activeFilter.key) {
 			case 'mine': {

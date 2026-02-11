@@ -24,6 +24,7 @@ load_dotenv()
 SECRET_KEY = os.getenv('DJANGO_SECRET')
 ACCESS_SECONDS = int(os.getenv('ACCESS_TOKEN_SECONDS', 900)) # Default 5 mins
 REFRESH_SECONDS = int(os.getenv('REFRESH_TOKEN_SECONDS', 86400))
+ACCESS_CODE_PEPPER = os.getenv('ACCESS_CODE_PEPPER', SECRET_KEY)
 SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', 'False') == 'True'
 
 CSRF_COOKIE_SECURE = SESSION_COOKIE_SECURE
@@ -43,6 +44,7 @@ if DEBUG:
     ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
+    'jazzmin',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -70,6 +72,9 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticatedOrReadOnly',
     ),
+    'DEFAULT_THROTTLE_RATES': {
+        'access_code_login': '5/min',
+    },
 }
 
 SIMPLE_JWT = {
@@ -82,6 +87,72 @@ SIMPLE_JWT = {
     'ALGORITHM': 'HS256',
     'SIGNING_KEY': SECRET_KEY,
     'AUTH_HEADER_TYPES': ('Bearer',),
+}
+
+JAZZMIN_SETTINGS = {
+    "site_title": "Kaizen Admin",
+    "site_header": "Kaizen",
+    "site_brand": "Admin Dashboard",
+    # Login Page Logo
+    "site_logo": "admin/img/logo.png",
+    "site_logo_classes": "img-fluid img-circle",
+    # Sidebar Logo (Dashboard)
+    "site_brand_logo": "admin/img/logo.png",
+    # Favicon
+    "site_icon": "admin/img/logo.png",
+    "welcome_sign": "Welcome to the Kaizen App Management Portal",
+    "copyright": "Upcoders sp. z o.o",
+    "search_model": [
+        "ideas.KaizenPost",   # Searches "Posty"
+        "ideas.PostSurvey",   # Searches "Ankiety do postów"
+        "users.CustomUser",   # Searches "Użytkownicy"
+        "ideas.Notification", # Searches "Powiadomienia"
+    ],
+    # Minimal custom styles only for logo sizing.
+    "custom_css": "admin/css/logo_fix.css",
+    "show_sidebar": True,
+    "navigation_expanded": True,
+    "icons": {
+        "users.CustomUser": "fas fa-user-friends",  # Użytkownicy
+        "ideas.KaizenPost": "fas fa-lightbulb",     # Posty
+        "ideas.PostSurvey": "fas fa-poll-h",        # Ankiety do postów
+        "ideas.Category": "fas fa-folder-open",     # Kategorie
+        "ideas.Notification": "fas fa-bell",        # Powiadomienia
+        "ideas.Comment": "fas fa-comments",         # Komentarze
+        "ideas.Like": "fas fa-thumbs-up",           # Polubienia
+    },
+}
+
+JAZZMIN_UI_TWEAKS = {
+    "theme": "default",
+    # Disable dark mode variant to keep one consistent classic theme.
+    "dark_mode_theme": None,    "navbar_small_text": False,
+    "footer_small_text": False,
+    "body_small_text": False,
+    "brand_small_text": False,
+    "brand_colour": "navbar-light",
+    "accent": "accent-primary",
+    "navbar": "navbar-white navbar-light",
+    "no_navbar_border": False,
+    "navbar_fixed": True,
+    "layout_boxed": False,
+    "footer_fixed": False,
+    "sidebar_fixed": True,
+    "sidebar": "sidebar-light-primary",
+    "sidebar_nav_small_text": False,
+    "sidebar_disable_expand": False,
+    "sidebar_nav_child_indent": True,
+    "sidebar_nav_compact_style": False,
+    "sidebar_nav_legacy_style": False,
+    "sidebar_nav_flat_style": False,
+    "show_ui_builder": False,
+    "button_classes": {
+        "primary": "btn-primary",
+        "success": "btn-success",
+        "info": "btn-info",
+        "warning": "btn-warning",
+        "danger": "btn-danger",
+    }
 }
 
 # CORS (development)
@@ -177,3 +248,6 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+STATICFILES_DIRS = [
+    os.path.join(Path(__file__).resolve().parents[1], "static"),
+]

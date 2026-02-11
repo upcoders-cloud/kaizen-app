@@ -1,16 +1,30 @@
-from django.conf import settings
+import logging
+
 from django.contrib.auth import get_user_model
-from rest_framework import status, serializers
-from rest_framework.response import Response
-from rest_framework.views import APIView
+from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema, inline_serializer
+from rest_framework import serializers, status
 from rest_framework.permissions import AllowAny
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
+from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
-from drf_spectacular.utils import extend_schema, inline_serializer, OpenApiResponse, OpenApiExample
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+
+from .serializers import AccessCodeLoginSerializer
+from .services import (
+    authenticate_by_access_code,
+    build_login_response_payload,
+    clear_refresh_token_cookie,
+    issue_tokens_for_user,
+    set_refresh_token_cookie,
+)
+
+logger = logging.getLogger(__name__)
 
 # --- Documentation Helpers ---
-AUTH_TAG = ["Authentication"]
+AUTH_TAG = ['Authentication']
+AUTH_FAILED_DETAIL = 'Invalid credentials.'
 
 LOGIN_RESPONSE_SCHEMA = inline_serializer(
     name='LoginResponse',
@@ -21,94 +35,129 @@ LOGIN_RESPONSE_SCHEMA = inline_serializer(
         'first_name': serializers.CharField(),
         'last_name': serializers.CharField(),
         'gender': serializers.CharField(),
-    }
+    },
 )
 
 TOKEN_REFRESH_RESPONSE_SCHEMA = inline_serializer(
     name='TokenRefreshResponse',
     fields={
         'access': serializers.CharField(),
-    }
+    },
 )
+
+
+def _get_client_ip(request):
+    forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if forwarded_for:
+        return forwarded_for.split(',')[0].strip()
+    return request.META.get('REMOTE_ADDR', 'unknown')
 
 
 class SecureTokenObtainPairView(TokenObtainPairView):
     @extend_schema(
-        summary="User Login",
+        summary='User Login',
         description=(
-                "Takes user credentials and returns an access token along with the username. "
-                "A refresh token is automatically stored in a secure HttpOnly cookie."
+            'Takes user credentials and returns an access token along with the username. '
+            'A refresh token is automatically stored in a secure HttpOnly cookie.'
         ),
         tags=AUTH_TAG,
         responses={
             200: LOGIN_RESPONSE_SCHEMA,
-            401: OpenApiResponse(description="Invalid credentials (Username/Password)")
+            401: OpenApiResponse(description='Invalid credentials (Username/Password)'),
         },
         examples=[
             OpenApiExample(
                 'Successful Login Response',
                 value={
-                    "access": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-                    "username": "michal_kaizen",
-                    "email": "michal@example.com",
-                    "first_name": "Michal",
-                    "last_name": "Nowak",
-                    "gender": "male"
+                    'access': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+                    'username': 'michal_kaizen',
+                    'email': 'michal@example.com',
+                    'first_name': 'Michal',
+                    'last_name': 'Nowak',
+                    'gender': 'male',
                 },
                 response_only=True,
             )
-        ]
+        ],
     )
     def post(self, request, *args, **kwargs):
         response = super().post(request, *args, **kwargs)
 
-        if response.status_code == 200:
-            # Inject username into response body
+        if response.status_code == status.HTTP_200_OK:
+            refresh_token = response.data.get('refresh')
             username = request.data.get('username')
-            response.data['username'] = username
-            User = get_user_model()
-            user = User.objects.filter(username=username).first()
+            user_model = get_user_model()
+            user = user_model.objects.filter(username=username).first()
+
             if user:
-                response.data['first_name'] = user.first_name or ''
-                response.data['last_name'] = user.last_name or ''
-                response.data['gender'] = user.gender or ''
-                response.data['email'] = user.email or ''
+                access_token = response.data.get('access', '')
+                response.data = build_login_response_payload(user=user, access_token=access_token)
             else:
+                response.data['username'] = username or ''
                 response.data['first_name'] = ''
                 response.data['last_name'] = ''
                 response.data['gender'] = ''
                 response.data['email'] = ''
 
-            # Extract and set Refresh Token as HttpOnly Cookie
-            refresh_token = response.data.get('refresh')
-            response.set_cookie(
-                key='refresh_token',
-                value=refresh_token,
-                httponly=True,
-                secure=getattr(settings, 'SESSION_COOKIE_SECURE', False),
-                samesite='Lax',
-                path='/api/access/token/refresh/',
-            )
+            if refresh_token:
+                set_refresh_token_cookie(response, refresh_token)
+            response.data.pop('refresh', None)
 
-            # Clean up JSON body
-            del response.data['refresh']
+        return response
 
+
+class AccessCodeLoginView(APIView):
+    permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'access_code_login'
+
+    @extend_schema(
+        summary='Access Code Login',
+        description=(
+            'Authenticates user with access code in format XXXX-XXXX and returns JWT access token. '
+            'Refresh token is set as HttpOnly cookie.'
+        ),
+        tags=AUTH_TAG,
+        request=AccessCodeLoginSerializer,
+        responses={
+            200: LOGIN_RESPONSE_SCHEMA,
+            400: OpenApiResponse(description='Invalid payload or code format'),
+            401: OpenApiResponse(description='Invalid credentials (access code)'),
+            429: OpenApiResponse(description='Too many attempts'),
+        },
+    )
+    def post(self, request):
+        serializer = AccessCodeLoginSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        code = serializer.validated_data['code']
+        user = authenticate_by_access_code(code)
+
+        if not user:
+            logger.warning('Access code login failed from ip=%s', _get_client_ip(request))
+            return Response({'detail': AUTH_FAILED_DETAIL}, status=status.HTTP_401_UNAUTHORIZED)
+
+        access_token, refresh_token = issue_tokens_for_user(user)
+        response_payload = build_login_response_payload(user=user, access_token=access_token)
+
+        response = Response(response_payload, status=status.HTTP_200_OK)
+        set_refresh_token_cookie(response, refresh_token)
         return response
 
 
 class SecureTokenRefreshView(TokenRefreshView):
     @extend_schema(
-        summary="Refresh Access Token",
+        summary='Refresh Access Token',
         description=(
-                "Uses the refresh token stored in the HttpOnly cookie to issue a new access token. "
-                "No request body is required as the token is read from cookies."
+            'Uses the refresh token stored in the HttpOnly cookie to issue a new access token. '
+            'No request body is required as the token is read from cookies.'
         ),
         tags=AUTH_TAG,
-        request=None,  # Removes the 'refresh' requirement from Swagger UI body
+        request=None,
         responses={
             200: TOKEN_REFRESH_RESPONSE_SCHEMA,
-            401: OpenApiResponse(description="Refresh token is expired or invalid")
-        }
+            401: OpenApiResponse(description='Refresh token is expired or invalid'),
+        },
     )
     def post(self, request, *args, **kwargs):
         refresh_token = request.COOKIES.get('refresh_token')
@@ -120,17 +169,9 @@ class SecureTokenRefreshView(TokenRefreshView):
 
         response = super().post(request, *args, **kwargs)
 
-        if response.status_code == 200 and 'refresh' in response.data:
-            new_refresh = response.data['refresh']
-            response.set_cookie(
-                key='refresh_token',
-                value=new_refresh,
-                httponly=True,
-                secure=getattr(settings, 'SESSION_COOKIE_SECURE', False),
-                samesite='Lax',
-                path='/api/access/token/refresh/',
-            )
-            del response.data['refresh']
+        if response.status_code == status.HTTP_200_OK and 'refresh' in response.data:
+            new_refresh = response.data.pop('refresh')
+            set_refresh_token_cookie(response, new_refresh)
 
         return response
 
@@ -139,15 +180,15 @@ class LogoutView(APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(
-        summary="User Logout",
-        description="Invalidates the session by blacklisting the token and clearing the cookie.",
+        summary='User Logout',
+        description='Invalidates the session by blacklisting the token and clearing the cookie.',
         tags=AUTH_TAG,
         responses={
             200: inline_serializer(
                 name='LogoutSuccess',
-                fields={'detail': serializers.CharField()}
+                fields={'detail': serializers.CharField()},
             )
-        }
+        },
     )
     def post(self, request):
         refresh_token = request.COOKIES.get('refresh_token')
@@ -160,12 +201,8 @@ class LogoutView(APIView):
                 pass
 
         response = Response(
-            {"detail": "Successfully logged out and token invalidated."},
-            status=status.HTTP_200_OK
+            {'detail': 'Successfully logged out and token invalidated.'},
+            status=status.HTTP_200_OK,
         )
-        response.delete_cookie(
-            key='refresh_token',
-            path='/api/access/token/refresh/',
-            samesite='Lax'
-        )
+        clear_refresh_token_cookie(response)
         return response

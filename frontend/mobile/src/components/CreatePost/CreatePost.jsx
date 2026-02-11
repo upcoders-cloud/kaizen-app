@@ -1,5 +1,6 @@
 import {useCallback, useEffect, useMemo, useState} from 'react';
 import {ActivityIndicator, ScrollView, StyleSheet, View} from 'react-native';
+import {Feather} from '@expo/vector-icons';
 import {useFocusEffect} from '@react-navigation/native';
 import colors from 'theme/colors';
 import postsService from 'src/server/services/postsService';
@@ -9,7 +10,23 @@ import Button from 'components/Button/Button';
 import Text from 'components/Text/Text';
 import ImagePicker from 'components/ImagePicker/ImagePicker';
 import OptionPills from 'components/OptionPills/OptionPills';
-import {CONTENT_IS_REQUIRED, EMPTY_STRING, FAILED_TO_CREATE_POST, TITLE_IS_REQUIRED} from "constants/constans";
+import ManagerPicker from 'components/ManagerPicker/ManagerPicker';
+import Toast from 'react-native-toast-message';
+import {
+	CATEGORY_IS_REQUIRED,
+	CONTENT_IS_REQUIRED,
+	EMPTY_STRING,
+	FAILED_TO_CREATE_POST,
+	MANAGER_IS_REQUIRED,
+	TITLE_IS_REQUIRED,
+} from 'constants/constans';
+
+const STEP_ICONS = [
+	{icon: 'file-text'},
+	{icon: 'tag'},
+	{icon: 'user-check'},
+	{icon: 'image'},
+];
 
 const CreatePost = ({
 	onSubmitSuccess,
@@ -22,12 +39,15 @@ const CreatePost = ({
 	const [title, setTitle] = useState(initialValues?.title ?? EMPTY_STRING);
 	const [content, setContent] = useState(initialValues?.content ?? EMPTY_STRING);
 	const [category, setCategory] = useState(initialValues?.category ?? null);
+	const [assignedManager, setAssignedManager] = useState(initialValues?.assigned_manager ?? null);
 	const [images, setImages] = useState(initialValues?.images ?? []);
 	const [removedImageIds, setRemovedImageIds] = useState([]);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState(null);
 	const [titleError, setTitleError] = useState(null);
 	const [contentError, setContentError] = useState(null);
+	const [categoryError, setCategoryError] = useState(null);
+	const [managerError, setManagerError] = useState(null);
 	const [categories, setCategories] = useState([]);
 	const [categoriesLoading, setCategoriesLoading] = useState(false);
 	const [categoriesError, setCategoriesError] = useState(null);
@@ -41,17 +61,18 @@ const CreatePost = ({
 		[categories]
 	);
 
-	const resolveDefaultCategory = () => initialValues?.category ?? categoryOptions[0]?.value ?? null;
-
 	const resetForm = () => {
 		setTitle(initialValues?.title ?? EMPTY_STRING);
 		setContent(initialValues?.content ?? EMPTY_STRING);
-		setCategory(resolveDefaultCategory());
+		setCategory(initialValues?.category ?? null);
+		setAssignedManager(initialValues?.assigned_manager ?? null);
 		setImages(initialValues?.images ?? []);
 		setRemovedImageIds([]);
 		setError(null);
 		setTitleError(null);
 		setContentError(null);
+		setCategoryError(null);
+		setManagerError(null);
 	};
 
 	useFocusEffect(
@@ -87,20 +108,14 @@ const CreatePost = ({
 		setTitle(initialValues?.title ?? EMPTY_STRING);
 		setContent(initialValues?.content ?? EMPTY_STRING);
 		setCategory(initialValues?.category ?? null);
+		setAssignedManager(initialValues?.assigned_manager ?? null);
 		setImages(initialValues?.images ?? []);
 		setRemovedImageIds([]);
 		setTitleError(null);
 		setContentError(null);
-	}, [initialValues?.title, initialValues?.content, initialValues?.category]);
-
-	useEffect(() => {
-		if (mode === 'edit') return;
-		if (!categoryOptions.length) return;
-		const hasMatch = categoryOptions.some((option) => String(option.value) === String(category));
-		if (!hasMatch) {
-			setCategory(categoryOptions[0].value);
-		}
-	}, [categoryOptions, category, mode]);
+		setCategoryError(null);
+		setManagerError(null);
+	}, [initialValues?.title, initialValues?.content, initialValues?.category, initialValues?.assigned_manager]);
 
 	const handleImagesChange = useCallback((nextImages = []) => {
 		setImages((prevImages) => {
@@ -124,24 +139,70 @@ const CreatePost = ({
 		});
 	}, []);
 
-	const handleSubmit = () => submitPost(
-		{
-			title, content, category, images, removedImageIds,
-			onSubmitSuccess, onSubmitFail,
-			setLoading, setError, resetForm,
-			setTitleError, setContentError,
-			mode, postId
-		});
+	const handleCategoryChange = (value) => {
+		setCategory(value);
+		if (categoryError) setCategoryError(null);
+	};
+
+	const handleManagerChange = (value) => {
+		setAssignedManager(value);
+		if (managerError) setManagerError(null);
+	};
+
+	const handleSubmit = () => submitPost({
+		title, content, category, assignedManager, images, removedImageIds,
+		onSubmitSuccess, onSubmitFail,
+		setLoading, setError, resetForm,
+		setTitleError, setContentError, setCategoryError, setManagerError,
+		mode, postId,
+	});
+
+	const completedSteps = [
+		Boolean(title.trim() && content.trim()),
+		Boolean(category),
+		Boolean(assignedManager),
+		images.length > 0,
+	];
+
+	const isEdit = mode === 'edit';
+	const headerTitle = isEdit ? 'Edytuj zgłoszenie' : 'Nowe zgłoszenie';
+	const headerSubtitle = isEdit
+		? 'Popraw treść i zapisz zmiany.'
+		: 'Opisz problem i dodaj szczegóły.';
 
 	return (
-		<ScrollView contentContainerStyle={styles.container}>
+		<ScrollView
+			contentContainerStyle={styles.container}
+			keyboardShouldPersistTaps="handled"
+			showsVerticalScrollIndicator={false}
+		>
 			<View style={styles.header}>
-				<Text style={styles.heading}>Nowe zgłoszenie</Text>
-				<Text style={styles.subheading}>Opisz problem i dodaj materiały pomocnicze.</Text>
+				<Text style={styles.heading}>{headerTitle}</Text>
+				<Text style={styles.subheading}>{headerSubtitle}</Text>
 			</View>
 
-			<View style={styles.sectionCard}>
-				<Text style={styles.sectionTitle}>Podstawowe informacje</Text>
+			<View style={styles.stepper}>
+				{STEP_ICONS.map((step, i) => {
+					const done = completedSteps[i];
+					const isLast = i === STEP_ICONS.length - 1;
+					return (
+						<View key={i} style={styles.stepItem}>
+							<View style={[styles.stepCircle, done ? styles.stepCircleDone : null]}>
+								<Feather
+									name={done ? 'check' : step.icon}
+									size={14}
+									color={done ? '#fff' : colors.muted}
+								/>
+							</View>
+							{!isLast ? (
+								<View style={[styles.stepLine, done && completedSteps[i + 1] ? styles.stepLineDone : null]} />
+							) : null}
+						</View>
+					);
+				})}
+			</View>
+
+			<Section icon="file-text" title="Podstawowe informacje">
 				<Input
 					label="Tytuł"
 					placeholder="Krótki, konkretny tytuł"
@@ -167,30 +228,61 @@ const CreatePost = ({
 					style={styles.multilineInput}
 					error={contentError}
 				/>
-			</View>
+			</Section>
 
-			<View style={styles.sectionCard}>
-				<Text style={styles.sectionTitle}>Kategoria</Text>
+			<Section icon="tag" title="Kategoria" error={categoryError}>
 				{categoriesLoading ? (
 					<ActivityIndicator size="small" color={colors.primary} />
 				) : categoriesError ? (
-					<Text style={styles.error}>{categoriesError}</Text>
+					<Text style={styles.errorText}>{categoriesError}</Text>
 				) : categoryOptions.length ? (
-					<OptionPills options={categoryOptions} value={category} onChange={setCategory} />
+					<OptionPills options={categoryOptions} value={category} onChange={handleCategoryChange} />
 				) : (
 					<Text style={styles.muted}>Brak dostępnych kategorii.</Text>
 				)}
-			</View>
+			</Section>
 
-			<View style={styles.sectionCard}>
-				<Text style={styles.sectionTitle}>Załączniki</Text>
+			<Section icon="user-check" title="Kierownik" error={managerError}>
+				<ManagerPicker value={assignedManager} onChange={handleManagerChange} />
+			</Section>
+
+			<Section icon="image" title="Załączniki" optional>
 				<ImagePicker value={images} onChange={handleImagesChange} />
-			</View>
+			</Section>
 
-			<Button title={submitLabel} onPress={handleSubmit} loading={loading} style={styles.submitButton} />
+			{error ? (
+				<View style={styles.errorBanner}>
+					<Feather name="alert-circle" size={16} color={colors.danger} />
+					<Text style={styles.errorBannerText}>{error}</Text>
+				</View>
+			) : null}
+
+			<Button
+				title={submitLabel}
+				onPress={handleSubmit}
+				loading={loading}
+				leftIcon={<Feather name={isEdit ? 'save' : 'send'} size={16} color="#fff" />}
+				style={styles.submitButton}
+			/>
 		</ScrollView>
 	);
 };
+
+const Section = ({icon, title, optional, error, children}) => (
+	<View style={[styles.sectionCard, error ? styles.sectionCardError : null]}>
+		<View style={styles.sectionHeader}>
+			<View style={[styles.sectionIconCircle, error ? styles.sectionIconCircleError : null]}>
+				<Feather name={icon} size={14} color={error ? colors.danger : colors.primary} />
+			</View>
+			<Text style={styles.sectionTitle}>{title}</Text>
+			{optional ? <Text style={styles.optionalTag}>Opcjonalne</Text> : null}
+		</View>
+		{children}
+		{error ? (
+			<Text style={styles.sectionError}>{error}</Text>
+		) : null}
+	</View>
+);
 
 export default CreatePost;
 
@@ -198,6 +290,7 @@ async function submitPost({
 	title,
 	content,
 	category,
+	assignedManager,
 	images,
 	removedImageIds,
 	onSubmitSuccess,
@@ -207,17 +300,38 @@ async function submitPost({
 	resetForm,
 	setTitleError,
 	setContentError,
+	setCategoryError,
+	setManagerError,
 	mode,
-	postId
+	postId,
 }) {
+	let hasError = false;
+
 	if (!title.trim()) {
 		setTitleError?.(TITLE_IS_REQUIRED);
-		onSubmitFail?.(TITLE_IS_REQUIRED);
-		return;
+		hasError = true;
 	}
 	if (!content.trim()) {
 		setContentError?.(CONTENT_IS_REQUIRED);
-		onSubmitFail?.(CONTENT_IS_REQUIRED);
+		hasError = true;
+	}
+	if (!category) {
+		setCategoryError?.(CATEGORY_IS_REQUIRED);
+		hasError = true;
+	}
+	if (!assignedManager) {
+		setManagerError?.(MANAGER_IS_REQUIRED);
+		hasError = true;
+	}
+
+	if (hasError) {
+		Toast.show({
+			type: 'error',
+			text1: 'Uzupełnij wymagane pola',
+			text2: 'Sprawdź oznaczone sekcje formularza',
+			visibilityTime: 2500,
+		});
+		onSubmitFail?.('Uzupełnij wymagane pola');
 		return;
 	}
 
@@ -225,6 +339,8 @@ async function submitPost({
 	setError(null);
 	setTitleError?.(null);
 	setContentError?.(null);
+	setCategoryError?.(null);
+	setManagerError?.(null);
 
 	try {
 		const normalizedImages = normalizeImagesForUpload(images);
@@ -233,6 +349,7 @@ async function submitPost({
 			title: title.trim(),
 			content: content.trim(),
 			category,
+			assigned_manager: assignedManager,
 			images: normalizedImages,
 		};
 
@@ -272,37 +389,127 @@ const normalizeImagesForUpload = (images = []) =>
 const styles = StyleSheet.create({
 	container: {
 		padding: 16,
-		gap: 18,
+		paddingBottom: 32,
+		gap: 14,
 	},
 	header: {
-		gap: 6,
+		gap: 4,
 	},
 	heading: {
-		fontSize: 20,
-		fontWeight: '700',
+		fontSize: 22,
+		fontWeight: '800',
 		color: colors.text,
 	},
 	subheading: {
 		color: colors.muted,
+		fontSize: 14,
+	},
+	stepper: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		paddingVertical: 4,
+		paddingHorizontal: 8,
+	},
+	stepItem: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		flex: 1,
+	},
+	stepCircle: {
+		width: 28,
+		height: 28,
+		borderRadius: 14,
+		backgroundColor: colors.border,
+		alignItems: 'center',
+		justifyContent: 'center',
+	},
+	stepCircleDone: {
+		backgroundColor: colors.primary,
+	},
+	stepLine: {
+		flex: 1,
+		height: 2,
+		backgroundColor: colors.border,
+		marginHorizontal: 4,
+	},
+	stepLineDone: {
+		backgroundColor: colors.primary,
 	},
 	sectionCard: {
 		gap: 12,
-		padding: 14,
+		padding: 16,
 		borderRadius: 14,
 		backgroundColor: colors.surface,
 		borderWidth: 1,
 		borderColor: colors.border,
+		shadowColor: '#000',
+		shadowOpacity: 0.02,
+		shadowOffset: {width: 0, height: 4},
+		shadowRadius: 8,
+		elevation: 1,
+	},
+	sectionCardError: {
+		borderColor: '#fca5a5',
+		backgroundColor: '#fefafa',
+	},
+	sectionHeader: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		gap: 10,
+	},
+	sectionIconCircle: {
+		width: 28,
+		height: 28,
+		borderRadius: 14,
+		backgroundColor: '#e0e7ff',
+		alignItems: 'center',
+		justifyContent: 'center',
+	},
+	sectionIconCircleError: {
+		backgroundColor: '#fee2e2',
 	},
 	sectionTitle: {
-		fontSize: 14,
+		flex: 1,
+		fontSize: 15,
 		fontWeight: '700',
 		color: colors.text,
+	},
+	optionalTag: {
+		fontSize: 11,
+		fontWeight: '600',
+		color: colors.muted,
+		backgroundColor: colors.border,
+		paddingHorizontal: 8,
+		paddingVertical: 2,
+		borderRadius: 6,
+		overflow: 'hidden',
+	},
+	sectionError: {
+		fontSize: 12,
+		fontWeight: '600',
+		color: colors.danger,
 	},
 	muted: {
 		color: colors.muted,
 	},
-	error: {
+	errorText: {
 		color: colors.danger,
+		fontWeight: '600',
+	},
+	errorBanner: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		gap: 8,
+		padding: 12,
+		borderRadius: 10,
+		backgroundColor: '#fef2f2',
+		borderWidth: 1,
+		borderColor: '#fecaca',
+	},
+	errorBannerText: {
+		flex: 1,
+		color: colors.danger,
+		fontSize: 13,
 		fontWeight: '600',
 	},
 	multilineInput: {

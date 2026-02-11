@@ -10,6 +10,7 @@ import {navigateBack} from 'utils/navigation';
 import {useAuthStore} from 'store/authStore';
 import {getJwtPayload} from 'utils/jwt';
 import BackButton from 'components/Navigation/BackButton';
+import Toast from 'react-native-toast-message';
 
 const EditPostRoute = () => {
 	const router = useRouter();
@@ -61,9 +62,10 @@ const EditPostRoute = () => {
 			title: post?.title ?? '',
 			content: post?.content ?? '',
 			category: post?.category?.id ?? post?.category ?? null,
+			assigned_manager: post?.assigned_manager_detail?.id ?? post?.assigned_manager ?? null,
 			images,
 		};
-	}, [post?.title, post?.content, post?.category, post?.image_items, post?.image_urls]);
+	}, [post?.title, post?.content, post?.category, post?.image_items, post?.image_urls, post?.assigned_manager]);
 
 	return (
 		<>
@@ -96,8 +98,18 @@ const EditPostRoute = () => {
 						mode="edit"
 						postId={resolvedId}
 						initialValues={initialValues}
-						submitLabel="Zapisz zmiany"
-						onSubmitSuccess={handleBack}
+						submitLabel={post?.status === 'CANCELLED' ? 'Zapisz i zgłoś ponownie' : 'Zapisz zmiany'}
+						onSubmitSuccess={async () => {
+							if (post?.status === 'CANCELLED') {
+								try {
+									await postsService.resubmit(resolvedId);
+									Toast.show({type: 'success', text1: 'Post zgłoszony ponownie', visibilityTime: 2000});
+								} catch {
+									Toast.show({type: 'error', text1: 'Nie udało się ponownie zgłosić posta', visibilityTime: 2500});
+								}
+							}
+							handleBack();
+						}}
 					/>
 				)}
 			</SafeAreaView>

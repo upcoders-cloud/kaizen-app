@@ -44,6 +44,22 @@ const postsService = {
 		const options = withAuthHeaders();
 		return httpClient.put(`${basePath}${postId}/survey/`, payload, options);
 	},
+	approve(postId) {
+		const options = withAuthHeaders();
+		return httpClient.post(`${basePath}${postId}/approve/`, undefined, options);
+	},
+	reject(postId, payload) {
+		const options = withAuthHeaders();
+		return httpClient.post(`${basePath}${postId}/reject/`, payload, options);
+	},
+	resubmit(postId) {
+		const options = withAuthHeaders();
+		return httpClient.post(`${basePath}${postId}/resubmit/`, undefined, options);
+	},
+	myCases(params) {
+		const options = withAuthHeaders({params});
+		return httpClient.get(`${basePath}my_cases/`, options);
+	},
 };
 
 export default postsService;

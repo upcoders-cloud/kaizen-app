@@ -21,7 +21,7 @@ class UserPublicSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'nickname', 'first_name', 'last_name', 'username']
+        fields = ['id', 'nickname', 'first_name', 'last_name', 'username', 'role']
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -91,6 +91,20 @@ class PostSerializer(serializers.ModelSerializer):
         required=False
     )
     image_urls = serializers.SerializerMethodField(read_only=True)
+    assigned_manager = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.filter(role='MANAGER'),
+        required=False,
+        allow_null=True,
+    )
+    assigned_manager_detail = UserPublicSerializer(
+        source='assigned_manager',
+        read_only=True,
+    )
+    rejection_reason = serializers.CharField(
+        read_only=True,
+        required=False,
+        allow_null=True,
+    )
 
     class Meta:
         model = KaizenPost
@@ -111,8 +125,11 @@ class PostSerializer(serializers.ModelSerializer):
             'image_items',
             'image_urls',
             'survey',
+            'assigned_manager',
+            'assigned_manager_detail',
+            'rejection_reason',
         ]
-        read_only_fields = ['status']
+        read_only_fields = ['status', 'rejection_reason']
 
     def get_is_liked_by_me(self, obj):
         request = self.context.get('request')

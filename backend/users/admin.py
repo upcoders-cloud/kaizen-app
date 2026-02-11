@@ -2,5 +2,11 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from .models import CustomUser
 
-# Wyswietlenie CustomUser używając wbudowanego wyglądu UserAdmin
-admin.site.register(CustomUser, UserAdmin)
+
+@admin.register(CustomUser)
+class CustomUserAdmin(UserAdmin):
+    list_display = ('username', 'email', 'first_name', 'last_name', 'role', 'is_staff')
+    list_filter = ('role', 'is_staff', 'is_active')
+    fieldsets = UserAdmin.fieldsets + (
+        ('Kaizen', {'fields': ('nickname', 'microsoft_oid', 'is_verified', 'gender', 'role')}),
+    )

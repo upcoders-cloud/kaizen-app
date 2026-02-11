@@ -4,6 +4,40 @@ import {LOGIN_FAILED, MMKV_AUTH_KEY, REFRESH_FAILED} from "constants/constans";
 import {getItem, removeItem, setItem} from "store/storage";
 import {getAccessTokenExpiration} from "utils/jwt";
 
+const ACCESS_CODE_LOGIN_FAILED = 'Access code login failed';
+
+const resolveUnauthenticatedState = (message = null) => ({
+	isAuthenticated: false,
+	accessToken: null,
+	accessTokenExpiration: null,
+	user: null,
+	error: message,
+});
+
+const persistAuthSession = ({response, set}) => {
+	const accessToken = response?.access || null;
+	if (!accessToken) {
+		return null;
+	}
+
+	const authData = {
+		isAuthenticated: true,
+		accessToken,
+		accessTokenExpiration: getAccessTokenExpiration(accessToken, {skewMs: 60 * 1000}),
+		user: response,
+		error: null,
+	};
+	setItem(MMKV_AUTH_KEY, authData);
+	set(authData);
+	return authData;
+};
+
+const processLoginError = ({set, error, fallbackMessage}) => {
+	const message = error?.message || fallbackMessage;
+	set(() => resolveUnauthenticatedState(message));
+	return {success: false, error: message};
+};
+
 export const useAuthStore = create((set, get) => ({
 	isAuthenticated: false,
 	accessToken: null,
@@ -18,55 +52,54 @@ export const useAuthStore = create((set, get) => ({
 				{withCredentials: true}
 			);
 
-			const accessToken = response?.access || null;
-			if (!accessToken) {
-				const message = LOGIN_FAILED;
-				set(() => ({
-					isAuthenticated: false,
-					accessToken: null,
-					accessTokenExpiration: null,
-					user: null,
-					error: message,
-				}));
-				return {success: false, error: message};
+			const authData = persistAuthSession({response, set});
+			if (!authData) {
+				return processLoginError({
+					set,
+					error: null,
+					fallbackMessage: LOGIN_FAILED,
+				});
 			}
-			const authData = {
-				isAuthenticated: true,
-				accessToken,
-				accessTokenExpiration: getAccessTokenExpiration(accessToken, {skewMs: 60 * 1000}),
-				user: response,
-				error: null,
-			};
-
-			// save in MMKV
-			setItem(MMKV_AUTH_KEY, authData);
-
-			// save in Zustand
-			set(authData);
 
 			return {success: true, data: response};
 		} catch (error) {
-			const message = error?.message || LOGIN_FAILED;
-			set(() => ({
-				isAuthenticated: false,
-				accessToken: null,
-				accessTokenExpiration: null,
-				user: null,
-				error: message,
-			}));
-			return {success: false, error: message};
+			return processLoginError({
+				set,
+				error,
+				fallbackMessage: LOGIN_FAILED,
+			});
+		}
+	},
+
+	loginWithAccessCode: async (code) => {
+		try {
+			const response = await authService.loginWithAccessCode(
+				{code},
+				{withCredentials: true}
+			);
+
+			const authData = persistAuthSession({response, set});
+			if (!authData) {
+				return processLoginError({
+					set,
+					error: null,
+					fallbackMessage: ACCESS_CODE_LOGIN_FAILED,
+				});
+			}
+
+			return {success: true, data: response};
+		} catch (error) {
+			return processLoginError({
+				set,
+				error,
+				fallbackMessage: ACCESS_CODE_LOGIN_FAILED,
+			});
 		}
 	},
 
 	logout: () => {
 		removeItem(MMKV_AUTH_KEY);
-		set(() => ({
-			isAuthenticated: false,
-			accessToken: null,
-			accessTokenExpiration: null,
-			user: null,
-			error: null,
-		}));
+		set(() => resolveUnauthenticatedState(null));
 		return {success: true};
 	},
 

@@ -103,6 +103,21 @@ export const useAuthStore = create((set, get) => ({
 		return {success: true};
 	},
 
+	updateUser: (partialUser) => {
+		const current = get();
+		const nextUser = {...(current.user ?? {}), ...partialUser};
+		const nextState = {...current, user: nextUser};
+		set({user: nextUser});
+		setItem(MMKV_AUTH_KEY, {
+			isAuthenticated: nextState.isAuthenticated,
+			accessToken: nextState.accessToken,
+			accessTokenExpiration: nextState.accessTokenExpiration,
+			user: nextUser,
+			error: nextState.error,
+		});
+		return nextUser;
+	},
+
 	refreshAccessToken: async () => {
 		try {
 			const response = await authService.refresh(undefined, {withCredentials: true});

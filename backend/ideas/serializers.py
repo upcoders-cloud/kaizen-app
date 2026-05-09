@@ -1,27 +1,10 @@
-import base64
-import io
-import uuid
-from PIL import Image
-from django.core.files.base import ContentFile
 from rest_framework import serializers
 from .models import KaizenPost, Comment, Like, PostImage, PostSurvey, Notification, Category
 from django.contrib.auth import get_user_model
+from users.fields import Base64ImageField
+from users.serializers import UserPublicSerializer
 
 User = get_user_model()
-
-try:
-    from pillow_heif import register_heif_opener
-    register_heif_opener()
-except ImportError:
-    pass
-
-
-# Serializer Użytkownika - TYLKO DANE PUBLICZNE
-class UserPublicSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = User
-        fields = ['id', 'nickname', 'first_name', 'last_name', 'username', 'role']
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -34,42 +17,24 @@ class CategorySerializer(serializers.ModelSerializer):
 class CommentSerializer(serializers.ModelSerializer):
     author = UserPublicSerializer(read_only=True)
     post = serializers.PrimaryKeyRelatedField(read_only=True)
+    parent = serializers.PrimaryKeyRelatedField(
+        queryset=Comment.objects.all(),
+        required=False,
+        allow_null=True,
+    )
 
     class Meta:
         model = Comment
-        fields = ['id', 'post', 'author', 'text', 'created_at']
+        fields = ['id', 'post', 'author', 'parent', 'text', 'created_at']
         read_only_fields = ['id', 'post', 'author', 'created_at']
 
-
-class Base64ImageField(serializers.ImageField):
-    def _get_extension(self, decoded):
-        try:
-            image = Image.open(io.BytesIO(decoded))
-            image_format = image.format
-            if not image_format:
-                return 'jpg'
-            image_format = image_format.lower()
-            return 'jpg' if image_format == 'jpeg' else image_format
-        except Exception:
-            return 'jpg'
-
-    def to_internal_value(self, data):
-        if isinstance(data, str):
-            if data.startswith('data:'):
-                try:
-                    _, data = data.split(';base64,')
-                except ValueError:
-                    raise serializers.ValidationError('Invalid image data.')
-            try:
-                decoded = base64.b64decode(data, validate=True)
-            except (TypeError, ValueError):
-                raise serializers.ValidationError('Invalid image data.')
-
-            file_name = uuid.uuid4().hex[:12]
-            file_extension = self._get_extension(decoded)
-            data = ContentFile(decoded, name=f'{file_name}.{file_extension}')
-
-        return super().to_internal_value(data)
+    def validate_parent(self, value):
+        if value is None:
+            return value
+        post = self.context.get('post')
+        if post is not None and value.post_id != post.id:
+            raise serializers.ValidationError('Komentarz nadrzędny musi należeć do tego samego posta.')
+        return value
 
 
 class PostSerializer(serializers.ModelSerializer):

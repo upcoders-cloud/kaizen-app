@@ -13,6 +13,10 @@ const usersService = {
 		const options = withAuthHeaders();
 		return httpClient.get(`${basePath}me/`, options);
 	},
+	updateMe(payload) {
+		const options = withAuthHeaders();
+		return httpClient.patch(`${basePath}me/`, payload, options);
+	},
 };
 
 export default usersService;

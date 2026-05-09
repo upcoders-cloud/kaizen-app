@@ -28,6 +28,7 @@ import {navigateBack} from 'utils/navigation';
 import {getJwtPayload} from 'utils/jwt';
 import CommentsList from 'components/Comments/CommentsList';
 import CommentInput from 'components/Comments/CommentInput';
+import {buildCommentTree} from 'utils/commentTree';
 import KeyboardAwareScrollView from 'components/KeyboardAwareScrollView/KeyboardAwareScrollView';
 import TextBase from 'components/Text/Text';
 import {CONTENT_IS_REQUIRED, EMPTY_STRING, FAILED_TO_LOAD_POST, FAILED_TO_LOAD_COMMENTS} from 'constants/constans';
@@ -88,6 +89,7 @@ export default function PostDetails() {
 	const [isLiked, setIsLiked] = useState(false);
 	const [updatingCommentId, setUpdatingCommentId] = useState(null);
 	const [deletingCommentId, setDeletingCommentId] = useState(null);
+	const [replyingTo, setReplyingTo] = useState(null);
 	const [menuVisible, setMenuVisible] = useState(false);
 	const [deletingPost, setDeletingPost] = useState(false);
 	const [showAllComments, setShowAllComments] = useState(false);
@@ -391,16 +393,39 @@ export default function PostDetails() {
 		setCommentError(null);
 		setSubmittingComment(true);
 		try {
-			const newComment = await postsService.addComment(resolvedId, {text});
+			const payload = {text};
+			if (replyingTo?.id) {
+				payload.parent = replyingTo.id;
+			}
+			const newComment = await postsService.addComment(resolvedId, payload);
 			LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
 			setComments((prev) => [newComment, ...prev]);
 			setCommentValue(EMPTY_STRING);
+			setReplyingTo(null);
 		} catch (err) {
 			setCommentError(err?.message || 'Nie udało się dodać komentarza');
 		} finally {
 			setSubmittingComment(false);
 		}
 	};
+
+	const handleStartReply = useCallback((comment) => {
+		if (!comment?.id) return;
+		setReplyingTo({id: comment.id, nickname: comment?.author?.nickname || 'użytkownik'});
+		setCommentValue((prev) => {
+			const nick = comment?.author?.nickname;
+			if (!nick) return prev;
+			const mention = `@${nick} `;
+			return prev?.startsWith(mention) ? prev : mention;
+		});
+		requestAnimationFrame(() => {
+			scrollRef.current?.scrollToEnd({animated: true});
+		});
+	}, []);
+
+	const handleCancelReply = useCallback(() => {
+		setReplyingTo(null);
+	}, []);
 
 	const handleCommentFocus = useCallback(() => {
 		requestAnimationFrame(() => {
@@ -497,14 +522,11 @@ export default function PostDetails() {
 	const surveySavingsLabel = Number.isFinite(surveySavings)
 		? surveySavings.toLocaleString('pl-PL', {minimumFractionDigits: 0, maximumFractionDigits: 0})
 		: '0';
-	const sortedComments = useMemo(
-		() =>
-			[...comments].sort((a, b) => new Date(b?.created_at) - new Date(a?.created_at)),
-		[comments]
-	);
-	const visibleComments = showAllComments
-		? sortedComments
-		: sortedComments.slice(0, COMMENTS_PREVIEW_COUNT);
+	const commentTree = useMemo(() => buildCommentTree(comments), [comments]);
+	const visibleTree = showAllComments
+		? commentTree
+		: commentTree.slice(0, COMMENTS_PREVIEW_COUNT);
+	const totalCommentsCount = comments.length;
 
 	return (
 		<>
@@ -779,19 +801,20 @@ export default function PostDetails() {
 									</View>
 								) : null}
 								<View style={{flex: 1}} />
-								{comments.length > COMMENTS_PREVIEW_COUNT ? (
+								{commentTree.length > COMMENTS_PREVIEW_COUNT ? (
 									<Pressable onPress={handleToggleComments}>
 										<TextBase style={styles.showAllText}>
-											{showAllComments ? 'Mniej' : `Wszystkie (${comments.length})`}
+											{showAllComments ? 'Mniej' : `Wszystkie (${totalCommentsCount})`}
 										</TextBase>
 									</Pressable>
 								) : null}
 							</View>
 							<CommentsList
-								comments={visibleComments}
+								tree={visibleTree}
 								currentUserId={currentUserId}
 								onUpdate={handleUpdateComment}
 								onDelete={handleDeleteComment}
+								onReply={handleStartReply}
 								updatingId={updatingCommentId}
 								deletingId={deletingCommentId}
 								onCommentLayout={handleCommentLayout}
@@ -804,6 +827,8 @@ export default function PostDetails() {
 								loading={submittingComment}
 								error={commentError}
 								onFocus={handleCommentFocus}
+								replyingTo={replyingTo}
+								onCancelReply={handleCancelReply}
 							/>
 						</View>
 					</>

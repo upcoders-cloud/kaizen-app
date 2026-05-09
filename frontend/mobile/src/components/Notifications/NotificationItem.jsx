@@ -6,6 +6,8 @@ import colors from 'theme/colors';
 const TYPE_CONFIG = {
 	LIKE: {icon: 'heart', color: '#e11d48', bg: '#fff1f2'},
 	COMMENT: {icon: 'message-circle', color: '#2563eb', bg: '#eff6ff'},
+	REPLY: {icon: 'corner-down-right', color: '#2563eb', bg: '#eff6ff'},
+	MENTION: {icon: 'at-sign', color: '#0ea5e9', bg: '#f0f9ff'},
 	ASSIGNED: {icon: 'user-check', color: '#7c3aed', bg: '#f5f3ff'},
 	APPROVED: {icon: 'check-circle', color: '#16a34a', bg: '#f0fdf4'},
 	REJECTED: {icon: 'x-circle', color: '#dc2626', bg: '#fef2f2'},
@@ -28,6 +30,8 @@ const NotificationItem = ({notification, onPress}) => {
 	const actionLabel = {
 		LIKE: 'polubił Twój post',
 		COMMENT: 'skomentował Twój post',
+		REPLY: 'odpowiedział na Twój komentarz',
+		MENTION: 'oznaczył Cię w komentarzu',
 		ASSIGNED: 'przypisał Ci post do weryfikacji',
 		APPROVED: 'zatwierdził Twój post',
 		REJECTED: 'odrzucił Twój post',

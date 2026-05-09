@@ -91,7 +91,7 @@ class SecureTokenObtainPairView(TokenObtainPairView):
 
             if user:
                 access_token = response.data.get('access', '')
-                response.data = build_login_response_payload(user=user, access_token=access_token)
+                response.data = build_login_response_payload(user=user, access_token=access_token, request=request)
             else:
                 response.data['username'] = username or ''
                 response.data['first_name'] = ''
@@ -138,7 +138,7 @@ class AccessCodeLoginView(APIView):
             return Response({'detail': AUTH_FAILED_DETAIL}, status=status.HTTP_401_UNAUTHORIZED)
 
         access_token, refresh_token = issue_tokens_for_user(user)
-        response_payload = build_login_response_payload(user=user, access_token=access_token)
+        response_payload = build_login_response_payload(user=user, access_token=access_token, request=request)
 
         response = Response(response_payload, status=status.HTTP_200_OK)
         set_refresh_token_cookie(response, refresh_token)

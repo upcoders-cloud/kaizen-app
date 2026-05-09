@@ -5,6 +5,25 @@ import Button from 'components/Button/Button';
 import Input from 'components/Input/Input';
 import Text from 'components/Text/Text';
 import colors from 'theme/colors';
+import {splitMentions} from 'utils/mentions';
+
+const MentionText = ({value, style}) => {
+	const segments = splitMentions(value);
+	if (!segments.length) return <Text style={style}>{value}</Text>;
+	return (
+		<Text style={style}>
+			{segments.map((segment, idx) =>
+				segment.type === 'mention' ? (
+					<Text key={idx} style={styles.mention}>
+						{segment.value}
+					</Text>
+				) : (
+					<Text key={idx}>{segment.value}</Text>
+				)
+			)}
+		</Text>
+	);
+};
 
 const formatDate = (value) => {
 	if (!value) return '';
@@ -17,9 +36,12 @@ const CommentItem = ({
 	isOwner = false,
 	onEdit,
 	onDelete,
+	onReply,
 	isUpdating = false,
 	isDeleting = false,
 	isHighlighted = false,
+	isReply = false,
+	replyToNickname = null,
 }) => {
 	if (!comment) return null;
 	const [isEditing, setIsEditing] = useState(false);
@@ -57,6 +79,14 @@ const CommentItem = ({
 	const handleEditPress = () => {
 		setError(null);
 		setIsEditing(true);
+	};
+
+	const handleOpenMenu = () => {
+		Alert.alert('Komentarz', null, [
+			{text: 'Edytuj', onPress: handleEditPress},
+			{text: 'Usuń', style: 'destructive', onPress: handleDelete},
+			{text: 'Anuluj', style: 'cancel'},
+		]);
 	};
 
 	const handleCancel = () => {
@@ -99,7 +129,7 @@ const CommentItem = ({
 
 	const actionsDisabled = isUpdating || isDeleting;
 	return (
-		<View style={styles.container}>
+		<View style={[styles.container, isReply ? styles.containerReply : null]}>
 			<Animated.View
 				style={[
 					styles.highlightOverlay,
@@ -113,38 +143,53 @@ const CommentItem = ({
 			/>
 			<View style={[styles.content, {paddingHorizontal: highlightInset}]}>
 				<View style={styles.header}>
-				<View style={styles.authorRow}>
-					<Feather name="user" size={14} color={colors.muted} />
-					<Text style={styles.author}>{comment.author?.nickname || 'Anonim'}</Text>
-				</View>
-				<View style={styles.metaRow}>
-					<Text style={styles.date}>{formatDate(comment.created_at)}</Text>
-					{isOwner ? (
-						<View style={styles.actions}>
-							<Pressable
-								onPress={handleEditPress}
-								disabled={actionsDisabled}
-								style={({pressed}) => [
-									styles.iconButton,
-									pressed && !actionsDisabled ? styles.iconButtonPressed : null,
-								]}
-							>
-								<Feather name="edit-2" size={14} color={colors.primary} />
-							</Pressable>
-							<Pressable
-								onPress={handleDelete}
-								disabled={actionsDisabled}
-								style={({pressed}) => [
-									styles.iconButton,
-									styles.iconButtonDanger,
-									pressed && !actionsDisabled ? styles.iconButtonPressed : null,
-								]}
-							>
-								<Feather name="trash-2" size={14} color={colors.danger} />
-							</Pressable>
+					<View style={styles.authorBlock}>
+						<View style={styles.authorRow}>
+							<Feather name="user" size={14} color={colors.muted} />
+							<Text style={styles.author} numberOfLines={1}>
+								{comment.author?.nickname || 'Anonim'}
+							</Text>
+							{replyToNickname ? (
+								<View style={styles.replyTag}>
+									<Feather name="corner-down-right" size={11} color={colors.muted} />
+									<Text style={styles.replyTagText} numberOfLines={1}>
+										@{replyToNickname}
+									</Text>
+								</View>
+							) : null}
 						</View>
-					) : null}
-				</View>
+						<Text style={styles.date} numberOfLines={1}>
+							{formatDate(comment.created_at)}
+						</Text>
+					</View>
+					<View style={styles.metaRow}>
+						{onReply ? (
+							<Pressable
+								onPress={() => onReply(comment)}
+								disabled={actionsDisabled}
+								hitSlop={8}
+								style={({pressed}) => [
+									styles.iconButton,
+									pressed && !actionsDisabled ? styles.iconButtonPressed : null,
+								]}
+							>
+								<Feather name="message-circle" size={14} color={colors.primary} />
+							</Pressable>
+						) : null}
+						{isOwner ? (
+							<Pressable
+								onPress={handleOpenMenu}
+								disabled={actionsDisabled}
+								hitSlop={8}
+								style={({pressed}) => [
+									styles.iconButton,
+									pressed && !actionsDisabled ? styles.iconButtonPressed : null,
+								]}
+							>
+								<Feather name="more-vertical" size={16} color={colors.muted} />
+							</Pressable>
+						) : null}
+					</View>
 				</View>
 				{isEditing ? (
 					<View style={styles.editSection}>
@@ -178,7 +223,7 @@ const CommentItem = ({
 					</View>
 				) : (
 					<>
-						<Text style={styles.text}>{comment.text}</Text>
+						<MentionText value={comment.text} style={styles.text} />
 						{error ? <Text style={styles.error}>{error}</Text> : null}
 					</>
 				)}
@@ -194,26 +239,60 @@ const styles = StyleSheet.create({
 		paddingVertical: 12,
 		position: 'relative',
 	},
+	containerReply: {
+		paddingLeft: 24,
+		borderLeftWidth: 2,
+		borderLeftColor: colors.borderMuted,
+		marginLeft: 8,
+	},
 	content: {
 		gap: 6,
+	},
+	mention: {
+		color: colors.primary,
+		fontWeight: '600',
+	},
+	replyTag: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		gap: 3,
+		paddingHorizontal: 6,
+		paddingVertical: 2,
+		borderRadius: 6,
+		backgroundColor: colors.placeholderSurface,
+		flexShrink: 1,
+	},
+	replyTagText: {
+		fontSize: 11,
+		color: colors.muted,
+		fontWeight: '600',
+		flexShrink: 1,
 	},
 	header: {
 		flexDirection: 'row',
 		justifyContent: 'space-between',
-		alignItems: 'center',
+		alignItems: 'flex-start',
+		gap: 8,
+	},
+	authorBlock: {
+		flex: 1,
+		gap: 2,
 	},
 	authorRow: {
 		flexDirection: 'row',
 		alignItems: 'center',
 		gap: 6,
+		flexShrink: 1,
 	},
 	author: {
 		fontWeight: '700',
 		color: colors.text,
+		flexShrink: 1,
 	},
 	date: {
 		fontSize: 12,
 		color: colors.muted,
+		marginLeft: 20,
 	},
 	text: {
 		fontSize: 14,
@@ -223,7 +302,8 @@ const styles = StyleSheet.create({
 	metaRow: {
 		flexDirection: 'row',
 		alignItems: 'center',
-		gap: 8,
+		gap: 4,
+		flexShrink: 0,
 	},
 	actions: {
 		flexDirection: 'row',

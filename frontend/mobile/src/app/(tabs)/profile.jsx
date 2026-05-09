@@ -1,5 +1,6 @@
-import {Image, ScrollView, StyleSheet, View} from 'react-native';
+import {Image, Pressable, ScrollView, StyleSheet, View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
+import {useRouter} from 'expo-router';
 import colors from 'theme/colors';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
@@ -25,6 +26,7 @@ const InfoRow = ({label, value, icon}) => (
 
 const Profile = () => {
 	const {logout, user, isAuthenticated} = useAuthStore();
+	const router = useRouter();
 
 	const handleLogout = () => {
 		const result = logout();
@@ -38,7 +40,7 @@ const Profile = () => {
 	};
 
 	const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(SPACE).trim();
-	const avatar = user?.image;
+	const avatar = user?.avatar_url || user?.image;
 	const initials =
 		(fullName && fullName.split(SPACE).map((part) => part[0]).join('').slice(0, 2).toUpperCase()) ||
 		(user?.username ? user.username[0]?.toUpperCase() : 'U');
@@ -50,6 +52,10 @@ const Profile = () => {
 			<ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 				<View style={styles.header}>
 					<Text style={styles.screenTitle}>Profil</Text>
+					<Pressable onPress={() => router.push('/profile-edit')} style={styles.editButton}>
+						<Feather name="edit-2" size={14} color={colors.primary} />
+						<Text style={styles.editButtonText}>Edytuj</Text>
+					</Pressable>
 				</View>
 
 				<View style={styles.card}>
@@ -130,12 +136,30 @@ const styles = StyleSheet.create({
 		backgroundColor: '#36d1dc22',
 	},
 	header: {
-		gap: 4,
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'space-between',
 	},
 	screenTitle: {
 		fontSize: 24,
 		fontWeight: '800',
 		color: colors.text,
+	},
+	editButton: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		gap: 6,
+		paddingHorizontal: 12,
+		paddingVertical: 6,
+		borderRadius: 999,
+		borderWidth: 1,
+		borderColor: colors.primary,
+		backgroundColor: colors.surface,
+	},
+	editButtonText: {
+		color: colors.primary,
+		fontWeight: '700',
+		fontSize: 13,
 	},
 	card: {
 		backgroundColor: colors.surface,

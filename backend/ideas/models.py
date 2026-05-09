@@ -133,9 +133,18 @@ class Comment(models.Model):
     class Meta:
         verbose_name = "Komentarz"  # Liczba pojedyncza
         verbose_name_plural = "Komentarze"  # Liczba mnoga (to pokaże się w Adminie)
+        ordering = ['created_at']
 
     post = models.ForeignKey(KaizenPost, related_name='comments', on_delete=models.CASCADE)
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    parent = models.ForeignKey(
+        'self',
+        related_name='replies',
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        verbose_name='Odpowiedź na',
+    )
     text = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -154,6 +163,8 @@ class Notification(models.Model):
     class Type(models.TextChoices):
         LIKE = "LIKE", "Like"
         COMMENT = "COMMENT", "Comment"
+        REPLY = "REPLY", "Reply to comment"
+        MENTION = "MENTION", "Mention"
         APPROVED = "APPROVED", "Post approved"
         REJECTED = "REJECTED", "Post rejected"
         ASSIGNED = "ASSIGNED", "Assigned for review"

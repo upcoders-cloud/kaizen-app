@@ -36,15 +36,24 @@ def build_access_code_digest(code: str) -> str:
     ).hexdigest()
 
 
-def build_login_response_payload(*, user, access_token: str) -> dict:
+def build_login_response_payload(*, user, access_token: str, request=None) -> dict:
+    avatar = getattr(user, 'avatar', None)
+    avatar_url = None
+    if avatar:
+        avatar_url = avatar.url
+        if request is not None:
+            avatar_url = request.build_absolute_uri(avatar_url)
     return {
         'access': access_token,
+        'id': user.id,
         'username': user.username or '',
+        'nickname': getattr(user, 'nickname', '') or '',
         'email': user.email or '',
         'first_name': user.first_name or '',
         'last_name': user.last_name or '',
         'gender': user.gender or '',
         'role': getattr(user, 'role', 'EMPLOYEE'),
+        'avatar_url': avatar_url,
     }
 
 

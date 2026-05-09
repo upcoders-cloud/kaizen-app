@@ -1,10 +1,12 @@
-import {ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View} from 'react-native';
+import {FlatList, RefreshControl, StyleSheet, Text, View} from 'react-native';
 import Post from './Post';
+import PostListSkeleton from './PostSkeleton';
 import colors from 'theme/colors';
 
 const PostList = ({
 	posts = [],
 	loading = false,
+	refreshing = false,
 	error = null,
 	emptyText = 'Brak postów do wyświetlenia.',
 	onRefresh,
@@ -16,12 +18,7 @@ const PostList = ({
 	isDeleting = false,
 }) => {
 	if (loading) {
-		return (
-			<View style={styles.centered}>
-				<ActivityIndicator size="large" color={colors.primary} />
-				<Text style={styles.muted}>Ładowanie postów...</Text>
-			</View>
-		);
+		return <PostListSkeleton count={4} />;
 	}
 
 	if (error) {
@@ -54,7 +51,7 @@ const PostList = ({
 			showsVerticalScrollIndicator={false}
 			refreshControl={
 				onRefresh ? (
-					<RefreshControl refreshing={loading} onRefresh={onRefresh} tintColor={colors.primary} />
+					<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
 				) : undefined
 			}
 		/>

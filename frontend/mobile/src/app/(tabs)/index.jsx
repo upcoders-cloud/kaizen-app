@@ -1,5 +1,5 @@
-import {useCallback, useMemo, useState} from 'react';
-import {Alert, Modal, Pressable, StyleSheet, Text, View} from 'react-native';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import {Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';
 import {Feather} from '@expo/vector-icons';
 import {useRouter} from 'expo-router';
@@ -7,6 +7,7 @@ import {useFocusEffect} from '@react-navigation/native';
 import {FAILED_TO_LOAD_POSTS} from 'constants/constans';
 import PostList from 'components/PostList/PostList';
 import postsService from 'src/server/services/postsService';
+import categoriesService from 'src/server/services/categoriesService';
 import colors from 'theme/colors';
 import {useAuthStore} from 'store/authStore';
 import {getJwtPayload} from 'utils/jwt';
@@ -14,24 +15,49 @@ import AppHeader from 'components/Navigation/AppHeader';
 import SearchBar from 'components/Search/SearchBar';
 import Toast from 'react-native-toast-message';
 
-const FILTERS = [
+const SORT_FILTERS = [
 	{key: 'all', label: 'Wszystkie'},
 	{key: 'mine', label: 'Moje'},
 	{key: 'newest', label: 'Najnowsze'},
 	{key: 'likes', label: 'Najwięcej polubień'},
 ];
 
+const STATUS_FILTERS = [
+	{key: null, label: 'Wszystkie statusy'},
+	{key: 'SUBMITTED', label: 'Zgłoszone'},
+	{key: 'IN_PROGRESS', label: 'W trakcie wdrożenia'},
+	{key: 'IMPLEMENTED', label: 'Wdrożone'},
+];
+
+const SEARCH_DEBOUNCE_MS = 300;
+
+const buildPostsParams = ({sortKey, statusKey, categoryId, search}) => {
+	const params = {};
+	if (sortKey === 'mine') params.mine = 'true';
+	if (sortKey === 'likes') params.ordering = 'likes';
+	if (statusKey) params.status = statusKey;
+	if (categoryId) params.category = categoryId;
+	const trimmed = search?.trim();
+	if (trimmed) params.search = trimmed;
+	return params;
+};
+
 const Home = () => {
 	const [allPosts, setAllPosts] = useState([]);
 	const [loading, setLoading] = useState(true);
+	const [refreshing, setRefreshing] = useState(false);
 	const [error, setError] = useState(null);
-	const [activeFilter, setActiveFilter] = useState(FILTERS[0]);
+	const [activeFilter, setActiveFilter] = useState(SORT_FILTERS[0]);
+	const [activeStatus, setActiveStatus] = useState(STATUS_FILTERS[0]);
+	const [activeCategoryId, setActiveCategoryId] = useState(null);
+	const [categories, setCategories] = useState([]);
 	const [filterVisible, setFilterVisible] = useState(false);
 	const [likingPostId, setLikingPostId] = useState(null);
 	const [menuVisible, setMenuVisible] = useState(false);
 	const [menuPost, setMenuPost] = useState(null);
 	const [deletingPostId, setDeletingPostId] = useState(null);
 	const [searchQuery, setSearchQuery] = useState('');
+	const [debouncedSearch, setDebouncedSearch] = useState('');
 	const [searchVisible, setSearchVisible] = useState(false);
 	const router = useRouter();
 	const accessToken = useAuthStore((state) => state.accessToken);
@@ -39,9 +65,50 @@ const Home = () => {
 		() => getJwtPayload(accessToken)?.user_id ?? null,
 		[accessToken]
 	);
-	const loadPosts = useCallback(() => {
-		void loadPostsData({setLoading, setError, setPosts: setAllPosts});
+
+	useEffect(() => {
+		const timeout = setTimeout(() => setDebouncedSearch(searchQuery), SEARCH_DEBOUNCE_MS);
+		return () => clearTimeout(timeout);
+	}, [searchQuery]);
+
+	useEffect(() => {
+		categoriesService
+			.list()
+			.then((data) => setCategories(Array.isArray(data) ? data : data?.results ?? []))
+			.catch(() => setCategories([]));
 	}, []);
+
+	const params = useMemo(
+		() => buildPostsParams({
+			sortKey: activeFilter.key,
+			statusKey: activeStatus.key,
+			categoryId: activeCategoryId,
+			search: debouncedSearch,
+		}),
+		[activeFilter.key, activeStatus.key, activeCategoryId, debouncedSearch]
+	);
+
+	const isFirstLoadRef = useRef(true);
+	const loadPosts = useCallback((options = {}) => {
+		void loadPostsData({
+			setLoading,
+			setRefreshing,
+			setError,
+			setPosts: setAllPosts,
+			refresh: Boolean(options.refresh),
+			params,
+		});
+	}, [params]);
+
+	const handleRefresh = useCallback(() => loadPosts({refresh: true}), [loadPosts]);
+
+	useEffect(() => {
+		if (isFirstLoadRef.current) {
+			isFirstLoadRef.current = false;
+			return;
+		}
+		loadPosts();
+	}, [loadPosts]);
 
 	useFocusEffect(
 		useCallback(() => {
@@ -49,42 +116,15 @@ const Home = () => {
 		}, [loadPosts])
 	);
 
-	const filteredPosts = useMemo(() => {
-		const data = Array.isArray(allPosts) ? [...allPosts] : [];
-		let result = data;
-		switch (activeFilter.key) {
-			case 'mine': {
-				if (!currentUserId) return [];
-				result = data.filter((post) => String(post?.author?.id) === String(currentUserId));
-				break;
-			}
-			case 'newest':
-				result = data.sort((a, b) => new Date(b?.created_at || 0) - new Date(a?.created_at || 0));
-				break;
-			case 'likes':
-				result = data.sort((a, b) => {
-					const likesA = a?.likes_count ?? a?.likes?.length ?? 0;
-					const likesB = b?.likes_count ?? b?.likes?.length ?? 0;
-					return likesB - likesA;
-				});
-				break;
-			default:
-				result = data;
-		}
-		const query = searchQuery.trim().toLowerCase();
-		if (!query) return result;
-		return result.filter((post) =>
-			String(post?.title ?? '')
-				.toLowerCase()
-				.includes(query)
-		);
-	}, [allPosts, activeFilter.key, currentUserId, searchQuery]);
-
 	const handleOpenFilter = () => setFilterVisible(true);
 	const handleCloseFilter = () => setFilterVisible(false);
-	const handleSelectFilter = (filter) => {
-		setActiveFilter(filter);
-		setFilterVisible(false);
+	const handleSelectFilter = (filter) => setActiveFilter(filter);
+	const handleSelectStatus = (option) => setActiveStatus(option);
+	const handleSelectCategory = (id) => setActiveCategoryId(id);
+	const handleResetFilters = () => {
+		setActiveFilter(SORT_FILTERS[0]);
+		setActiveStatus(STATUS_FILTERS[0]);
+		setActiveCategoryId(null);
 	};
 	const handleToggleSearch = () => {
 		setSearchVisible((prev) => {
@@ -192,8 +232,10 @@ const Home = () => {
 		}
 	};
 
-	const emptyListText = searchQuery.trim()
-		? 'Brak wyników dla tego wyszukiwania.'
+	const hasActiveFilters =
+		activeFilter.key !== 'all' || activeStatus.key !== null || activeCategoryId !== null;
+	const emptyListText = debouncedSearch.trim() || hasActiveFilters
+		? 'Brak wyników dla wybranych filtrów.'
 		: 'Brak postów do wyświetlenia.';
 
 	return (
@@ -214,11 +256,12 @@ const Home = () => {
 					onClear={handleClearSearch}
 				/>
 				<PostList
-					posts={filteredPosts}
+					posts={allPosts}
 					loading={loading}
+					refreshing={refreshing}
 					error={error}
 					emptyText={emptyListText}
-					onRefresh={loadPosts}
+					onRefresh={handleRefresh}
 					onPressItem={(item) => router.push(`/post/${item.id}`)}
 					onToggleLike={handleToggleLike}
 					onPressComment={handleOpenComments}
@@ -229,23 +272,81 @@ const Home = () => {
 				<Modal transparent visible={filterVisible} animationType="fade" onRequestClose={handleCloseFilter}>
 					<Pressable style={styles.filterOverlay} onPress={handleCloseFilter}>
 						<Pressable style={styles.filterMenu} onPress={(event) => event.stopPropagation()}>
-							{FILTERS.map((option) => {
-								const isActive = option.key === activeFilter.key;
-								return (
-									<Pressable
-										key={option.key}
-										style={styles.filterOption}
-										onPress={() => handleSelectFilter(option)}
-									>
-										<Text style={[styles.filterOptionText, isActive ? styles.filterOptionTextActive : null]}>
-											{option.label}
-										</Text>
-										{isActive ? (
-											<Feather name="check" size={16} color={colors.primary} />
-										) : null}
-									</Pressable>
-								);
-							})}
+							<ScrollView showsVerticalScrollIndicator={false} style={styles.filterScroll}>
+								<Text style={styles.filterSectionLabel}>Sortowanie</Text>
+								{SORT_FILTERS.map((option) => {
+									const isActive = option.key === activeFilter.key;
+									return (
+										<Pressable
+											key={option.key}
+											style={styles.filterOption}
+											onPress={() => handleSelectFilter(option)}
+										>
+											<Text style={[styles.filterOptionText, isActive ? styles.filterOptionTextActive : null]}>
+												{option.label}
+											</Text>
+											{isActive ? <Feather name="check" size={16} color={colors.primary} /> : null}
+										</Pressable>
+									);
+								})}
+
+								<Text style={styles.filterSectionLabel}>Status</Text>
+								{STATUS_FILTERS.map((option) => {
+									const isActive = option.key === activeStatus.key;
+									return (
+										<Pressable
+											key={String(option.key)}
+											style={styles.filterOption}
+											onPress={() => handleSelectStatus(option)}
+										>
+											<Text style={[styles.filterOptionText, isActive ? styles.filterOptionTextActive : null]}>
+												{option.label}
+											</Text>
+											{isActive ? <Feather name="check" size={16} color={colors.primary} /> : null}
+										</Pressable>
+									);
+								})}
+
+								{categories.length ? (
+									<>
+										<Text style={styles.filterSectionLabel}>Kategoria</Text>
+										<Pressable
+											style={styles.filterOption}
+											onPress={() => handleSelectCategory(null)}
+										>
+											<Text style={[styles.filterOptionText, activeCategoryId === null ? styles.filterOptionTextActive : null]}>
+												Wszystkie kategorie
+											</Text>
+											{activeCategoryId === null ? <Feather name="check" size={16} color={colors.primary} /> : null}
+										</Pressable>
+										{categories.map((category) => {
+											const isActive = String(activeCategoryId) === String(category.id);
+											return (
+												<Pressable
+													key={category.id}
+													style={styles.filterOption}
+													onPress={() => handleSelectCategory(category.id)}
+												>
+													<Text style={[styles.filterOptionText, isActive ? styles.filterOptionTextActive : null]}>
+														{category.name}
+													</Text>
+													{isActive ? <Feather name="check" size={16} color={colors.primary} /> : null}
+												</Pressable>
+											);
+										})}
+									</>
+								) : null}
+							</ScrollView>
+							<View style={styles.filterFooter}>
+								<Pressable onPress={handleResetFilters} style={styles.filterResetButton} disabled={!hasActiveFilters}>
+									<Text style={[styles.filterResetText, !hasActiveFilters ? styles.filterResetTextDisabled : null]}>
+										Wyczyść filtry
+									</Text>
+								</Pressable>
+								<Pressable onPress={handleCloseFilter} style={styles.filterApplyButton}>
+									<Text style={styles.filterApplyText}>Gotowe</Text>
+								</Pressable>
+							</View>
 						</Pressable>
 					</Pressable>
 				</Modal>
@@ -268,16 +369,24 @@ const Home = () => {
 	);
 };
 
-const loadPostsData = async ({setLoading, setError, setPosts}) => {
-	setLoading(true);
+const loadPostsData = async ({setLoading, setRefreshing, setError, setPosts, refresh = false, params}) => {
+	if (refresh) {
+		setRefreshing(true);
+	} else {
+		setLoading(true);
+	}
 	setError(null);
 	try {
-		const data = await postsService.list();
-		setPosts(data);
+		const data = await postsService.list(params);
+		setPosts(Array.isArray(data) ? data : data?.results ?? []);
 	} catch (err) {
 		setError(err?.message || FAILED_TO_LOAD_POSTS);
 	} finally {
-		setLoading(false);
+		if (refresh) {
+			setRefreshing(false);
+		} else {
+			setLoading(false);
+		}
 	}
 };
 
@@ -297,7 +406,9 @@ const styles = StyleSheet.create({
 	},
 	filterMenu: {
 		alignSelf: 'flex-end',
-		marginRight: 96,
+		marginRight: 16,
+		width: 300,
+		maxHeight: '80%',
 		backgroundColor: colors.surface,
 		borderRadius: 16,
 		borderWidth: 1,
@@ -309,20 +420,67 @@ const styles = StyleSheet.create({
 		shadowOffset: {width: 0, height: 10},
 		elevation: 4,
 	},
+	filterScroll: {
+		flexGrow: 0,
+	},
+	filterSectionLabel: {
+		fontSize: 11,
+		fontWeight: '700',
+		letterSpacing: 0.6,
+		textTransform: 'uppercase',
+		color: colors.muted,
+		paddingHorizontal: 18,
+		paddingTop: 12,
+		paddingBottom: 4,
+	},
 	filterOption: {
 		flexDirection: 'row',
 		alignItems: 'center',
 		justifyContent: 'space-between',
 		paddingHorizontal: 18,
-		paddingVertical: 12,
+		paddingVertical: 10,
 	},
 	filterOptionText: {
-		fontSize: 16,
+		fontSize: 15,
 		fontWeight: '600',
 		color: colors.text,
 	},
 	filterOptionTextActive: {
 		color: colors.primary,
+	},
+	filterFooter: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'space-between',
+		paddingHorizontal: 12,
+		paddingTop: 8,
+		paddingBottom: 4,
+		borderTopWidth: 1,
+		borderTopColor: colors.border,
+		marginTop: 8,
+	},
+	filterResetButton: {
+		paddingVertical: 8,
+		paddingHorizontal: 8,
+	},
+	filterResetText: {
+		fontSize: 13,
+		fontWeight: '600',
+		color: colors.danger,
+	},
+	filterResetTextDisabled: {
+		color: colors.muted,
+	},
+	filterApplyButton: {
+		paddingVertical: 8,
+		paddingHorizontal: 14,
+		borderRadius: 8,
+		backgroundColor: colors.primary,
+	},
+	filterApplyText: {
+		fontSize: 13,
+		fontWeight: '700',
+		color: colors.surface,
 	},
 	decorativeBubble: {
 		position: 'absolute',

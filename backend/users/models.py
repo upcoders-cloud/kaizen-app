@@ -30,6 +30,12 @@ class CustomUser(AbstractUser):
         default=Role.EMPLOYEE,
         verbose_name="Rola",
     )
+    avatar = models.ImageField(
+        upload_to='avatars/%Y/%m/',
+        null=True,
+        blank=True,
+        verbose_name='Awatar',
+    )
 
     def save(self, *args, **kwargs):
         if not self.nickname:

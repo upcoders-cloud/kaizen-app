@@ -159,6 +159,21 @@ class Like(models.Model):
         unique_together = ('post', 'user') # Jeden like na usera per post
 
 
+class Bookmark(models.Model):
+    post = models.ForeignKey(KaizenPost, related_name='bookmarks', on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='bookmarks', on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Zakładka"
+        verbose_name_plural = "Zakładki"
+        unique_together = ('post', 'user')
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+        ]
+
+
 class Notification(models.Model):
     class Type(models.TextChoices):
         LIKE = "LIKE", "Like"

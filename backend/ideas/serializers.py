@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import KaizenPost, Comment, Like, PostImage, PostSurvey, Notification, Category
+from .models import KaizenPost, Comment, Like, PostImage, PostSurvey, Notification, Category, Bookmark
 from django.contrib.auth import get_user_model
 from users.fields import Base64ImageField
 from users.serializers import UserPublicSerializer
@@ -44,6 +44,7 @@ class PostSerializer(serializers.ModelSerializer):
     likes_count = serializers.IntegerField(read_only=True)
     comments_count = serializers.IntegerField(read_only=True)
     is_liked_by_me = serializers.SerializerMethodField()
+    is_bookmarked_by_me = serializers.SerializerMethodField()
     survey = serializers.SerializerMethodField(read_only=True)
     images = serializers.ListField(
         child=Base64ImageField(),
@@ -85,6 +86,7 @@ class PostSerializer(serializers.ModelSerializer):
             'likes_count',
             'comments_count',
             'is_liked_by_me',
+            'is_bookmarked_by_me',
             'images',
             'remove_images',
             'image_items',
@@ -100,6 +102,12 @@ class PostSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if request and request.user.is_authenticated:
             return obj.likes.filter(user=request.user).exists()
+        return False
+
+    def get_is_bookmarked_by_me(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return obj.bookmarks.filter(user=request.user).exists()
         return False
 
     def get_image_urls(self, obj):

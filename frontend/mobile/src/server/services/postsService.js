@@ -36,6 +36,14 @@ const postsService = {
 		const options = withAuthHeaders();
 		return httpClient.post(`${basePath}${postId}/like/`, undefined, options);
 	},
+	toggleBookmark(postId) {
+		const options = withAuthHeaders();
+		return httpClient.post(`${basePath}${postId}/bookmark/`, undefined, options);
+	},
+	bookmarked(params) {
+		const options = withAuthHeaders({params});
+		return httpClient.get(`${basePath}bookmarked/`, options);
+	},
 	createSurvey(postId, payload) {
 		const options = withAuthHeaders();
 		return httpClient.post(`${basePath}${postId}/survey/`, payload, options);

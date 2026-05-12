@@ -12,6 +12,7 @@ const PostList = ({
 	onRefresh,
 	onPressItem,
 	onToggleLike,
+	onToggleBookmark,
 	onPressComment,
 	onPressMore,
 	currentUserId,
@@ -38,6 +39,7 @@ const PostList = ({
 					post={item}
 					onPress={() => onPressItem?.(item)}
 					onToggleLike={onToggleLike}
+					onToggleBookmark={onToggleBookmark}
 					onPressComment={onPressComment}
 					onPressMore={onPressMore}
 					canManage={

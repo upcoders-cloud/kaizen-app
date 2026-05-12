@@ -190,6 +190,38 @@ const Home = () => {
 		]);
 	};
 
+	const handleToggleBookmark = async (postId) => {
+		if (!postId) return;
+		let previousPosts = null;
+		setAllPosts((prev) => {
+			previousPosts = prev;
+			return prev.map((post) => {
+				if (String(post?.id) !== String(postId)) return post;
+				return {...post, is_bookmarked_by_me: !post?.is_bookmarked_by_me};
+			});
+		});
+		try {
+			const response = await postsService.toggleBookmark(postId);
+			const nextBookmarked = response?.is_bookmarked_by_me;
+			if (typeof nextBookmarked === 'boolean') {
+				setAllPosts((prev) =>
+					prev.map((post) => {
+						if (String(post?.id) !== String(postId)) return post;
+						return {...post, is_bookmarked_by_me: nextBookmarked};
+					})
+				);
+			}
+		} catch (err) {
+			if (previousPosts) setAllPosts(previousPosts);
+			Toast.show({
+				type: 'error',
+				text1: 'Nie udało się zapisać',
+				text2: err?.message || 'Spróbuj ponownie',
+				visibilityTime: 2000,
+			});
+		}
+	};
+
 	const handleToggleLike = async (postId) => {
 		if (!postId || likingPostId) return;
 		let previousPosts = null;
@@ -264,6 +296,7 @@ const Home = () => {
 					onRefresh={handleRefresh}
 					onPressItem={(item) => router.push(`/post/${item.id}`)}
 					onToggleLike={handleToggleLike}
+					onToggleBookmark={handleToggleBookmark}
 					onPressComment={handleOpenComments}
 					onPressMore={handleOpenMenu}
 					currentUserId={currentUserId}

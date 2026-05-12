@@ -10,7 +10,7 @@ from rest_framework.exceptions import ValidationError, PermissionDenied
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
-from .models import KaizenPost, Comment, Like, PostSurvey, Notification, Category
+from .models import KaizenPost, Comment, Like, PostSurvey, Notification, Category, Bookmark
 from .serializers import (
     PostSerializer,
     CommentSerializer,
@@ -127,7 +127,7 @@ class PostViewSet(viewsets.ModelViewSet):
             if self.request.method in ['POST', 'PUT']:
                 return [permissions.IsAuthenticated()]
             return [permissions.AllowAny()]
-        if self.action in ('approve', 'reject', 'resubmit', 'my_cases'):
+        if self.action in ('approve', 'reject', 'resubmit', 'my_cases', 'bookmark', 'bookmarked'):
             return [permissions.IsAuthenticated()]
         return super().get_permissions()
 
@@ -258,6 +258,37 @@ class PostViewSet(viewsets.ModelViewSet):
             'likes_count': post.likes.count(),
             'is_liked_by_me': True,
         })
+
+    @action(detail=True, methods=['post'])
+    def bookmark(self, request, pk=None):
+        post = self.get_object()
+        user = request.user
+        bookmark_obj, created = Bookmark.objects.get_or_create(post=post, user=user)
+
+        if not created:
+            bookmark_obj.delete()
+            return Response({
+                'status': 'unbookmarked',
+                'is_bookmarked_by_me': False,
+            })
+        return Response({
+            'status': 'bookmarked',
+            'is_bookmarked_by_me': True,
+        })
+
+    @action(detail=False, methods=['get'])
+    def bookmarked(self, request):
+        qs = (
+            KaizenPost.objects.filter(bookmarks__user=request.user)
+            .order_by('-bookmarks__created_at')
+            .distinct()
+        )
+        page = self.paginate_queryset(qs)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data)
 
     @action(detail=True, methods=['post', 'get'])
     def comments(self, request, pk=None):

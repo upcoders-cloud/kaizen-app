@@ -30,10 +30,19 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
     def managers(self, request):
-        managers = CustomUser.objects.filter(
-            role=CustomUser.Role.MANAGER,
-            is_active=True,
-        )
+        """Lista użytkowników z rolą zatwierdzającą.
+        Domyślnie zwraca samych MANAGER'ów (back-compat). Parametr `role`
+        pozwala wskazać TEAM_LEAD lub DIRECTOR.
+        """
+        role_param = (request.query_params.get('role') or '').upper().strip()
+        approver_roles = {
+            CustomUser.Role.TEAM_LEAD,
+            CustomUser.Role.MANAGER,
+            CustomUser.Role.DIRECTOR,
+        }
+        role = role_param if role_param in approver_roles else CustomUser.Role.MANAGER
+
+        managers = CustomUser.objects.filter(role=role, is_active=True)
         search = request.query_params.get('search', '').strip()
         if search:
             managers = managers.filter(
@@ -41,5 +50,5 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
                 | Q(last_name__icontains=search)
                 | Q(nickname__icontains=search)
             )
-        serializer = UserPublicSerializer(managers, many=True)
+        serializer = UserPublicSerializer(managers, many=True, context={'request': request})
         return Response(serializer.data)

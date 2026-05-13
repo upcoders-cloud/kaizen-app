@@ -52,9 +52,9 @@ const postsService = {
 		const options = withAuthHeaders();
 		return httpClient.put(`${basePath}${postId}/survey/`, payload, options);
 	},
-	approve(postId) {
+	approve(postId, payload) {
 		const options = withAuthHeaders();
-		return httpClient.post(`${basePath}${postId}/approve/`, undefined, options);
+		return httpClient.post(`${basePath}${postId}/approve/`, payload, options);
 	},
 	reject(postId, payload) {
 		const options = withAuthHeaders();
@@ -67,6 +67,10 @@ const postsService = {
 	myCases(params) {
 		const options = withAuthHeaders({params});
 		return httpClient.get(`${basePath}my_cases/`, options);
+	},
+	updateProgress(postId, payload) {
+		const options = withAuthHeaders();
+		return httpClient.patch(`${basePath}${postId}/progress/`, payload, options);
 	},
 };
 

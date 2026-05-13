@@ -10,7 +10,7 @@ from rest_framework.exceptions import ValidationError, PermissionDenied
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
-from .models import KaizenPost, Comment, Like, PostSurvey, Notification, Category, Bookmark
+from .models import KaizenPost, Comment, Like, PostSurvey, Notification, Category, Bookmark, PostApproval
 from .serializers import (
     PostSerializer,
     CommentSerializer,
@@ -22,9 +22,41 @@ from .serializers import (
 )
 from .pagination import PostPagination
 from .permissions import IsCommentAuthorOrReadOnly, IsPostAuthorOrReadOnly
+from .services.approval import (
+    COST_THRESHOLD_DIRECTOR,
+    apply_manager_decision,
+    current_pending_stage,
+    director_required,
+    init_approvals,
+    is_active_approver,
+    process_decision,
+)
 from .services.post_survey_calculator import calculate_survey_results
 
 logger = logging.getLogger(__name__)
+
+
+_PARSE_ERROR = object()
+
+
+def _parse_cost(value):
+    if value in (None, ''):
+        return None
+    try:
+        from decimal import Decimal
+        return Decimal(str(value))
+    except Exception:
+        return None
+
+
+def _parse_deadline(value):
+    if value in (None, ''):
+        return None
+    from datetime import date
+    try:
+        return date.fromisoformat(str(value))
+    except (TypeError, ValueError):
+        return _PARSE_ERROR
 
 
 def create_notification(notification_type, recipient, actor, post, comment=None):
@@ -127,16 +159,26 @@ class PostViewSet(viewsets.ModelViewSet):
             if self.request.method in ['POST', 'PUT']:
                 return [permissions.IsAuthenticated()]
             return [permissions.AllowAny()]
-        if self.action in ('approve', 'reject', 'resubmit', 'my_cases', 'bookmark', 'bookmarked'):
+        if self.action in (
+            'approve',
+            'reject',
+            'resubmit',
+            'my_cases',
+            'bookmark',
+            'bookmarked',
+            'progress',
+        ):
             return [permissions.IsAuthenticated()]
         return super().get_permissions()
 
     def perform_create(self, serializer):
         post = serializer.save(author=self.request.user)
-        if post.assigned_manager:
+        init_approvals(post)
+        current = current_pending_stage(post)
+        if current and current.approver_id:
             create_notification(
                 Notification.Type.ASSIGNED,
-                post.assigned_manager,
+                current.approver,
                 self.request.user,
                 post,
             )
@@ -150,35 +192,112 @@ class PostViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def approve(self, request, pk=None):
         post = self.get_object()
-        if post.assigned_manager != request.user:
-            return Response(
-                {'detail': 'Nie jesteś przypisanym kierownikiem.'},
-                status=status.HTTP_403_FORBIDDEN,
-            )
         if post.status != KaizenPost.Status.TO_VERIFY:
             return Response(
                 {'detail': 'Tylko posty do weryfikacji mogą zostać zatwierdzone.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        post.status = KaizenPost.Status.SUBMITTED
-        post.rejection_reason = None
-        post.save(update_fields=['status', 'rejection_reason'])
-        create_notification(Notification.Type.APPROVED, post.author, request.user, post)
+        if not is_active_approver(post, request.user):
+            return Response(
+                {'detail': 'Nie jesteś osobą wyznaczoną do akceptacji tego etapu.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        current = current_pending_stage(post)
+        comment = request.data.get('comment')
+
+        if current.stage == PostApproval.Stage.MANAGER:
+            # Manager musi uzupełnić koszt i opcjonalnie termin.
+            estimated_cost = _parse_cost(request.data.get('estimated_cost'))
+            if estimated_cost is None:
+                return Response(
+                    {'detail': 'Podaj szacowany koszt wdrożenia.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            deadline = _parse_deadline(request.data.get('deadline'))
+            if deadline is _PARSE_ERROR:
+                return Response(
+                    {'detail': 'deadline musi być w formacie YYYY-MM-DD.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            director = None
+            director_id = request.data.get('assigned_director')
+            if director_id:
+                User = get_user_model()
+                director = User.objects.filter(
+                    id=director_id,
+                    role='DIRECTOR',
+                    is_active=True,
+                ).first()
+                if not director:
+                    return Response(
+                        {'detail': 'Wskazany dyrektor nie istnieje.'},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
+            if director_required(estimated_cost) and not director:
+                return Response(
+                    {
+                        'detail': (
+                            f'Dla kosztu powyżej {COST_THRESHOLD_DIRECTOR} zł wymagane jest '
+                            f'wskazanie dyrektora do akceptacji.'
+                        )
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            try:
+                stage_obj, finished = apply_manager_decision(
+                    post,
+                    request.user,
+                    PostApproval.Decision.APPROVED,
+                    estimated_cost=estimated_cost,
+                    deadline=deadline,
+                    assigned_director=director,
+                    comment=comment,
+                )
+            except ValueError as err:
+                return Response({'detail': str(err)}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            stage_obj, finished = process_decision(
+                post,
+                request.user,
+                PostApproval.Decision.APPROVED,
+                comment=comment,
+            )
+
+        if stage_obj is None:
+            return Response(
+                {'detail': 'Nie udało się przetworzyć decyzji.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if finished:
+            create_notification(Notification.Type.APPROVED, post.author, request.user, post)
+        else:
+            next_stage = current_pending_stage(post)
+            if next_stage and next_stage.approver_id:
+                create_notification(
+                    Notification.Type.ASSIGNED,
+                    next_stage.approver,
+                    request.user,
+                    post,
+                )
+        post.refresh_from_db()
         serializer = self.get_serializer(post)
         return Response(serializer.data)
 
     @action(detail=True, methods=['post'])
     def reject(self, request, pk=None):
         post = self.get_object()
-        if post.assigned_manager != request.user:
-            return Response(
-                {'detail': 'Nie jesteś przypisanym kierownikiem.'},
-                status=status.HTTP_403_FORBIDDEN,
-            )
         if post.status != KaizenPost.Status.TO_VERIFY:
             return Response(
                 {'detail': 'Tylko posty do weryfikacji mogą zostać odrzucone.'},
                 status=status.HTTP_400_BAD_REQUEST,
+            )
+        if not is_active_approver(post, request.user):
+            return Response(
+                {'detail': 'Nie jesteś osobą wyznaczoną do akceptacji tego etapu.'},
+                status=status.HTTP_403_FORBIDDEN,
             )
         rejection_reason = request.data.get('rejection_reason', '').strip()
         if not rejection_reason:
@@ -186,9 +305,17 @@ class PostViewSet(viewsets.ModelViewSet):
                 {'detail': 'Powód odrzucenia jest wymagany.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        post.status = KaizenPost.Status.CANCELLED
-        post.rejection_reason = rejection_reason
-        post.save(update_fields=['status', 'rejection_reason'])
+        stage, _ = process_decision(
+            post,
+            request.user,
+            PostApproval.Decision.REJECTED,
+            comment=rejection_reason,
+        )
+        if stage is None:
+            return Response(
+                {'detail': 'Nie udało się przetworzyć decyzji.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         create_notification(Notification.Type.REJECTED, post.author, request.user, post)
         serializer = self.get_serializer(post)
         return Response(serializer.data)
@@ -209,10 +336,14 @@ class PostViewSet(viewsets.ModelViewSet):
         post.status = KaizenPost.Status.TO_VERIFY
         post.rejection_reason = None
         post.save(update_fields=['status', 'rejection_reason'])
-        if post.assigned_manager:
+        # Reset ścieżki akceptacji — nowe etapy zgodne z aktualnym kosztem.
+        post.approvals.all().delete()
+        init_approvals(post)
+        current = current_pending_stage(post)
+        if current and current.approver_id:
             create_notification(
                 Notification.Type.ASSIGNED,
-                post.assigned_manager,
+                current.approver,
                 request.user,
                 post,
             )
@@ -223,12 +354,16 @@ class PostViewSet(viewsets.ModelViewSet):
     def my_cases(self, request):
         user = request.user
         pending_statuses = [KaizenPost.Status.TO_VERIFY, KaizenPost.Status.CANCELLED]
+        role = getattr(user, 'role', None)
+        approver_roles = {'TEAM_LEAD', 'MANAGER', 'DIRECTOR'}
 
-        if getattr(user, 'role', None) == 'MANAGER':
+        if role in approver_roles:
+            # Posty, gdzie user jest aktualnym pending approverem
             qs = KaizenPost.objects.filter(
-                assigned_manager=user,
                 status__in=pending_statuses,
-            )
+                approvals__approver=user,
+                approvals__decision=PostApproval.Decision.PENDING,
+            ).distinct()
         else:
             qs = KaizenPost.objects.filter(
                 author=user,
@@ -288,6 +423,72 @@ class PostViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(page, many=True)
             return self.get_paginated_response(serializer.data)
         serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['patch'])
+    def progress(self, request, pk=None):
+        """
+        Aktualizacja stanu wdrożenia (postęp + termin) przez przypisanego managera.
+        Payload: {progress_percent?, deadline?}. progress=100 ustawia IMPLEMENTED,
+        progress>0 przy SUBMITTED ustawia IN_PROGRESS.
+        """
+        post = self.get_object()
+        if post.assigned_manager_id != request.user.id:
+            return Response(
+                {'detail': 'Tylko przypisany kierownik może aktualizować postęp.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if post.status not in (KaizenPost.Status.SUBMITTED, KaizenPost.Status.IN_PROGRESS, KaizenPost.Status.IMPLEMENTED):
+            return Response(
+                {'detail': 'Post nie jest jeszcze w fazie wdrożenia.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        update_fields = []
+        if 'progress_percent' in request.data:
+            try:
+                value = int(request.data.get('progress_percent'))
+            except (TypeError, ValueError):
+                return Response(
+                    {'detail': 'progress_percent musi być liczbą całkowitą 0-100.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if not 0 <= value <= 100:
+                return Response(
+                    {'detail': 'progress_percent musi być w zakresie 0-100.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            post.progress_percent = value
+            update_fields.append('progress_percent')
+            if value == 100 and post.status != KaizenPost.Status.IMPLEMENTED:
+                post.status = KaizenPost.Status.IMPLEMENTED
+                update_fields.append('status')
+            elif 0 < value < 100 and post.status == KaizenPost.Status.SUBMITTED:
+                post.status = KaizenPost.Status.IN_PROGRESS
+                update_fields.append('status')
+
+        if 'deadline' in request.data:
+            deadline_value = request.data.get('deadline')
+            if deadline_value in (None, ''):
+                post.deadline = None
+            else:
+                from datetime import date
+                try:
+                    post.deadline = date.fromisoformat(str(deadline_value))
+                except ValueError:
+                    return Response(
+                        {'detail': 'deadline musi być w formacie YYYY-MM-DD.'},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+            update_fields.append('deadline')
+
+        if not update_fields:
+            return Response(
+                {'detail': 'Brak pól do aktualizacji.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        post.save(update_fields=update_fields)
+        serializer = self.get_serializer(post)
         return Response(serializer.data)
 
     @action(detail=True, methods=['post', 'get'])

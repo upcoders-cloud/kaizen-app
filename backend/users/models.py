@@ -10,7 +10,9 @@ class CustomUser(AbstractUser):
 
     class Role(models.TextChoices):
         EMPLOYEE = 'EMPLOYEE', 'Pracownik'
+        TEAM_LEAD = 'TEAM_LEAD', 'Lider zespołu'
         MANAGER = 'MANAGER', 'Kierownik'
+        DIRECTOR = 'DIRECTOR', 'Dyrektor'
 
     GENDER_CHOICES = [
         ('male', 'Male'),

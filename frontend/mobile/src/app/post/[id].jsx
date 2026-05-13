@@ -39,6 +39,10 @@ import BackButton from 'components/Navigation/BackButton';
 import RejectionReasonModal from 'components/RejectionReasonModal/RejectionReasonModal';
 import Toast from 'react-native-toast-message';
 import ExtraImagesBadge from 'components/Badges/ExtraImagesBadge';
+import ApprovalTimeline from 'components/PostDetail/ApprovalTimeline';
+import ApproveDecisionModal from 'components/PostDetail/ApproveDecisionModal';
+import ImplementationCard from 'components/PostDetail/ImplementationCard';
+import ProgressUpdateModal from 'components/PostDetail/ProgressUpdateModal';
 
 const CATEGORY_STYLES = {
 	BHP: {backgroundColor: '#E6F6FF', color: '#0F5F7F'},
@@ -100,6 +104,9 @@ export default function PostDetails() {
 	const [approvingPost, setApprovingPost] = useState(false);
 	const [rejectModalVisible, setRejectModalVisible] = useState(false);
 	const [rejectLoading, setRejectLoading] = useState(false);
+	const [progressModalVisible, setProgressModalVisible] = useState(false);
+	const [progressSaving, setProgressSaving] = useState(false);
+	const [approveModalVisible, setApproveModalVisible] = useState(false);
 	const likeScale = useRef(new Animated.Value(1)).current;
 	const accessToken = useAuthStore((state) => state.accessToken);
 	const user = useAuthStore((state) => state.user);
@@ -109,6 +116,9 @@ export default function PostDetails() {
 	);
 	const isOwner = post?.author?.id && String(post.author.id) === String(currentUserId);
 	const isAssignedManager = post?.assigned_manager_detail?.id && String(post.assigned_manager_detail.id) === String(currentUserId);
+	const currentStageApprover = post?.current_stage?.approver;
+	const isCurrentStageApprover =
+		currentStageApprover?.id && String(currentStageApprover.id) === String(currentUserId);
 
 	useEffect(() => {
 		if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -167,7 +177,8 @@ export default function PostDetails() {
 		]);
 	};
 
-	const handleApprovePost = async () => {
+	const handleApproveDirector = async () => {
+		// Akceptacja dyrektora — bez dodatkowych pól.
 		if (!resolvedId || approvingPost) return;
 		setApprovingPost(true);
 		try {
@@ -178,6 +189,31 @@ export default function PostDetails() {
 			Toast.show({type: 'error', text1: 'Nie udało się zatwierdzić', text2: err?.message, visibilityTime: 2500});
 		} finally {
 			setApprovingPost(false);
+		}
+	};
+
+	const handleApproveManager = async (payload) => {
+		// Akceptacja kierownika — z payloadem koszt/termin/dyrektor.
+		if (!resolvedId || approvingPost) return;
+		setApprovingPost(true);
+		try {
+			const updated = await postsService.approve(resolvedId, payload);
+			setPost((prev) => ({...prev, ...updated}));
+			setApproveModalVisible(false);
+			Toast.show({type: 'success', text1: 'Zgłoszenie zatwierdzone', visibilityTime: 2000});
+		} catch (err) {
+			Toast.show({type: 'error', text1: 'Nie udało się zatwierdzić', text2: err?.message, visibilityTime: 2500});
+		} finally {
+			setApprovingPost(false);
+		}
+	};
+
+	const handleApprovePost = () => {
+		const stageName = post?.current_stage?.stage;
+		if (stageName === 'MANAGER') {
+			setApproveModalVisible(true);
+		} else {
+			void handleApproveDirector();
 		}
 	};
 
@@ -427,6 +463,30 @@ export default function PostDetails() {
 		setReplyingTo(null);
 	}, []);
 
+	const handleSubmitProgress = async (payload) => {
+		if (!resolvedId) return;
+		setProgressSaving(true);
+		try {
+			const updated = await postsService.updateProgress(resolvedId, payload);
+			setPost(updated);
+			setProgressModalVisible(false);
+			Toast.show({
+				type: 'success',
+				text1: 'Zaktualizowano postęp',
+				visibilityTime: 1800,
+			});
+		} catch (err) {
+			Toast.show({
+				type: 'error',
+				text1: 'Nie udało się zaktualizować',
+				text2: err?.message || 'Spróbuj ponownie',
+				visibilityTime: 2500,
+			});
+		} finally {
+			setProgressSaving(false);
+		}
+	};
+
 	const handleCommentFocus = useCallback(() => {
 		requestAnimationFrame(() => {
 			scrollRef.current?.scrollToEnd({animated: true});
@@ -648,15 +708,38 @@ export default function PostDetails() {
 							</View>
 						) : null}
 
-						{/* Manager actions */}
-						{post?.status === 'TO_VERIFY' && isAssignedManager ? (
+						{/* Approval timeline — pokazuje wszystkie etapy zatwierdzenia */}
+						{Array.isArray(post?.approvals) && post.approvals.length > 0 ? (
+							<View style={styles.card}>
+								<ApprovalTimeline approvals={post.approvals} />
+							</View>
+						) : null}
+
+						{/* Implementation card — koszt, termin, postęp */}
+						{(post?.estimated_cost != null || post?.deadline || post?.progress_percent > 0 || ['SUBMITTED', 'IN_PROGRESS', 'IMPLEMENTED'].includes(post?.status)) ? (
+							<ImplementationCard
+								post={post}
+								canManage={Boolean(isAssignedManager)}
+								onUpdateProgress={() => setProgressModalVisible(true)}
+							/>
+						) : null}
+
+						{/* Approver actions (multi-stage) */}
+						{post?.status === 'TO_VERIFY' && isCurrentStageApprover ? (
 							<View style={styles.card}>
 								<View style={styles.cardHeader}>
 									<View style={[styles.cardIconCircle, {backgroundColor: '#fef3c7'}]}>
 										<Feather name="shield" size={14} color="#92400e" />
 									</View>
-									<TextBase style={styles.cardTitle}>Akcje kierownika</TextBase>
+									<TextBase style={styles.cardTitle}>Twoja decyzja</TextBase>
 								</View>
+								<TextBase style={styles.stageHint}>
+									Etap: {{
+										TEAM_LEAD: 'Lider zespołu',
+										MANAGER: 'Kierownik',
+										DIRECTOR: 'Dyrektor',
+									}[post?.current_stage?.stage] || post?.current_stage?.stage}
+								</TextBase>
 								<View style={styles.managerActionsRow}>
 									<Button
 										title="Zatwierdź"
@@ -875,6 +958,23 @@ export default function PostDetails() {
 				onClose={() => setRejectModalVisible(false)}
 				onSubmit={handleRejectPost}
 				loading={rejectLoading}
+			/>
+			<ProgressUpdateModal
+				visible={progressModalVisible}
+				onClose={() => setProgressModalVisible(false)}
+				onSubmit={handleSubmitProgress}
+				initialProgress={post?.progress_percent ?? 0}
+				initialDeadline={post?.deadline ?? ''}
+				loading={progressSaving}
+			/>
+			<ApproveDecisionModal
+				visible={approveModalVisible}
+				onClose={() => setApproveModalVisible(false)}
+				onSubmit={handleApproveManager}
+				initialCost={post?.estimated_cost ?? ''}
+				initialDeadline={post?.deadline ?? ''}
+				initialDirector={post?.assigned_director_detail?.id ?? null}
+				loading={approvingPost}
 			/>
 		</>
 	);
@@ -1098,6 +1198,12 @@ const styles = StyleSheet.create({
 	},
 
 	/* Manager actions */
+	stageHint: {
+		fontSize: 12,
+		color: colors.muted,
+		fontWeight: '600',
+		marginBottom: 6,
+	},
 	managerActionsRow: {
 		flexDirection: 'row',
 		gap: 10,

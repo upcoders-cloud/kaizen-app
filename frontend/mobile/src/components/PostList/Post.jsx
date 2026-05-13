@@ -25,6 +25,7 @@ const Post = ({
 	post,
 	onPress,
 	onToggleLike,
+	onToggleBookmark,
 	onPressComment,
 	onPressMore,
 	canManage = false,
@@ -39,7 +40,9 @@ const Post = ({
 	const authorName = authorFullName || post?.author?.nickname || post?.author?.username || 'Użytkownik';
 	const statusMeta = getPostStatusMeta(post?.status);
 	const isLiked = Boolean(post?.is_liked_by_me);
+	const isBookmarked = Boolean(post?.is_bookmarked_by_me);
 	const likeScale = useRef(new Animated.Value(1)).current;
+	const bookmarkScale = useRef(new Animated.Value(1)).current;
 	const imageUrls = Array.isArray(post?.image_urls)
 		? post.image_urls.filter(Boolean)
 		: Array.isArray(post?.images)
@@ -85,6 +88,16 @@ const Post = ({
 	const handleCommentPress = (event) => {
 		event.stopPropagation?.();
 		onPressComment?.(post);
+	};
+
+	const handleBookmarkPress = (event) => {
+		event.stopPropagation?.();
+		bookmarkScale.setValue(1);
+		Animated.sequence([
+			Animated.spring(bookmarkScale, {toValue: 1.12, useNativeDriver: true, speed: 30, bounciness: 8}),
+			Animated.spring(bookmarkScale, {toValue: 1, useNativeDriver: true, speed: 30, bounciness: 8}),
+		]).start();
+		onToggleBookmark?.(post?.id);
 	};
 
 	const handleMorePress = (event) => {
@@ -169,6 +182,21 @@ const Post = ({
 						<Feather name="message-circle" size={13} color={colors.primary} />
 						<Text style={styles.footerButtonText}>{commentsCount}</Text>
 					</Pressable>
+					{onToggleBookmark ? (
+						<Animated.View style={[styles.footerButtonWrapper, styles.bookmarkWrapper, {transform: [{scale: bookmarkScale}]}]}>
+							<Pressable
+								style={[styles.footerButton, isBookmarked ? styles.bookmarkButtonActive : null]}
+								onPress={handleBookmarkPress}
+								hitSlop={6}
+							>
+								<Feather
+									name="bookmark"
+									size={13}
+									color={isBookmarked ? '#fff' : colors.primary}
+								/>
+							</Pressable>
+						</Animated.View>
+					) : null}
 					{canManage ? (
 						<Pressable
 							style={[styles.footerButton, isDeleting ? styles.footerButtonDisabled : null]}
@@ -339,5 +367,12 @@ const styles = StyleSheet.create({
 	},
 	footerButtonDisabled: {
 		opacity: 0.5,
+	},
+	bookmarkWrapper: {
+		marginLeft: 'auto',
+	},
+	bookmarkButtonActive: {
+		backgroundColor: '#f59e0b',
+		borderColor: '#f59e0b',
 	},
 });

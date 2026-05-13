@@ -31,7 +31,13 @@ const getDisplayName = (manager) => {
 	return full || manager.nickname || manager.username || 'Kierownik';
 };
 
-const ManagerPicker = ({value, onChange, style}) => {
+const ROLE_LABELS = {
+	MANAGER: {placeholder: 'Wybierz kierownika', title: 'Wybierz kierownika', empty: 'Brak kierowników.'},
+	TEAM_LEAD: {placeholder: 'Wybierz lidera zespołu', title: 'Wybierz lidera zespołu', empty: 'Brak liderów.'},
+	DIRECTOR: {placeholder: 'Wybierz dyrektora', title: 'Wybierz dyrektora', empty: 'Brak dyrektorów.'},
+};
+
+const ManagerPicker = ({value, onChange, style, role = 'MANAGER'}) => {
 	const [visible, setVisible] = useState(false);
 	const [managers, setManagers] = useState([]);
 	const [search, setSearch] = useState('');
@@ -39,12 +45,13 @@ const ManagerPicker = ({value, onChange, style}) => {
 	const [error, setError] = useState(null);
 	const debounceRef = useRef(null);
 	const selectedManager = managers.find((m) => m.id === value) || null;
+	const labels = ROLE_LABELS[role] || ROLE_LABELS.MANAGER;
 
 	const fetchManagers = useCallback(async (query = '') => {
 		setLoading(true);
 		setError(null);
 		try {
-			const params = query ? {search: query} : undefined;
+			const params = {role, ...(query ? {search: query} : {})};
 			const data = await usersService.listManagers(params);
 			const resolved = Array.isArray(data) ? data : data?.results ?? [];
 			if (!query) {
@@ -57,7 +64,7 @@ const ManagerPicker = ({value, onChange, style}) => {
 		} finally {
 			setLoading(false);
 		}
-	}, []);
+	}, [role]);
 
 	useEffect(() => {
 		if (!visible) return;
@@ -121,7 +128,7 @@ const ManagerPicker = ({value, onChange, style}) => {
 					style={[styles.triggerText, !selectedManager ? styles.triggerPlaceholder : null]}
 					numberOfLines={1}
 				>
-					{selectedManager ? getDisplayName(selectedManager) : 'Wybierz kierownika'}
+					{selectedManager ? getDisplayName(selectedManager) : labels.placeholder}
 				</Text>
 				{selectedManager ? (
 					<Pressable onPress={handleClear} hitSlop={8} style={styles.clearButton}>
@@ -144,7 +151,7 @@ const ManagerPicker = ({value, onChange, style}) => {
 				>
 					<View style={styles.modalContent}>
 						<View style={styles.modalHeader}>
-							<Text style={styles.modalTitle}>Wybierz kierownika</Text>
+							<Text style={styles.modalTitle}>{labels.title}</Text>
 							<Pressable onPress={handleClose} hitSlop={8}>
 								<Feather name="x" size={22} color={colors.text} />
 							</Pressable>
@@ -175,7 +182,7 @@ const ManagerPicker = ({value, onChange, style}) => {
 							</View>
 						) : managers.length === 0 ? (
 							<View style={styles.centered}>
-								<Text style={styles.emptyText}>Brak kierowników do wyświetlenia.</Text>
+								<Text style={styles.emptyText}>{labels.empty}</Text>
 							</View>
 						) : (
 							<FlatList

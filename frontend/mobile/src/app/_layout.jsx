@@ -53,6 +53,7 @@ const RootLayout = () => {
 					<Stack.Screen name="post/[id]/survey" options={{headerShown: false}} />
 					<Stack.Screen name="post/[id]/survey-results" options={{headerShown: false}} />
 					<Stack.Screen name="profile-edit" options={{headerShown: false}} />
+					<Stack.Screen name="bookmarks" options={{headerShown: false}} />
 				</Stack.Protected>
 			</Stack>
 			<Toast

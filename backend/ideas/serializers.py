@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import KaizenPost, Comment, Like, PostImage, PostSurvey, Notification, Category
+from .models import KaizenPost, Comment, Like, PostImage, PostSurvey, Notification, Category, Bookmark, PostApproval
 from django.contrib.auth import get_user_model
 from users.fields import Base64ImageField
 from users.serializers import UserPublicSerializer
@@ -12,6 +12,15 @@ class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
         fields = ['id', 'name', 'is_active']
+
+
+class PostApprovalSerializer(serializers.ModelSerializer):
+    approver = UserPublicSerializer(read_only=True)
+
+    class Meta:
+        model = PostApproval
+        fields = ['id', 'stage', 'order', 'approver', 'decision', 'comment', 'decided_at', 'created_at']
+        read_only_fields = fields
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -44,6 +53,7 @@ class PostSerializer(serializers.ModelSerializer):
     likes_count = serializers.IntegerField(read_only=True)
     comments_count = serializers.IntegerField(read_only=True)
     is_liked_by_me = serializers.SerializerMethodField()
+    is_bookmarked_by_me = serializers.SerializerMethodField()
     survey = serializers.SerializerMethodField(read_only=True)
     images = serializers.ListField(
         child=Base64ImageField(),
@@ -65,6 +75,16 @@ class PostSerializer(serializers.ModelSerializer):
         source='assigned_manager',
         read_only=True,
     )
+    assigned_team_lead_detail = UserPublicSerializer(
+        source='assigned_team_lead',
+        read_only=True,
+    )
+    assigned_director_detail = UserPublicSerializer(
+        source='assigned_director',
+        read_only=True,
+    )
+    approvals = PostApprovalSerializer(many=True, read_only=True)
+    current_stage = serializers.SerializerMethodField()
     rejection_reason = serializers.CharField(
         read_only=True,
         required=False,
@@ -85,6 +105,7 @@ class PostSerializer(serializers.ModelSerializer):
             'likes_count',
             'comments_count',
             'is_liked_by_me',
+            'is_bookmarked_by_me',
             'images',
             'remove_images',
             'image_items',
@@ -92,15 +113,42 @@ class PostSerializer(serializers.ModelSerializer):
             'survey',
             'assigned_manager',
             'assigned_manager_detail',
+            'assigned_team_lead_detail',
+            'assigned_director_detail',
+            'estimated_cost',
+            'deadline',
+            'progress_percent',
+            'approvals',
+            'current_stage',
             'rejection_reason',
         ]
-        read_only_fields = ['status', 'rejection_reason']
+        # Pola ustawiane wyłącznie przez backend (głównie przez akcję `approve`/`progress`),
+        # nie da się ich podać przy POST/PATCH zwykłego posta.
+        read_only_fields = [
+            'status',
+            'rejection_reason',
+            'progress_percent',
+            'estimated_cost',
+            'deadline',
+        ]
 
     def get_is_liked_by_me(self, obj):
         request = self.context.get('request')
         if request and request.user.is_authenticated:
             return obj.likes.filter(user=request.user).exists()
         return False
+
+    def get_is_bookmarked_by_me(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return obj.bookmarks.filter(user=request.user).exists()
+        return False
+
+    def get_current_stage(self, obj):
+        pending = obj.approvals.filter(decision=PostApproval.Decision.PENDING).order_by('order').first()
+        if not pending:
+            return None
+        return PostApprovalSerializer(pending).data
 
     def get_image_urls(self, obj):
         request = self.context.get('request')

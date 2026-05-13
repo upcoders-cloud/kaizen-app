@@ -44,6 +44,22 @@ class KaizenPost(models.Model):
         related_name='managed_posts',
         verbose_name="Przypisany kierownik",
     )
+    assigned_team_lead = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='team_lead_posts',
+        verbose_name="Przypisany lider zespołu",
+    )
+    assigned_director = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='director_posts',
+        verbose_name="Przypisany dyrektor",
+    )
 
     status = models.CharField(
         max_length=20,
@@ -55,6 +71,22 @@ class KaizenPost(models.Model):
         null=True,
         blank=True,
         verbose_name="Powód odrzucenia",
+    )
+    estimated_cost = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name="Szacowany koszt wdrożenia (zł)",
+    )
+    deadline = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name="Termin wdrożenia",
+    )
+    progress_percent = models.PositiveSmallIntegerField(
+        default=0,
+        verbose_name="Postęp wdrożenia (%)",
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -76,6 +108,18 @@ class PostImage(models.Model):
     Model specifically for handling multiple image attachments
     linked to a single KaizenPost.
     """
+
+    class Type(models.TextChoices):
+        GENERAL = 'GENERAL', 'Załącznik'
+        BEFORE = 'BEFORE', 'Przed wdrożeniem'
+        AFTER = 'AFTER', 'Po wdrożeniu'
+
+    type = models.CharField(
+        max_length=10,
+        choices=Type.choices,
+        default=Type.GENERAL,
+        verbose_name="Typ zdjęcia",
+    )
     post = models.ForeignKey(
         KaizenPost,
         related_name='images',
@@ -159,6 +203,21 @@ class Like(models.Model):
         unique_together = ('post', 'user') # Jeden like na usera per post
 
 
+class Bookmark(models.Model):
+    post = models.ForeignKey(KaizenPost, related_name='bookmarks', on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='bookmarks', on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Zakładka"
+        verbose_name_plural = "Zakładki"
+        unique_together = ('post', 'user')
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+        ]
+
+
 class Notification(models.Model):
     class Type(models.TextChoices):
         LIKE = "LIKE", "Like"
@@ -207,3 +266,47 @@ class Notification(models.Model):
     @property
     def is_read(self):
         return self.read_at is not None
+
+
+class PostApproval(models.Model):
+    """Pojedynczy etap w wieloetapowej ścieżce akceptacji posta."""
+
+    class Stage(models.TextChoices):
+        TEAM_LEAD = 'TEAM_LEAD', 'Lider zespołu'
+        MANAGER = 'MANAGER', 'Kierownik'
+        DIRECTOR = 'DIRECTOR', 'Dyrektor'
+
+    class Decision(models.TextChoices):
+        PENDING = 'PENDING', 'Oczekuje'
+        APPROVED = 'APPROVED', 'Zaakceptowane'
+        REJECTED = 'REJECTED', 'Odrzucone'
+        SKIPPED = 'SKIPPED', 'Pominięte'
+
+    post = models.ForeignKey(
+        KaizenPost,
+        related_name='approvals',
+        on_delete=models.CASCADE,
+    )
+    stage = models.CharField(max_length=20, choices=Stage.choices)
+    order = models.PositiveSmallIntegerField(default=0)
+    approver = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name='post_approvals',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+    decision = models.CharField(
+        max_length=10,
+        choices=Decision.choices,
+        default=Decision.PENDING,
+    )
+    comment = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    decided_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Etap akceptacji"
+        verbose_name_plural = "Etapy akceptacji"
+        unique_together = ('post', 'stage')
+        ordering = ['order']

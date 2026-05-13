@@ -244,6 +244,10 @@ const CreatePost = ({
 
 			<Section icon="user-check" title="Kierownik" error={managerError}>
 				<ManagerPicker value={assignedManager} onChange={handleManagerChange} />
+				<Text style={styles.hintText}>
+					Kierownik przy akceptacji zgłoszenia ustali koszt i termin wdrożenia.
+					Powyżej 10 000 zł wymagana będzie dodatkowo akceptacja dyrektora.
+				</Text>
 			</Section>
 
 			<Section icon="image" title="Załączniki" optional>
@@ -491,6 +495,12 @@ const styles = StyleSheet.create({
 	},
 	muted: {
 		color: colors.muted,
+	},
+	hintText: {
+		color: colors.muted,
+		fontSize: 11,
+		marginTop: 6,
+		lineHeight: 16,
 	},
 	errorText: {
 		color: colors.danger,

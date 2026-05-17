@@ -53,6 +53,7 @@ api_urlpatterns = [
 
     # App Features
     path('access/', include('access_control.urls')),
+    path('gamification/', include('gamification.urls')),
     path('', include(router.urls)),  # Router should usually come last
 ]
 

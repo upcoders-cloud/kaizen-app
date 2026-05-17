@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt.token_blacklist',
     'access_control',
     'gamification',
+    'analytics',
     'app',
 ]
 

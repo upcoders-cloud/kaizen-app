@@ -3,6 +3,19 @@ from django.contrib.auth.models import AbstractUser
 import random
 
 
+class Department(models.Model):
+    name = models.CharField(max_length=100, unique=True, verbose_name="Nazwa działu")
+    is_active = models.BooleanField(default=True, verbose_name="Czy aktywny?")
+
+    class Meta:
+        verbose_name = "Dział"
+        verbose_name_plural = "Działy"
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
 class CustomUser(AbstractUser):
     class Meta:
         verbose_name = "Użytkownik"
@@ -37,6 +50,14 @@ class CustomUser(AbstractUser):
         null=True,
         blank=True,
         verbose_name='Awatar',
+    )
+    department = models.ForeignKey(
+        Department,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='members',
+        verbose_name='Dział',
     )
 
     def save(self, *args, **kwargs):

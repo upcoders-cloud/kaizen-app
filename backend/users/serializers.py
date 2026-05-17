@@ -41,6 +41,7 @@ class UserPublicSerializer(serializers.ModelSerializer):
 class UserMeSerializer(serializers.ModelSerializer):
     avatar = Base64ImageField(required=False, allow_null=True, write_only=True)
     avatar_url = serializers.SerializerMethodField()
+    department_name = serializers.CharField(source='department.name', read_only=True, default=None)
 
     class Meta:
         model = User
@@ -54,10 +55,12 @@ class UserMeSerializer(serializers.ModelSerializer):
             'gender',
             'is_staff',
             'role',
+            'department',
+            'department_name',
             'avatar',
             'avatar_url',
         ]
-        read_only_fields = ['id', 'username', 'email', 'is_staff', 'role']
+        read_only_fields = ['id', 'username', 'email', 'is_staff', 'role', 'department']
 
     def get_avatar_url(self, obj):
         return _absolute_avatar_url(obj, self.context.get('request'))

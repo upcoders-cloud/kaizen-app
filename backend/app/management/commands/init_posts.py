@@ -5,12 +5,37 @@ from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
-from ideas.models import KaizenPost, Category, PostApproval
+from ideas.models import KaizenPost, Category, PostApproval, PostSurvey
 from ideas.services.approval import (
     COST_THRESHOLD_DIRECTOR,
     director_required,
     init_approvals,
 )
+from ideas.services.post_survey_calculator import calculate_survey_results
+
+# Parametry ankiety per status — żeby analityka miała realne oszczędności.
+SURVEY_PARAMS = {
+    KaizenPost.Status.SUBMITTED: (3, 'WEEK', 4, 15),
+    KaizenPost.Status.IN_PROGRESS: (2, 'DAY', 6, 20),
+    KaizenPost.Status.IMPLEMENTED: (5, 'DAY', 8, 25),
+}
+
+
+def _attach_survey(post):
+    params = SURVEY_PARAMS.get(post.status)
+    if not params or hasattr(post, 'survey'):
+        return
+    fv, fu, ap, tl = params
+    calc = calculate_survey_results(fv, fu, ap, tl)
+    PostSurvey.objects.create(
+        post=post,
+        frequency_value=fv,
+        frequency_unit=fu,
+        affected_people=ap,
+        time_lost_minutes=tl,
+        estimated_time_savings_hours=calc['estimated_time_savings_hours'],
+        estimated_financial_savings=calc['estimated_financial_savings'],
+    )
 
 
 # Posty testowe — workflow:
@@ -219,6 +244,7 @@ class Command(BaseCommand):
                 rejection_reason=data.get('rejection_reason'),
             )
             _setup_approvals(post)
+            _attach_survey(post)
             created_count += 1
 
         self.stdout.write(self.style.SUCCESS(f'Created {created_count} sample posts (with approvals).'))

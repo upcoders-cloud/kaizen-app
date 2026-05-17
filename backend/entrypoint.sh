@@ -17,6 +17,9 @@ if [ "${SEED_DB}" = "true" ]; then
 
   echo "Seeding comments..."
   python manage.py init_comments
+
+  echo "Seeding gamification..."
+  python manage.py init_gamification
 else
   echo "Skipping seeders (set SEED_DB=true to enable)."
 fi

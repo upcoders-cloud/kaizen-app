@@ -1,6 +1,7 @@
 import {StyleSheet, View} from 'react-native';
 import Button from 'components/Button/Button';
 import colors from 'theme/colors';
+import {radius} from 'theme/theme';
 
 const OptionPills = ({options = [], value, onChange, style}) => (
 	<View style={[styles.row, style]}>
@@ -32,16 +33,16 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 12,
 		paddingVertical: 6,
 		minHeight: 32,
-		borderRadius: 999,
+		borderRadius: radius.pill,
 		borderWidth: 1,
 	},
 	buttonInactive: {
-		backgroundColor: '#f8fafc',
+		backgroundColor: colors.surfaceAlt,
 		borderColor: colors.border,
 	},
 	buttonActive: {
-		backgroundColor: '#eef2ff',
-		borderColor: '#c7d2fe',
+		backgroundColor: colors.primarySoft,
+		borderColor: colors.primary,
 	},
 	text: {
 		fontSize: 12,

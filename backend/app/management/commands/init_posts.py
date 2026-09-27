@@ -13,7 +13,7 @@ from ideas.services.approval import (
 )
 from ideas.services.post_survey_calculator import calculate_survey_results
 
-# Parametry ankiety per status — żeby analityka miała realne oszczędności.
+# Parametry ankiety per status - żeby analityka miała realne oszczędności.
 SURVEY_PARAMS = {
     KaizenPost.Status.SUBMITTED: (3, 'WEEK', 4, 15),
     KaizenPost.Status.IN_PROGRESS: (2, 'DAY', 6, 20),
@@ -38,7 +38,7 @@ def _attach_survey(post):
     )
 
 
-# Posty testowe — workflow:
+# Posty testowe - workflow:
 # - TO_VERIFY: tylko `assigned_manager`, brak kosztu/terminu (kierownik dopiero
 #   uzupełni je przy akceptacji).
 # - SUBMITTED/IN_PROGRESS/IMPLEMENTED: kierownik już zaakceptował, koszt i termin
@@ -49,7 +49,7 @@ SAMPLE_POSTS = [
     # ----- TO_VERIFY (oczekujące na decyzję kierownika) -----
     {
         'title': 'Bezpieczniejsze stanowisko pakowania',
-        'content': 'Dodanie osłon i oznaczeń poprawi bezpieczeństwo pracy. @user2345 — twoje uwagi?',
+        'content': 'Dodanie osłon i oznaczeń poprawi bezpieczeństwo pracy. @user2345 - twoje uwagi?',
         'category_name': 'BHP',
         'status': KaizenPost.Status.TO_VERIFY,
         'manager': 'manager1',
@@ -65,7 +65,7 @@ SAMPLE_POSTS = [
     },
     {
         'title': 'Wymiana całej linii pakującej',
-        'content': 'Stara linia jest awaryjna — nowa zmniejszy przestoje i koszty serwisu. Inwestycja będzie duża, ale zwrot szybki.',
+        'content': 'Stara linia jest awaryjna - nowa zmniejszy przestoje i koszty serwisu. Inwestycja będzie duża, ale zwrot szybki.',
         'category_name': 'Usprawnienie Procesu',
         'status': KaizenPost.Status.TO_VERIFY,
         'manager': 'manager1',
@@ -137,7 +137,7 @@ SAMPLE_POSTS = [
     # ----- CANCELLED (odrzucone przez kierownika, bez kosztu) -----
     {
         'title': 'Tablice informacyjne BHP w 3 językach',
-        'content': 'Mamy pracowników z zagranicy — tablice w PL/EN/UA zwiększą bezpieczeństwo.',
+        'content': 'Mamy pracowników z zagranicy - tablice w PL/EN/UA zwiększą bezpieczeństwo.',
         'category_name': 'BHP',
         'status': KaizenPost.Status.CANCELLED,
         'manager': 'manager2',

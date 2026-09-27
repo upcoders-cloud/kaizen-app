@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.utils import timezone
 
 
 class Category(models.Model):
@@ -196,6 +197,7 @@ class Comment(models.Model):
 class Like(models.Model):
     post = models.ForeignKey(KaizenPost, related_name='likes', on_delete=models.CASCADE)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
 
     class Meta:
         verbose_name = "Polubienie"  # Liczba pojedyncza

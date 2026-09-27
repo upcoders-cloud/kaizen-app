@@ -3,29 +3,42 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .permissions import IsManagement, is_management
-from .services import exporters, metrics
+from access_control.permissions import IsApprover, IsManagement, is_management
+from ideas.serializers import PostLightSerializer
+from .services import exporters, insights, metrics
+from .services.filters import AnalyticsFilters
+
+
+def _filters(request):
+    return AnalyticsFilters.from_params(request.query_params)
+
+
+def _limit(request, default=10, maximum=50):
+    try:
+        return max(1, min(int(request.query_params.get('limit', default)), maximum))
+    except (TypeError, ValueError):
+        return default
 
 
 class OverviewView(APIView):
     permission_classes = [IsAuthenticated, IsManagement]
 
     def get(self, request):
-        return Response(metrics.overview())
+        return Response(metrics.overview(_filters(request).posts()))
 
 
 class DepartmentsView(APIView):
     permission_classes = [IsAuthenticated, IsManagement]
 
     def get(self, request):
-        return Response(metrics.departments())
+        return Response(metrics.departments(_filters(request).posts()))
 
 
 class CategoriesView(APIView):
     permission_classes = [IsAuthenticated, IsManagement]
 
     def get(self, request):
-        return Response(metrics.categories())
+        return Response(metrics.categories(_filters(request).posts()))
 
 
 class TrendsView(APIView):
@@ -35,7 +48,77 @@ class TrendsView(APIView):
         granularity = request.query_params.get('granularity', 'month')
         if granularity not in ('month', 'quarter'):
             granularity = 'month'
-        return Response(metrics.trends(granularity=granularity))
+        filters = _filters(request)
+        return Response(metrics.trends(
+            granularity=granularity,
+            base_qs=filters.posts(),
+            date_from=filters.date_from,
+        ))
+
+
+class ApprovalsView(APIView):
+    """Lejek i SLA akceptacji."""
+    permission_classes = [IsAuthenticated, IsManagement]
+
+    def get(self, request):
+        return Response(insights.approvals(_filters(request).posts()))
+
+
+class TopIdeasView(APIView):
+    """Top pomysły wg `by=savings|likes|comments`. Bez filtra `status`: tylko zaakceptowane."""
+    permission_classes = [IsAuthenticated, IsManagement]
+
+    def get(self, request):
+        filters = _filters(request)
+        posts = filters.posts()
+        if not filters.status:
+            posts = posts.filter(status__in=insights.PUBLIC_STATUSES)
+        by = request.query_params.get('by', 'savings')
+        rows = insights.top_ideas(posts, by=by, limit=_limit(request))
+        data = PostLightSerializer(rows, many=True, context={'request': request}).data
+        for row in data:
+            row['department'] = row['author'].get('department_name') if row.get('author') else None
+        return Response(data)
+
+
+class TeamView(APIView):
+    """Mój zespół: dział zalogowanego (TEAM_LEAD i wyżej); management może wskazać `?department=`."""
+    permission_classes = [IsAuthenticated, IsApprover]
+
+    def get(self, request):
+        from users.models import Department
+
+        filters = _filters(request)
+        department = None
+        if filters.department and is_management(request.user):
+            department = Department.objects.filter(id=filters.department).select_related('lead').first()
+            if department is None:
+                return Response({'detail': 'Nie znaleziono działu.'}, status=404)
+        else:
+            department = request.user.department
+        if department is None:
+            return Response(
+                {'detail': 'Nie masz przypisanego działu. Wskaż dział parametrem department.'},
+                status=400,
+            )
+
+        # Filtr działu w AnalyticsFilters nie dotyczy tu postów - zakres wyznacza `department`.
+        filters.department = None
+        posts = filters.posts()
+        data = insights.team(department, posts)
+        data['ideas_in_progress'] = PostLightSerializer(
+            insights.team_ideas_in_progress(department, posts),
+            many=True,
+            context={'request': request},
+        ).data
+        return Response(data)
+
+
+class ParticipationView(APIView):
+    permission_classes = [IsAuthenticated, IsManagement]
+
+    def get(self, request):
+        return Response(insights.participation(_filters(request)))
 
 
 class HeatmapView(APIView):
@@ -65,7 +148,7 @@ class HeatmapView(APIView):
 
 
 class MyImpactView(APIView):
-    """Mój wkład — dostępne dla każdego zalogowanego."""
+    """Mój wkład - dostępne dla każdego zalogowanego."""
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -81,17 +164,18 @@ class ExportView(APIView):
     }
 
     def get(self, request):
-        # Uwaga: NIE używamy parametru `format` — koliduje z DRF
+        # Uwaga: NIE używamy parametru `format` - koliduje z DRF
         # URL_FORMAT_OVERRIDE (content negotiation). Stąd `fmt`.
         report = request.query_params.get('report', 'overview')
         fmt = request.query_params.get('fmt', 'csv')
         if fmt not in self.CONTENT_TYPES:
             return Response({'detail': 'Parametr fmt: csv lub xlsx.'}, status=400)
+        filters = _filters(request)
         try:
             if fmt == 'csv':
-                payload = exporters.to_csv(report)
+                payload = exporters.to_csv(report, filters)
             else:
-                payload = exporters.to_xlsx(report)
+                payload = exporters.to_xlsx(report, filters)
         except ValueError as err:
             return Response({'detail': str(err)}, status=400)
 

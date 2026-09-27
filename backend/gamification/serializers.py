@@ -28,6 +28,7 @@ class BadgeSerializer(serializers.ModelSerializer):
 class BadgeProgressSerializer(serializers.Serializer):
     badge = BadgeSerializer()
     earned = serializers.BooleanField()
+    awarded_at = serializers.DateTimeField(allow_null=True, required=False)
     value = serializers.IntegerField()
     threshold = serializers.IntegerField()
     progress = serializers.FloatField()
@@ -46,6 +47,7 @@ class MeGamificationSerializer(serializers.Serializer):
 
 
 class LeaderboardUserSerializer(serializers.Serializer):
+    rank = serializers.IntegerField()
     user = UserPublicSerializer()
     points = serializers.IntegerField()
     level = LevelSerializer(allow_null=True)
@@ -53,11 +55,14 @@ class LeaderboardUserSerializer(serializers.Serializer):
 
 
 class LeaderboardCategorySerializer(serializers.Serializer):
+    rank = serializers.IntegerField()
+    category_id = serializers.IntegerField()
     category = serializers.CharField()
     points = serializers.IntegerField()
 
 
 class LeaderboardDepartmentSerializer(serializers.Serializer):
+    rank = serializers.IntegerField()
     department_id = serializers.IntegerField()
     department = serializers.CharField()
     points = serializers.IntegerField()
@@ -95,3 +100,33 @@ class PointTransactionSerializer(serializers.ModelSerializer):
     class Meta:
         model = PointTransaction
         fields = ['id', 'action', 'action_display', 'points', 'metadata', 'created_at']
+
+
+class BadgeStatusSerializer(serializers.Serializer):
+    """Odznaka z informacją o posiadaniu i postępie dla konkretnego użytkownika."""
+    id = serializers.IntegerField(source='badge.id')
+    code = serializers.CharField(source='badge.code')
+    name = serializers.CharField(source='badge.name')
+    description = serializers.CharField(source='badge.description')
+    icon = serializers.CharField(source='badge.icon')
+    criteria_type = serializers.CharField(source='badge.criteria_type')
+    tier = serializers.CharField(source='badge.tier')
+    order = serializers.IntegerField(source='badge.order')
+    threshold = serializers.IntegerField()
+    value = serializers.IntegerField()
+    progress = serializers.FloatField()
+    earned = serializers.BooleanField()
+    awarded_at = serializers.DateTimeField(allow_null=True)
+
+
+class PublicGamificationSerializer(serializers.Serializer):
+    user = UserPublicSerializer()
+    points = serializers.IntegerField()
+    rank = serializers.IntegerField(allow_null=True)
+    current_streak = serializers.IntegerField()
+    longest_streak = serializers.IntegerField()
+    level = LevelSerializer(allow_null=True)
+    next_level = LevelSerializer(allow_null=True)
+    level_progress = serializers.FloatField()
+    points_to_next = serializers.IntegerField()
+    badges = BadgeStatusSerializer(many=True)

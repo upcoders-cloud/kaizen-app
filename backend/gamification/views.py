@@ -1,3 +1,5 @@
+from django.contrib.auth import get_user_model
+from django.shortcuts import get_object_or_404
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -6,11 +8,13 @@ from rest_framework.views import APIView
 
 from .models import Reward, RewardRedemption
 from .serializers import (
+    BadgeStatusSerializer,
     LeaderboardCategorySerializer,
     LeaderboardDepartmentSerializer,
     LeaderboardUserSerializer,
     MeGamificationSerializer,
     PointTransactionSerializer,
+    PublicGamificationSerializer,
     RewardRedemptionSerializer,
     RewardSerializer,
 )
@@ -43,27 +47,81 @@ class MeGamificationView(APIView):
 
 
 class LeaderboardView(APIView):
+    """Ranking: `{results: [...], me: {rank, points} | null}`.
+
+    Parametry: period=week|month|quarter|all, scope=users|departments|categories,
+    department=<id> (tylko scope=users), limit (domyślnie 20, maks. 100).
+    """
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         period = request.query_params.get('period', lb.PERIOD_ALL)
+        if period not in lb.PERIODS:
+            period = lb.PERIOD_ALL
         scope = request.query_params.get('scope', 'users')
         try:
-            limit = min(int(request.query_params.get('limit', 20)), 100)
+            limit = max(1, min(int(request.query_params.get('limit', 20)), 100))
         except (TypeError, ValueError):
             limit = 20
 
         if scope == 'categories':
             rows = lb.top_categories(period, limit)
-            return Response(LeaderboardCategorySerializer(rows, many=True).data)
+            return Response({
+                'results': LeaderboardCategorySerializer(rows, many=True).data,
+                'me': None,
+            })
         if scope == 'departments':
             rows = lb.top_departments(period, limit)
-            return Response(LeaderboardDepartmentSerializer(rows, many=True).data)
+            return Response({
+                'results': LeaderboardDepartmentSerializer(rows, many=True).data,
+                'me': None,
+            })
 
-        rows = lb.top_users(period, limit)
-        return Response(
-            LeaderboardUserSerializer(rows, many=True, context={'request': request}).data
-        )
+        department = request.query_params.get('department') or None
+        rows = lb.top_users(period, limit, department=department)
+        return Response({
+            'results': LeaderboardUserSerializer(
+                rows, many=True, context={'request': request},
+            ).data,
+            'me': lb.my_position(request.user, period, department=department),
+        })
+
+
+class BadgeListView(APIView):
+    """Wszystkie aktywne odznaki z `earned`, `awarded_at` i postępem zalogowanego."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        profile = get_or_create_profile(request.user)
+        rows = badges_service.badge_progress(request.user, profile)
+        return Response(BadgeStatusSerializer(rows, many=True).data)
+
+
+class UserGamificationView(APIView):
+    """Publiczny profil gamifikacji dowolnego użytkownika (odznaki: tylko zdobyte)."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, user_id):
+        User = get_user_model()
+        user = get_object_or_404(User.objects.select_related('department'), pk=user_id)
+        profile = get_or_create_profile(user)
+        progress = levels_service.level_progress(profile.total_points)
+        badges = [
+            row for row in badges_service.badge_progress(user, profile) if row['earned']
+        ]
+        data = {
+            'user': user,
+            'points': profile.total_points,
+            'rank': lb.user_rank(user),
+            'current_streak': profile.current_streak,
+            'longest_streak': profile.longest_streak,
+            'level': progress['current'],
+            'next_level': progress['next'],
+            'level_progress': progress['progress'],
+            'points_to_next': progress['to_next'],
+            'badges': badges,
+        }
+        return Response(PublicGamificationSerializer(data, context={'request': request}).data)
 
 
 class RewardViewSet(viewsets.ReadOnlyModelViewSet):

@@ -7,11 +7,12 @@ import {useFocusEffect} from '@react-navigation/native';
 import Toast from 'react-native-toast-message';
 
 import PostList from 'components/PostList/PostList';
-import Text from 'components/Text/Text';
 import colors from 'theme/colors';
 import postsService from 'src/server/services/postsService';
 import {useAuthStore} from 'store/authStore';
 import {getJwtPayload} from 'utils/jwt';
+import {Chip, SectionHeader} from 'components/ui';
+import {spacing} from 'theme/theme';
 
 const Bookmarks = () => {
 	const router = useRouter();
@@ -108,9 +109,10 @@ const Bookmarks = () => {
 				<Pressable onPress={() => router.back()} style={styles.backButton} hitSlop={8}>
 					<Feather name="chevron-left" size={22} color={colors.text} />
 				</Pressable>
-				<Text style={styles.title}>Zapisane pomysły</Text>
+				<SectionHeader title="Zapisane pomysły" subtitle="Wróć do pomysłów, które Cię zainteresowały" style={styles.sectionHeader} />
 				<View style={styles.headerSpacer} />
 			</View>
+			{!loading ? <Chip label={`${posts.length} zapisanych`} style={styles.countChip} /> : null}
 			<PostList
 				posts={posts}
 				loading={loading}
@@ -142,18 +144,15 @@ const styles = StyleSheet.create({
 		alignItems: 'center',
 		justifyContent: 'space-between',
 		paddingHorizontal: 12,
-		paddingVertical: 12,
+		paddingVertical: spacing.md,
 	},
+	sectionHeader: {flex: 1},
+	countChip: {marginHorizontal: spacing.lg, marginBottom: spacing.sm},
 	backButton: {
 		padding: 6,
 		borderRadius: 999,
 	},
 	headerSpacer: {
 		width: 32,
-	},
-	title: {
-		fontSize: 18,
-		fontWeight: '800',
-		color: colors.text,
 	},
 });

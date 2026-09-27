@@ -5,6 +5,7 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import KeyboardAwareScrollView from 'components/KeyboardAwareScrollView/KeyboardAwareScrollView';
 import Text from 'components/Text/Text';
 import colors from 'theme/colors';
+import {radius, shadows, spacing, typography} from 'theme/theme';
 
 const AuthScreenLayout = ({
 	title,
@@ -28,6 +29,7 @@ const AuthScreenLayout = ({
 				showsVerticalScrollIndicator={false}
 			>
 				<View style={[styles.main, centerCard ? styles.mainCenteredCard : null]}>
+				<View style={styles.brandMark}><Feather name="zap" size={25} color={colors.white} /></View>
 					{onBackPress ? (
 						<Pressable onPress={onBackPress} style={styles.backButton}>
 							<Feather name="chevron-left" size={18} color={colors.primary} />
@@ -72,8 +74,8 @@ const styles = StyleSheet.create({
 	},
 	content: {
 		flexGrow: 1,
-		paddingHorizontal: 24,
-		paddingVertical: 24,
+		paddingHorizontal: spacing.xxl,
+		paddingVertical: spacing.xxxl,
 		justifyContent: 'space-between',
 		gap: 24,
 	},
@@ -83,6 +85,7 @@ const styles = StyleSheet.create({
 	mainCenteredCard: {
 		flex: 1,
 	},
+	brandMark: {width: 52, height: 52, borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary, ...shadows.card},
 	centerCardWrapper: {
 		flex: 1,
 		justifyContent: 'center',
@@ -102,28 +105,22 @@ const styles = StyleSheet.create({
 		gap: 6,
 	},
 	title: {
-		fontSize: 28,
-		fontWeight: '800',
+		...typography.display,
 		color: colors.primary,
 		lineHeight: 32,
 	},
 	subtitle: {
-		fontSize: 15,
-		lineHeight: 22,
+		...typography.body,
 		color: colors.muted,
 	},
 	card: {
 		backgroundColor: colors.surface,
 		borderWidth: 1,
 		borderColor: colors.border,
-		borderRadius: 16,
+		borderRadius: radius.xl,
 		padding: 18,
 		gap: 14,
-		shadowColor: '#000',
-		shadowOpacity: 0.06,
-		shadowOffset: {width: 0, height: 8},
-		shadowRadius: 16,
-		elevation: 3,
+		...shadows.card,
 	},
 	footerWrapper: {
 		gap: 12,
@@ -170,7 +167,7 @@ const styles = StyleSheet.create({
 		width: 220,
 		height: 220,
 		borderRadius: 120,
-		backgroundColor: '#36d1dc22',
+		backgroundColor: colors.infoSoft,
 		transform: [{rotate: '10deg'}],
 	},
 });

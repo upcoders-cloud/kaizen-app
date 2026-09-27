@@ -1,6 +1,5 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {
-	ActivityIndicator,
 	FlatList,
 	KeyboardAvoidingView,
 	Modal,
@@ -15,15 +14,11 @@ import colors from 'theme/colors';
 import Text from 'components/Text/Text';
 import usersService from 'src/server/services/usersService';
 import {FAILED_TO_LOAD_MANAGERS} from 'constants/constans';
+import {Avatar, EmptyState, ErrorState, Skeleton} from 'components/ui';
+import {radius, shadows} from 'theme/theme';
 
 const DEBOUNCE_MS = 300;
-const INITIAL_LIMIT = 3;
-
-const getInitials = (manager) => {
-	const first = manager?.first_name?.[0] || '';
-	const last = manager?.last_name?.[0] || '';
-	return (first + last).toUpperCase() || manager?.nickname?.[0]?.toUpperCase() || 'U';
-};
+const INITIAL_LIMIT = 20;
 
 const getDisplayName = (manager) => {
 	if (!manager) return '';
@@ -44,15 +39,19 @@ const ManagerPicker = ({value, onChange, style, role = 'MANAGER'}) => {
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState(null);
 	const debounceRef = useRef(null);
-	const selectedManager = managers.find((m) => m.id === value) || null;
+	const requestId = useRef(0);
+	const [selectedUser, setSelectedUser] = useState(null);
+	const selectedManager = managers.find((m) => String(m.id) === String(value)) || (String(selectedUser?.id) === String(value) ? selectedUser : null);
 	const labels = ROLE_LABELS[role] || ROLE_LABELS.MANAGER;
 
 	const fetchManagers = useCallback(async (query = '') => {
+		const id = ++requestId.current;
 		setLoading(true);
 		setError(null);
 		try {
 			const params = {role, ...(query ? {search: query} : {})};
 			const data = await usersService.listManagers(params);
+			if (id !== requestId.current) return;
 			const resolved = Array.isArray(data) ? data : data?.results ?? [];
 			if (!query) {
 				setManagers(resolved.slice(0, INITIAL_LIMIT));
@@ -60,9 +59,9 @@ const ManagerPicker = ({value, onChange, style, role = 'MANAGER'}) => {
 				setManagers(resolved);
 			}
 		} catch (err) {
-			setError(err?.message || FAILED_TO_LOAD_MANAGERS);
+			if (id === requestId.current) setError(err?.message || FAILED_TO_LOAD_MANAGERS);
 		} finally {
-			setLoading(false);
+			if (id === requestId.current) setLoading(false);
 		}
 	}, [role]);
 
@@ -70,9 +69,12 @@ const ManagerPicker = ({value, onChange, style, role = 'MANAGER'}) => {
 		if (!visible) return;
 		void fetchManagers();
 	}, [visible, fetchManagers]);
+	useEffect(() => () => {if (debounceRef.current) clearTimeout(debounceRef.current);}, []);
 
 	const handleSearchChange = (text) => {
+		requestId.current += 1;
 		setSearch(text);
+		setLoading(true);
 		if (debounceRef.current) clearTimeout(debounceRef.current);
 		debounceRef.current = setTimeout(() => {
 			void fetchManagers(text.trim());
@@ -80,6 +82,7 @@ const ManagerPicker = ({value, onChange, style, role = 'MANAGER'}) => {
 	};
 
 	const handleSelect = (manager) => {
+		setSelectedUser(manager);
 		onChange?.(manager.id);
 		setVisible(false);
 		setSearch('');
@@ -87,13 +90,16 @@ const ManagerPicker = ({value, onChange, style, role = 'MANAGER'}) => {
 
 	const handleClear = (event) => {
 		event.stopPropagation?.();
+		setSelectedUser(null);
 		onChange?.(null);
 	};
 
 	const handleOpen = () => setVisible(true);
 	const handleClose = () => {
+		requestId.current += 1;
 		setVisible(false);
 		setSearch('');
+		if (debounceRef.current) clearTimeout(debounceRef.current);
 	};
 
 	const renderManagerItem = ({item}) => {
@@ -103,11 +109,7 @@ const ManagerPicker = ({value, onChange, style, role = 'MANAGER'}) => {
 				style={[styles.managerItem, isSelected ? styles.managerItemActive : null]}
 				onPress={() => handleSelect(item)}
 			>
-				<View style={[styles.avatar, isSelected ? styles.avatarActive : null]}>
-					<Text style={[styles.avatarText, isSelected ? styles.avatarTextActive : null]}>
-						{getInitials(item)}
-					</Text>
-				</View>
+			<Avatar name={getDisplayName(item)} size={36} />
 				<View style={styles.managerInfo}>
 					<Text style={[styles.managerName, isSelected ? styles.managerNameActive : null]}>
 						{getDisplayName(item)}
@@ -167,23 +169,20 @@ const ManagerPicker = ({value, onChange, style, role = 'MANAGER'}) => {
 								autoFocus
 							/>
 						</View>
-						{!search && !loading && !error && managers.length > 0 ? (
+						{!search && !loading && !error && managers.length >= INITIAL_LIMIT ? (
 							<View style={styles.hintRow}>
 								<Text style={styles.hintText}>Wpisz, aby wyszukać więcej</Text>
 							</View>
 						) : null}
 						{loading ? (
 							<View style={styles.centered}>
-								<ActivityIndicator size="small" color={colors.primary} />
+								<Skeleton width="80%" height={42} />
+								<Skeleton width="80%" height={42} />
 							</View>
 						) : error ? (
-							<View style={styles.centered}>
-								<Text style={styles.error}>{error}</Text>
-							</View>
+							<ErrorState description={error} onRetry={() => fetchManagers(search.trim())} />
 						) : managers.length === 0 ? (
-							<View style={styles.centered}>
-								<Text style={styles.emptyText}>{labels.empty}</Text>
-							</View>
+							<EmptyState title={labels.empty} icon="users" />
 						) : (
 							<FlatList
 								data={managers}
@@ -211,7 +210,7 @@ const styles = StyleSheet.create({
 		minHeight: 48,
 		borderWidth: 1,
 		borderColor: colors.border,
-		borderRadius: 10,
+		borderRadius: radius.md,
 		paddingHorizontal: 12,
 		paddingVertical: 10,
 		backgroundColor: colors.surface,
@@ -241,11 +240,7 @@ const styles = StyleSheet.create({
 		maxHeight: '60%',
 		paddingTop: 54,
 		paddingBottom: 16,
-		shadowColor: '#000',
-		shadowOffset: {width: 0, height: 4},
-		shadowOpacity: 0.15,
-		shadowRadius: 12,
-		elevation: 8,
+		...shadows.floating,
 	},
 	modalHeader: {
 		flexDirection: 'row',
@@ -270,7 +265,7 @@ const styles = StyleSheet.create({
 		borderWidth: 1,
 		borderColor: colors.border,
 		borderRadius: 10,
-		backgroundColor: colors.placeholderSurface,
+		backgroundColor: colors.surfaceAlt,
 	},
 	searchInput: {
 		flex: 1,

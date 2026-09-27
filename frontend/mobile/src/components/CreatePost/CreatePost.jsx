@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useMemo, useState} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {ActivityIndicator, ScrollView, StyleSheet, View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import {useFocusEffect} from '@react-navigation/native';
@@ -12,6 +12,8 @@ import ImagePicker from 'components/ImagePicker/ImagePicker';
 import OptionPills from 'components/OptionPills/OptionPills';
 import ManagerPicker from 'components/ManagerPicker/ManagerPicker';
 import Toast from 'react-native-toast-message';
+import {Card} from 'components/ui';
+import {radius, shadows, spacing, typography} from 'theme/theme';
 import {
 	CATEGORY_IS_REQUIRED,
 	CONTENT_IS_REQUIRED,
@@ -51,6 +53,7 @@ const CreatePost = ({
 	const [categories, setCategories] = useState([]);
 	const [categoriesLoading, setCategoriesLoading] = useState(false);
 	const [categoriesError, setCategoriesError] = useState(null);
+	const scrollRef = useRef(null);
 
 	const categoryOptions = useMemo(
 		() =>
@@ -154,6 +157,7 @@ const CreatePost = ({
 		onSubmitSuccess, onSubmitFail,
 		setLoading, setError, resetForm,
 		setTitleError, setContentError, setCategoryError, setManagerError,
+		scrollRef,
 		mode, postId,
 	});
 
@@ -172,13 +176,16 @@ const CreatePost = ({
 
 	return (
 		<ScrollView
+			ref={scrollRef}
 			contentContainerStyle={styles.container}
 			keyboardShouldPersistTaps="handled"
 			showsVerticalScrollIndicator={false}
 		>
 			<View style={styles.header}>
+				<Text style={styles.eyebrow}>POMYSŁ KAIZEN</Text>
 				<Text style={styles.heading}>{headerTitle}</Text>
 				<Text style={styles.subheading}>{headerSubtitle}</Text>
+				<Text style={styles.progressLabel}>{completedSteps.filter(Boolean).length} z 4 sekcji uzupełnionych</Text>
 			</View>
 
 			<View style={styles.stepper}>
@@ -191,7 +198,7 @@ const CreatePost = ({
 								<Feather
 									name={done ? 'check' : step.icon}
 									size={14}
-									color={done ? '#fff' : colors.muted}
+									color={done ? colors.white : colors.textMuted}
 								/>
 							</View>
 							{!isLast ? (
@@ -245,8 +252,7 @@ const CreatePost = ({
 			<Section icon="user-check" title="Kierownik" error={managerError}>
 				<ManagerPicker value={assignedManager} onChange={handleManagerChange} />
 				<Text style={styles.hintText}>
-					Kierownik przy akceptacji zgłoszenia ustali koszt i termin wdrożenia.
-					Powyżej 10 000 zł wymagana będzie dodatkowo akceptacja dyrektora.
+					Kierownik przy akceptacji zgłoszenia ustali koszt i termin wdrożenia. Powyżej 10 000 zł wymagana będzie dodatkowo akceptacja dyrektora.
 				</Text>
 			</Section>
 
@@ -265,7 +271,7 @@ const CreatePost = ({
 				title={submitLabel}
 				onPress={handleSubmit}
 				loading={loading}
-				leftIcon={<Feather name={isEdit ? 'save' : 'send'} size={16} color="#fff" />}
+				leftIcon={<Feather name={isEdit ? 'save' : 'send'} size={16} color={colors.white} />}
 				style={styles.submitButton}
 			/>
 		</ScrollView>
@@ -273,7 +279,7 @@ const CreatePost = ({
 };
 
 const Section = ({icon, title, optional, error, children}) => (
-	<View style={[styles.sectionCard, error ? styles.sectionCardError : null]}>
+	<Card elevated style={[styles.sectionCard, error ? styles.sectionCardError : null]}>
 		<View style={styles.sectionHeader}>
 			<View style={[styles.sectionIconCircle, error ? styles.sectionIconCircleError : null]}>
 				<Feather name={icon} size={14} color={error ? colors.danger : colors.primary} />
@@ -285,7 +291,7 @@ const Section = ({icon, title, optional, error, children}) => (
 		{error ? (
 			<Text style={styles.sectionError}>{error}</Text>
 		) : null}
-	</View>
+	</Card>
 );
 
 export default CreatePost;
@@ -306,6 +312,7 @@ async function submitPost({
 	setContentError,
 	setCategoryError,
 	setManagerError,
+	scrollRef,
 	mode,
 	postId,
 }) {
@@ -329,6 +336,7 @@ async function submitPost({
 	}
 
 	if (hasError) {
+		scrollRef?.current?.scrollTo({y: 0, animated: true});
 		Toast.show({
 			type: 'error',
 			text1: 'Uzupełnij wymagane pola',
@@ -381,31 +389,37 @@ async function submitPost({
 	}
 }
 
+const IMAGE_TYPES = new Set(['GENERAL', 'BEFORE', 'AFTER']);
+
 const normalizeImagesForUpload = (images = []) =>
-	images
-		?.map(({base64, mimeType}) => {
-			if (!base64) return null;
-			const safeMimeType = mimeType?.includes('/') ? mimeType : 'image/jpeg';
-			return `data:${safeMimeType};base64,${base64}`;
+	(Array.isArray(images) ? images : [])
+		.map((item) => {
+			if (typeof item === 'string') return item;
+			const encoded = item?.base64 || item?.image;
+			if (!encoded || typeof encoded !== 'string') return null;
+			const safeMimeType = item.mimeType?.includes('/') ? item.mimeType : 'image/jpeg';
+			const image = encoded.startsWith('data:') ? encoded : `data:${safeMimeType};base64,${encoded}`;
+			return {image, type: IMAGE_TYPES.has(item.type) ? item.type : 'GENERAL'};
 		})
 		.filter(Boolean);
 
 const styles = StyleSheet.create({
 	container: {
-		padding: 16,
-		paddingBottom: 32,
-		gap: 14,
+		padding: spacing.lg,
+		paddingBottom: 120,
+		gap: spacing.lg,
 	},
 	header: {
 		gap: 4,
 	},
 	heading: {
-		fontSize: 22,
-		fontWeight: '800',
+		...typography.title,
 		color: colors.text,
 	},
+	eyebrow: {...typography.caption, fontWeight: '800', letterSpacing: 1.2, color: colors.statusTextInProgress},
+	progressLabel: {...typography.caption, color: colors.textMuted, marginTop: spacing.sm},
 	subheading: {
-		color: colors.muted,
+		color: colors.textMuted,
 		fontSize: 14,
 	},
 	stepper: {
@@ -423,7 +437,7 @@ const styles = StyleSheet.create({
 		width: 28,
 		height: 28,
 		borderRadius: 14,
-		backgroundColor: colors.border,
+		backgroundColor: colors.primarySoft,
 		alignItems: 'center',
 		justifyContent: 'center',
 	},
@@ -433,7 +447,7 @@ const styles = StyleSheet.create({
 	stepLine: {
 		flex: 1,
 		height: 2,
-		backgroundColor: colors.border,
+		backgroundColor: colors.borderMuted,
 		marginHorizontal: 4,
 	},
 	stepLineDone: {
@@ -441,20 +455,16 @@ const styles = StyleSheet.create({
 	},
 	sectionCard: {
 		gap: 12,
-		padding: 16,
-		borderRadius: 14,
+		padding: spacing.lg,
+		borderRadius: radius.lg,
 		backgroundColor: colors.surface,
 		borderWidth: 1,
 		borderColor: colors.border,
-		shadowColor: '#000',
-		shadowOpacity: 0.02,
-		shadowOffset: {width: 0, height: 4},
-		shadowRadius: 8,
-		elevation: 1,
+		...shadows.card,
 	},
 	sectionCardError: {
-		borderColor: '#fca5a5',
-		backgroundColor: '#fefafa',
+		borderColor: colors.danger,
+		backgroundColor: colors.dangerSoft,
 	},
 	sectionHeader: {
 		flexDirection: 'row',
@@ -465,12 +475,12 @@ const styles = StyleSheet.create({
 		width: 28,
 		height: 28,
 		borderRadius: 14,
-		backgroundColor: '#e0e7ff',
+		backgroundColor: colors.primarySoft,
 		alignItems: 'center',
 		justifyContent: 'center',
 	},
 	sectionIconCircleError: {
-		backgroundColor: '#fee2e2',
+		backgroundColor: colors.dangerSoft,
 	},
 	sectionTitle: {
 		flex: 1,
@@ -512,9 +522,9 @@ const styles = StyleSheet.create({
 		gap: 8,
 		padding: 12,
 		borderRadius: 10,
-		backgroundColor: '#fef2f2',
+		backgroundColor: colors.dangerSoft,
 		borderWidth: 1,
-		borderColor: '#fecaca',
+		borderColor: colors.danger,
 	},
 	errorBannerText: {
 		flex: 1,

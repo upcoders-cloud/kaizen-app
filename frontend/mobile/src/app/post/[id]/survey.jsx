@@ -16,6 +16,8 @@ import Text from 'components/Text/Text';
 import KeyboardAwareScrollView from 'components/KeyboardAwareScrollView/KeyboardAwareScrollView';
 import OptionPills from 'components/OptionPills/OptionPills';
 import postsService from 'src/server/services/postsService';
+import {Card, SectionHeader} from 'components/ui';
+import {radius, spacing} from 'theme/theme';
 
 const UNITS = [
 	{label: 'Dziennie', value: 'DAY'},
@@ -135,12 +137,7 @@ const SurveyScreen = () => {
 						keyboardVerticalOffset={12}
 						showsVerticalScrollIndicator={false}
 					>
-						<View style={styles.header}>
-							<Text style={styles.title}>Oszacuj korzyści</Text>
-							<Text style={styles.subtitle}>
-								Podaj dane o problemie, a wyliczymy ile czasu i pieniędzy można zaoszczędzić miesięcznie.
-							</Text>
-						</View>
+						<SectionHeader title="Oszacuj korzyści" subtitle="Podaj dane o problemie, a wyliczymy ile czasu i pieniędzy można zaoszczędzić miesięcznie." />
 
 						<View style={styles.card}>
 							<View style={styles.fieldHeader}>
@@ -191,7 +188,7 @@ const SurveyScreen = () => {
 						</View>
 
 						{preview.hasData ? (
-							<View style={styles.previewCard}>
+							<Card style={styles.previewCard} padded={false}>
 								<Text style={styles.previewTitle}>Podgląd oszczędności / miesiąc</Text>
 								<View style={styles.previewRow}>
 									<View style={styles.previewItem}>
@@ -200,13 +197,13 @@ const SurveyScreen = () => {
 									</View>
 									<View style={styles.previewDivider} />
 									<View style={styles.previewItem}>
-										<Feather name="trending-up" size={18} color="#16a34a" />
+										<Feather name="trending-up" size={18} color={colors.success} />
 										<Text style={[styles.previewValue, styles.previewValueGreen]}>
 											{preview.savings.toLocaleString('pl-PL', {minimumFractionDigits: 0, maximumFractionDigits: 0})} PLN
 										</Text>
 									</View>
 								</View>
-							</View>
+							</Card>
 						) : null}
 
 						{error ? (
@@ -220,7 +217,7 @@ const SurveyScreen = () => {
 							title="Przelicz i zapisz"
 							onPress={handleSubmit}
 							loading={loading}
-							leftIcon={<Feather name="bar-chart-2" size={16} color="#fff" />}
+							leftIcon={<Feather name="bar-chart-2" size={16} color={colors.white} />}
 							style={styles.submitButton}
 						/>
 					</KeyboardAwareScrollView>
@@ -238,10 +235,10 @@ const styles = StyleSheet.create({
 		backgroundColor: colors.background,
 	},
 	container: {
-		paddingHorizontal: 16,
+		paddingHorizontal: spacing.lg,
 		paddingBottom: 32,
 		paddingTop: 8,
-		gap: 14,
+		gap: spacing.lg,
 	},
 	header: {
 		gap: 4,
@@ -259,7 +256,7 @@ const styles = StyleSheet.create({
 	card: {
 		gap: 10,
 		padding: 16,
-		borderRadius: 14,
+		borderRadius: radius.lg,
 		backgroundColor: colors.surface,
 		borderWidth: 1,
 		borderColor: colors.border,
@@ -293,9 +290,9 @@ const styles = StyleSheet.create({
 		gap: 12,
 		padding: 16,
 		borderRadius: 14,
-		backgroundColor: '#f0f4ff',
+		backgroundColor: colors.primarySoft,
 		borderWidth: 1,
-		borderColor: '#c7d2fe',
+		borderColor: colors.borderStrong,
 	},
 	previewTitle: {
 		fontSize: 13,
@@ -318,7 +315,7 @@ const styles = StyleSheet.create({
 	previewDivider: {
 		width: 1,
 		height: 28,
-		backgroundColor: '#c7d2fe',
+		backgroundColor: colors.borderStrong,
 	},
 	previewValue: {
 		fontSize: 20,
@@ -326,7 +323,7 @@ const styles = StyleSheet.create({
 		color: colors.primary,
 	},
 	previewValueGreen: {
-		color: '#16a34a',
+		color: colors.success,
 	},
 	errorBanner: {
 		flexDirection: 'row',
@@ -334,9 +331,9 @@ const styles = StyleSheet.create({
 		gap: 8,
 		padding: 12,
 		borderRadius: 10,
-		backgroundColor: '#fef2f2',
+		backgroundColor: colors.dangerSoft,
 		borderWidth: 1,
-		borderColor: '#fecaca',
+		borderColor: colors.danger,
 	},
 	errorText: {
 		flex: 1,

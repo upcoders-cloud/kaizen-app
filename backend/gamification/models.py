@@ -13,6 +13,7 @@ class Action(models.TextChoices):
     COMMENT_MADE = 'COMMENT_MADE', 'Dodany komentarz'
     REVIEW_COMPLETED = 'REVIEW_COMPLETED', 'Wykonana weryfikacja'
     REWARD_REDEEMED = 'REWARD_REDEEMED', 'Wymiana nagrody'
+    MANUAL_ADJUSTMENT = 'MANUAL_ADJUSTMENT', 'Korekta ręczna'
 
 
 class PointRule(models.Model):
@@ -35,7 +36,7 @@ class PointRule(models.Model):
 
 
 class PointTransaction(models.Model):
-    """Niezmienny ledger zdarzeń punktowych — źródło prawdy."""
+    """Niezmienny ledger zdarzeń punktowych - źródło prawdy."""
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,

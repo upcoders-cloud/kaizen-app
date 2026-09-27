@@ -103,7 +103,7 @@ export default ProgressUpdateModal;
 const styles = StyleSheet.create({
 	overlay: {
 		flex: 1,
-		backgroundColor: 'rgba(15, 23, 42, 0.45)',
+		backgroundColor: colors.backdrop,
 		justifyContent: 'center',
 		paddingHorizontal: 24,
 	},

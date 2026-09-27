@@ -1,4 +1,4 @@
-"""Centralny silnik gamifikacji — jedyny punkt naliczania punktów."""
+"""Centralny silnik gamifikacji - jedyny punkt naliczania punktów."""
 from django.contrib.contenttypes.models import ContentType
 from django.db import IntegrityError, transaction
 from django.db.models import Sum
@@ -18,6 +18,22 @@ from . import streaks as streaks_service
 def get_or_create_profile(user):
     profile, _ = UserGamificationProfile.objects.get_or_create(user=user)
     return profile
+
+
+def lock_points(user):
+    """Blokuje profil punktowy użytkownika (SELECT FOR UPDATE) do końca bieżącej transakcji.
+
+    Wspólny punkt serializacji wszystkich operacji na saldzie jednego użytkownika:
+    naliczenia i korekty (`award`), wymiany (`rewards.redeem`) i zwroty (`rewards.set_status`).
+    Kolejność blokad: profil użytkownika -> wymiana -> nagroda. Wymaga otwartej transakcji.
+    """
+    get_or_create_profile(user)
+    return UserGamificationProfile.objects.select_for_update().get(user=user)
+
+
+def current_balance(user):
+    """Saldo z ledgera (źródło prawdy); wołać po `lock_points`."""
+    return PointTransaction.objects.filter(user=user).aggregate(s=Sum('points'))['s'] or 0
 
 
 def _rule_for(action):
@@ -49,6 +65,7 @@ def award(user, action, *, source=None, dedupe_key='', metadata=None, points_ove
     if user is None or not getattr(user, 'is_authenticated', True):
         return None
 
+    lock_points(user)
     rule = _rule_for(action)
     points = points_override if points_override is not None else (rule.points if rule else None)
     if points is None:
@@ -74,7 +91,7 @@ def award(user, action, *, source=None, dedupe_key='', metadata=None, points_ove
                 metadata=metadata or {},
             )
     except IntegrityError:
-        # Duplikat (ten sam dedupe_key) — akcja już naliczona.
+        # Duplikat (ten sam dedupe_key) - akcja już naliczona.
         return None
 
     _sync_profile(user, activity_date=txn.created_at.date())

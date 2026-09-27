@@ -42,7 +42,7 @@ Przykład: `import {useAuthStore} from 'store/authStore'`.
 cd frontend/mobile
 npm install
 npm run start          # Expo dashboard
-npm run ios            # iOS simulator
+npm run ios            # natywny build + iOS simulator (expo run:ios)
 npm run android        # Android
 npm run web            # web preview
 
@@ -52,6 +52,11 @@ npx expo prebuild --clean
 ```
 
 Skrypty `npm run *` ustawiają `EXPO_ROUTER_APP_ROOT=src/app`.
+
+`patches/@expo+cli+*.patch` (patch-package, aplikowany w `postinstall`): Xcode 27 zastąpił
+`Simulator.app` przez `DeviceHub.app`, a `@expo/cli` 54 szuka tylko "Simulator". Po aktualizacji
+`expo`/`@expo/cli` łatkę trzeba odtworzyć (`npx patch-package @expo/cli`) albo usunąć, jeśli Expo
+doda obsługę DeviceHub.
 
 ## API i auth
 

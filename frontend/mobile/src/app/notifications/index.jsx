@@ -3,7 +3,7 @@ import {Stack, useRouter} from 'expo-router';
 import {useFocusEffect} from '@react-navigation/native';
 import {
 	ActivityIndicator,
-	FlatList,
+	SectionList,
 	Pressable,
 	RefreshControl,
 	StyleSheet,
@@ -16,6 +16,7 @@ import colors from 'theme/colors';
 import notificationsService from 'src/server/services/notificationsService';
 import NotificationItem from 'components/Notifications/NotificationItem';
 import BackButton from 'components/Navigation/BackButton';
+import {EmptyState, ErrorState} from 'components/ui';
 
 const TABS = {UNREAD: 'UNREAD', ALL: 'ALL'};
 
@@ -33,7 +34,7 @@ const NotificationsScreen = () => {
 		setError(null);
 		try {
 			const data = await notificationsService.list();
-			setNotifications(Array.isArray(data) ? data : []);
+			setNotifications(Array.isArray(data) ? data : data?.results ?? []);
 		} catch (err) {
 			setError(err?.message || 'Nie udało się pobrać powiadomień.');
 		} finally {
@@ -61,29 +62,44 @@ const NotificationsScreen = () => {
 	const displayedNotifications = activeTab === TABS.UNREAD
 		? unreadNotifications
 		: notifications;
+	const sections = useMemo(() => {
+		const groups = new Map();
+		const today = new Date();
+		const yesterday = new Date(today);
+		yesterday.setDate(yesterday.getDate() - 1);
+		for (const notification of displayedNotifications) {
+			const date = new Date(notification.created_at);
+			const key = Number.isNaN(date.getTime()) ? 'unknown' : date.toDateString();
+			let title = 'Wcześniej';
+			if (key === today.toDateString()) title = 'Dzisiaj';
+			else if (key === yesterday.toDateString()) title = 'Wczoraj';
+			else if (key !== 'unknown') title = date.toLocaleDateString('pl-PL', {day: 'numeric', month: 'long', year: 'numeric'});
+			if (!groups.has(key)) groups.set(key, {title, data: []});
+			groups.get(key).data.push(notification);
+		}
+		return [...groups.values()];
+	}, [displayedNotifications]);
 
 	const unreadCount = unreadNotifications.length;
 	const hasUnread = unreadCount > 0;
 
+	const handleMarkRead = async (notification) => {
+		if (notification?.is_read) return;
+		setNotifications((prev) => prev.map((item) => item.id === notification.id
+			? {...item, is_read: true, read_at: new Date().toISOString()}
+			: item));
+		try {
+			await notificationsService.markRead(notification.id);
+		} catch (err) {
+			setNotifications((prev) => prev.map((item) => item.id === notification.id ? notification : item));
+		}
+	};
 	const handlePressNotification = async (notification) => {
 		const postId = notification?.post_id;
+		void handleMarkRead(notification);
 		if (!postId) return;
-		const isCommentNotification = notification?.type === 'COMMENT';
+		const isCommentNotification = ['COMMENT', 'REPLY', 'MENTION'].includes(notification?.type);
 		const commentId = isCommentNotification ? notification?.comment_id : null;
-		if (!notification?.is_read) {
-			setNotifications((prev) =>
-				prev.map((item) =>
-					item.id === notification.id
-						? {...item, is_read: true, read_at: new Date().toISOString()}
-						: item
-				)
-			);
-			notificationsService.markRead(notification.id).catch(() => {
-				setNotifications((prev) =>
-					prev.map((item) => (item.id === notification.id ? notification : item))
-				);
-			});
-		}
 		if (commentId) {
 			router.push({pathname: `/post/${postId}`, params: {commentId: String(commentId)}});
 			return;
@@ -182,26 +198,19 @@ const NotificationsScreen = () => {
 					</View>
 				) : error ? (
 					<View style={styles.centered}>
-						<Feather name="wifi-off" size={28} color={colors.muted} />
-						<Text style={styles.error}>{error}</Text>
+						<ErrorState description={error} onRetry={() => void loadNotifications()} />
 					</View>
 				) : (
-					<FlatList
-						data={displayedNotifications}
+					<SectionList
+						sections={sections}
 						keyExtractor={(item) => String(item.id)}
 						renderItem={({item}) => (
-							<NotificationItem notification={item} onPress={handlePressNotification} />
+							<NotificationItem notification={item} onPress={handlePressNotification} onMarkRead={handleMarkRead} />
 						)}
-						contentContainerStyle={displayedNotifications.length ? styles.listContent : styles.centered}
+						renderSectionHeader={({section}) => <Text style={styles.dayHeading}>{section.title}</Text>}
+						contentContainerStyle={sections.length ? styles.listContent : styles.centered}
 						ListEmptyComponent={
-							<View style={styles.emptyState}>
-								<Feather
-									name={activeTab === TABS.UNREAD ? 'check-circle' : 'bell-off'}
-									size={32}
-									color={colors.muted}
-								/>
-								<Text style={styles.muted}>{emptyText}</Text>
-							</View>
+							<EmptyState icon={activeTab === TABS.UNREAD ? 'check-circle' : 'bell-off'} title={activeTab === TABS.UNREAD ? 'Wszystko przeczytane' : 'Brak powiadomień'} description={emptyText} />
 						}
 						showsVerticalScrollIndicator={false}
 						refreshControl={
@@ -255,7 +264,7 @@ const styles = StyleSheet.create({
 		color: colors.text,
 	},
 	tabTextActive: {
-		color: '#fff',
+		color: colors.white,
 	},
 	tabBadge: {
 		minWidth: 20,
@@ -264,18 +273,18 @@ const styles = StyleSheet.create({
 		alignItems: 'center',
 		justifyContent: 'center',
 		paddingHorizontal: 6,
-		backgroundColor: '#fee2e2',
+		backgroundColor: colors.dangerSoft,
 	},
 	tabBadgeActive: {
-		backgroundColor: 'rgba(255,255,255,0.25)',
+		backgroundColor: colors.primarySoft,
 	},
 	tabBadgeText: {
 		fontSize: 11,
 		fontWeight: '800',
-		color: '#dc2626',
+		color: colors.danger,
 	},
 	tabBadgeTextActive: {
-		color: '#fff',
+		color: colors.white,
 	},
 
 	/* Mark all */
@@ -298,6 +307,7 @@ const styles = StyleSheet.create({
 		paddingTop: 8,
 		gap: 10,
 	},
+	dayHeading: {fontSize: 12, fontWeight: '800', color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.6, paddingTop: 10, paddingBottom: 3, backgroundColor: colors.background},
 	centered: {
 		flex: 1,
 		alignItems: 'center',

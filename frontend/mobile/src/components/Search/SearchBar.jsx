@@ -2,6 +2,7 @@ import {useEffect, useRef} from 'react';
 import {Animated, Easing, Pressable, StyleSheet, TextInput, View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import colors from 'theme/colors';
+import {radius} from 'theme/theme';
 
 const SEARCH_BAR_HEIGHT = 56;
 const ANIMATION_DURATION = 220;
@@ -69,6 +70,7 @@ const SearchBar = ({
 					onChangeText={onChangeText}
 					onSubmitEditing={onSubmitEditing}
 					selectionColor={colors.primary}
+					accessibilityLabel="Szukaj pomysłów"
 				/>
 				{showClear && onClear ? (
 					<Pressable style={styles.clearButton} onPress={handleClear}>
@@ -99,8 +101,8 @@ const styles = StyleSheet.create({
 		paddingVertical: 8,
 		borderWidth: 1,
 		borderColor: colors.borderMuted,
-		borderRadius: 12,
-		backgroundColor: '#f9fbff',
+		borderRadius: radius.md,
+		backgroundColor: colors.surfaceAlt,
 	},
 	input: {
 		flex: 1,

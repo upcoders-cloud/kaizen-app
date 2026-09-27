@@ -1,19 +1,30 @@
-import {Pressable, StyleSheet, View} from 'react-native';
+import {Animated, PanResponder, Pressable, StyleSheet, View} from 'react-native';
+import {useMemo, useRef} from 'react';
 import {Feather} from '@expo/vector-icons';
 import Text from 'components/Text/Text';
 import colors from 'theme/colors';
 
 const TYPE_CONFIG = {
-	LIKE: {icon: 'heart', color: '#e11d48', bg: '#fff1f2'},
-	COMMENT: {icon: 'message-circle', color: '#2563eb', bg: '#eff6ff'},
-	REPLY: {icon: 'corner-down-right', color: '#2563eb', bg: '#eff6ff'},
-	MENTION: {icon: 'at-sign', color: '#0ea5e9', bg: '#f0f9ff'},
-	ASSIGNED: {icon: 'user-check', color: '#7c3aed', bg: '#f5f3ff'},
-	APPROVED: {icon: 'check-circle', color: '#16a34a', bg: '#f0fdf4'},
-	REJECTED: {icon: 'x-circle', color: '#dc2626', bg: '#fef2f2'},
+	LIKE: {icon: 'heart', color: colors.danger, bg: colors.dangerSoft},
+	COMMENT: {icon: 'message-circle', color: colors.statusTextSubmitted, bg: colors.statusSubmitted},
+	REPLY: {icon: 'corner-down-right', color: colors.statusTextSubmitted, bg: colors.statusSubmitted},
+	MENTION: {icon: 'at-sign', color: colors.statusTextInProgress, bg: colors.infoSoft},
+	ASSIGNED: {icon: 'user-check', color: colors.roleManagerText, bg: colors.roleManagerSurface},
+	APPROVED: {icon: 'check-circle', color: colors.success, bg: colors.successSoft},
+	REJECTED: {icon: 'x-circle', color: colors.danger, bg: colors.dangerSoft},
 };
 
-const NotificationItem = ({notification, onPress}) => {
+const NotificationItem = ({notification, onPress, onMarkRead}) => {
+	const translateX = useRef(new Animated.Value(0)).current;
+	const panResponder = useMemo(() => PanResponder.create({
+		onMoveShouldSetPanResponder: (_, gesture) => !notification?.is_read && Math.abs(gesture.dx) > 15 && Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.3,
+		onPanResponderMove: (_, gesture) => translateX.setValue(Math.max(-90, Math.min(0, gesture.dx))),
+		onPanResponderRelease: (_, gesture) => {
+			if (gesture.dx < -65) onMarkRead?.(notification);
+			Animated.spring(translateX, {toValue: 0, useNativeDriver: true}).start();
+		},
+		onPanResponderTerminate: () => Animated.spring(translateX, {toValue: 0, useNativeDriver: true}).start(),
+	}), [notification, onMarkRead, translateX]);
 	const firstName = notification?.actor?.first_name?.trim() || '';
 	const lastName = notification?.actor?.last_name?.trim() || '';
 	const lastInitial = lastName ? `${lastName.charAt(0).toUpperCase()}.` : '';
@@ -38,7 +49,7 @@ const NotificationItem = ({notification, onPress}) => {
 	}[notification?.type] || 'polubił Twój post';
 	const createdAt = notification?.created_at ? new Date(notification.created_at) : null;
 	const formattedDate = createdAt
-		? createdAt.toLocaleDateString('pl-PL', {day: '2-digit', month: 'short', year: 'numeric'})
+		? createdAt.toLocaleTimeString('pl-PL', {hour: '2-digit', minute: '2-digit'})
 		: '';
 	const isRead = Boolean(notification?.is_read);
 	const typeConfig = TYPE_CONFIG[notification?.type] || {icon: 'bell', color: colors.muted, bg: colors.placeholderSurface};
@@ -52,6 +63,7 @@ const NotificationItem = ({notification, onPress}) => {
 		.toUpperCase();
 
 	return (
+		<Animated.View style={{transform: [{translateX}]}} {...panResponder.panHandlers}>
 		<Pressable
 			onPress={() => onPress?.(notification)}
 			style={({pressed}) => [
@@ -76,9 +88,13 @@ const NotificationItem = ({notification, onPress}) => {
 				<Text style={styles.postTitle} numberOfLines={1}>
 					{postTitle}
 				</Text>
-				{formattedDate ? <Text style={styles.date}>{formattedDate}</Text> : null}
+				<View style={styles.footer}>
+					{formattedDate ? <Text style={styles.date}>{formattedDate}</Text> : null}
+					{!isRead ? <Pressable onPress={(event) => { event.stopPropagation(); onMarkRead?.(notification); }} hitSlop={6}><Text style={styles.readAction}>Oznacz jako przeczytane</Text></Pressable> : null}
+				</View>
 			</View>
 		</Pressable>
+		</Animated.View>
 	);
 };
 
@@ -96,8 +112,8 @@ const styles = StyleSheet.create({
 		borderColor: colors.border,
 	},
 	cardUnread: {
-		borderColor: '#c7d2fe',
-		backgroundColor: '#f8f9ff',
+		borderColor: colors.borderStrong,
+		backgroundColor: colors.surfaceAlt,
 	},
 	cardPressed: {
 		opacity: 0.85,
@@ -119,7 +135,7 @@ const styles = StyleSheet.create({
 		width: 38,
 		height: 38,
 		borderRadius: 19,
-		backgroundColor: '#e0e7ff',
+		backgroundColor: colors.primarySoft,
 		alignItems: 'center',
 		justifyContent: 'center',
 	},
@@ -163,4 +179,6 @@ const styles = StyleSheet.create({
 		fontSize: 12,
 		marginTop: 2,
 	},
+	footer: {flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8},
+	readAction: {fontSize: 11, fontWeight: '700', color: colors.primary},
 });

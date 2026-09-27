@@ -14,12 +14,14 @@ import {getJwtPayload} from 'utils/jwt';
 import AppHeader from 'components/Navigation/AppHeader';
 import SearchBar from 'components/Search/SearchBar';
 import Toast from 'react-native-toast-message';
+import {shadows} from 'theme/theme';
 
 const SORT_FILTERS = [
 	{key: 'all', label: 'Wszystkie'},
 	{key: 'mine', label: 'Moje'},
 	{key: 'newest', label: 'Najnowsze'},
 	{key: 'likes', label: 'Najwięcej polubień'},
+	{key: 'comments', label: 'Najwięcej komentarzy'},
 ];
 
 const STATUS_FILTERS = [
@@ -34,7 +36,7 @@ const SEARCH_DEBOUNCE_MS = 300;
 const buildPostsParams = ({sortKey, statusKey, categoryId, search}) => {
 	const params = {};
 	if (sortKey === 'mine') params.mine = 'true';
-	if (sortKey === 'likes') params.ordering = 'likes';
+	if (['newest', 'likes', 'comments'].includes(sortKey)) params.ordering = sortKey;
 	if (statusKey) params.status = statusKey;
 	if (categoryId) params.category = categoryId;
 	const trimmed = search?.trim();
@@ -46,13 +48,21 @@ const Home = () => {
 	const [allPosts, setAllPosts] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [refreshing, setRefreshing] = useState(false);
+	const [loadingMore, setLoadingMore] = useState(false);
+	const [hasNextPage, setHasNextPage] = useState(false);
 	const [error, setError] = useState(null);
 	const [activeFilter, setActiveFilter] = useState(SORT_FILTERS[0]);
 	const [activeStatus, setActiveStatus] = useState(STATUS_FILTERS[0]);
 	const [activeCategoryId, setActiveCategoryId] = useState(null);
 	const [categories, setCategories] = useState([]);
 	const [filterVisible, setFilterVisible] = useState(false);
-	const [likingPostId, setLikingPostId] = useState(null);
+	const pendingLikes = useRef(new Set());
+	const pendingBookmarks = useRef(new Set());
+	const postsRef = useRef([]);
+	const requestId = useRef(0);
+	const nextPage = useRef(2);
+	const hasNextPageRef = useRef(false);
+	const loadingMoreRef = useRef(false);
 	const [menuVisible, setMenuVisible] = useState(false);
 	const [menuPost, setMenuPost] = useState(null);
 	const [deletingPostId, setDeletingPostId] = useState(null);
@@ -87,33 +97,47 @@ const Home = () => {
 		}),
 		[activeFilter.key, activeStatus.key, activeCategoryId, debouncedSearch]
 	);
+	useEffect(() => {postsRef.current = allPosts;}, [allPosts]);
 
-	const isFirstLoadRef = useRef(true);
-	const loadPosts = useCallback((options = {}) => {
-		void loadPostsData({
-			setLoading,
-			setRefreshing,
-			setError,
-			setPosts: setAllPosts,
-			refresh: Boolean(options.refresh),
-			params,
-		});
+	const loadPosts = useCallback(async ({refresh = false, more = false} = {}) => {
+		if (more && (loadingMoreRef.current || !hasNextPageRef.current)) return;
+		const id = more ? requestId.current : ++requestId.current;
+		if (!more) {loadingMoreRef.current = false; hasNextPageRef.current = false; setHasNextPage(false); setLoadingMore(false);}
+		if (more) {loadingMoreRef.current = true; setLoadingMore(true);}
+		else if (refresh) setRefreshing(true);
+		else setLoading(true);
+		if (!more) setError(null);
+		try {
+			const data = await postsService.list({...params, page: more ? nextPage.current : 1, page_size: 15});
+			if (id !== requestId.current) return;
+			const items = Array.isArray(data) ? data : data?.results ?? [];
+			setAllPosts((current) => more ? [...current, ...items.filter((item) => !current.some((existing) => String(existing.id) === String(item.id)))] : items);
+			hasNextPageRef.current = Boolean(data?.next);
+			setHasNextPage(hasNextPageRef.current);
+			if (more) nextPage.current += 1;
+			else nextPage.current = 2;
+		} catch (err) {
+			if (id === requestId.current) {
+				if (!more && !refresh && !postsRef.current.length) setError(err?.message || FAILED_TO_LOAD_POSTS);
+				else if (!more) Toast.show({type: 'error', text1: 'Nie udało się odświeżyć pomysłów'});
+				else Toast.show({type: 'error', text1: 'Nie udało się wczytać kolejnych pomysłów'});
+			}
+		} finally {
+			if (id === requestId.current) {setLoading(false); setRefreshing(false); setLoadingMore(false); loadingMoreRef.current = false;}
+		}
 	}, [params]);
 
 	const handleRefresh = useCallback(() => loadPosts({refresh: true}), [loadPosts]);
-
-	useEffect(() => {
-		if (isFirstLoadRef.current) {
-			isFirstLoadRef.current = false;
-			return;
-		}
-		loadPosts();
-	}, [loadPosts]);
+	const handleLoadMore = useCallback(() => loadPosts({more: true}), [loadPosts]);
 
 	useFocusEffect(
 		useCallback(() => {
 			loadPosts();
 		}, [loadPosts])
+	);
+
+	useFocusEffect(
+		useCallback(() => () => setFilterVisible(false), [])
 	);
 
 	const handleOpenFilter = () => setFilterVisible(true);
@@ -191,15 +215,10 @@ const Home = () => {
 	};
 
 	const handleToggleBookmark = async (postId) => {
-		if (!postId) return;
-		let previousPosts = null;
-		setAllPosts((prev) => {
-			previousPosts = prev;
-			return prev.map((post) => {
-				if (String(post?.id) !== String(postId)) return post;
-				return {...post, is_bookmarked_by_me: !post?.is_bookmarked_by_me};
-			});
-		});
+		if (!postId || pendingBookmarks.current.has(postId)) return;
+		pendingBookmarks.current.add(postId);
+		const previous = postsRef.current.find((post) => String(post?.id) === String(postId));
+		setAllPosts((items) => items.map((post) => String(post?.id) === String(postId) ? {...post, is_bookmarked_by_me: !post.is_bookmarked_by_me} : post));
 		try {
 			const response = await postsService.toggleBookmark(postId);
 			const nextBookmarked = response?.is_bookmarked_by_me;
@@ -212,23 +231,21 @@ const Home = () => {
 				);
 			}
 		} catch (err) {
-			if (previousPosts) setAllPosts(previousPosts);
+			if (previous) setAllPosts((items) => items.map((post) => String(post?.id) === String(postId) ? {...post, is_bookmarked_by_me: previous.is_bookmarked_by_me} : post));
 			Toast.show({
 				type: 'error',
 				text1: 'Nie udało się zapisać',
 				text2: err?.message || 'Spróbuj ponownie',
 				visibilityTime: 2000,
 			});
-		}
+		} finally {pendingBookmarks.current.delete(postId);}
 	};
 
 	const handleToggleLike = async (postId) => {
-		if (!postId || likingPostId) return;
-		let previousPosts = null;
-		setLikingPostId(postId);
-		setAllPosts((prev) => {
-			previousPosts = prev;
-			return prev.map((post) => {
+		if (!postId || pendingLikes.current.has(postId)) return;
+		pendingLikes.current.add(postId);
+		const previous = postsRef.current.find((post) => String(post?.id) === String(postId));
+		setAllPosts((prev) => prev.map((post) => {
 				if (String(post?.id) !== String(postId)) return post;
 				const currentLikes = post?.likes_count ?? post?.likes?.length ?? 0;
 				const nextLiked = !post?.is_liked_by_me;
@@ -237,8 +254,7 @@ const Home = () => {
 					is_liked_by_me: nextLiked,
 					likes_count: Math.max(0, currentLikes + (nextLiked ? 1 : -1)),
 				};
-			});
-		});
+			}));
 		try {
 			const response = await postsService.toggleLike(postId);
 			const nextLiked = response?.is_liked_by_me;
@@ -256,11 +272,11 @@ const Home = () => {
 				);
 			}
 		} catch (err) {
-			if (previousPosts) {
-				setAllPosts(previousPosts);
-			}
+			if (previous) setAllPosts((items) => items.map((post) => String(post?.id) === String(postId)
+				? {...post, is_liked_by_me: previous.is_liked_by_me, likes_count: previous.likes_count ?? previous.likes?.length ?? 0} : post));
+			Toast.show({type: 'error', text1: 'Nie udało się zmienić polubienia'});
 		} finally {
-			setLikingPostId(null);
+			pendingLikes.current.delete(postId);
 		}
 	};
 
@@ -275,7 +291,7 @@ const Home = () => {
 			<SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
 				<View style={styles.decorativeBubble} pointerEvents="none" />
 				<AppHeader
-					title="Główna"
+					title="Pomysły"
 					onFilterPress={handleOpenFilter}
 					onNotificationsPress={handleOpenNotifications}
 					onSearchPress={handleToggleSearch}
@@ -291,9 +307,11 @@ const Home = () => {
 					posts={allPosts}
 					loading={loading}
 					refreshing={refreshing}
+					loadingMore={loadingMore}
 					error={error}
 					emptyText={emptyListText}
 					onRefresh={handleRefresh}
+					onEndReached={hasNextPage ? handleLoadMore : undefined}
 					onPressItem={(item) => router.push(`/post/${item.id}`)}
 					onToggleLike={handleToggleLike}
 					onToggleBookmark={handleToggleBookmark}
@@ -313,7 +331,7 @@ const Home = () => {
 										<Pressable
 											key={option.key}
 											style={styles.filterOption}
-											onPress={() => handleSelectFilter(option)}
+						onPress={() => handleSelectFilter(option)}
 										>
 											<Text style={[styles.filterOptionText, isActive ? styles.filterOptionTextActive : null]}>
 												{option.label}
@@ -402,27 +420,6 @@ const Home = () => {
 	);
 };
 
-const loadPostsData = async ({setLoading, setRefreshing, setError, setPosts, refresh = false, params}) => {
-	if (refresh) {
-		setRefreshing(true);
-	} else {
-		setLoading(true);
-	}
-	setError(null);
-	try {
-		const data = await postsService.list(params);
-		setPosts(Array.isArray(data) ? data : data?.results ?? []);
-	} catch (err) {
-		setError(err?.message || FAILED_TO_LOAD_POSTS);
-	} finally {
-		if (refresh) {
-			setRefreshing(false);
-		} else {
-			setLoading(false);
-		}
-	}
-};
-
 export default Home;
 
 const styles = StyleSheet.create({
@@ -447,11 +444,7 @@ const styles = StyleSheet.create({
 		borderWidth: 1,
 		borderColor: colors.border,
 		paddingVertical: 8,
-		shadowColor: '#1d2b64',
-		shadowOpacity: 0.14,
-		shadowRadius: 16,
-		shadowOffset: {width: 0, height: 10},
-		elevation: 4,
+		...shadows.floating,
 	},
 	filterScroll: {
 		flexGrow: 0,
@@ -522,7 +515,7 @@ const styles = StyleSheet.create({
 		width: 200,
 		height: 200,
 		borderRadius: 100,
-		backgroundColor: '#36d1dc22',
+		backgroundColor: colors.accentWash,
 		transform: [{rotate: '8deg'}],
 	},
 	menuOverlay: {
@@ -537,11 +530,7 @@ const styles = StyleSheet.create({
 		borderWidth: 1,
 		borderColor: colors.border,
 		paddingVertical: 8,
-		shadowColor: '#0f172a',
-		shadowOpacity: 0.15,
-		shadowRadius: 18,
-		shadowOffset: {width: 0, height: 10},
-		elevation: 5,
+		...shadows.floating,
 	},
 	menuItem: {
 		flexDirection: 'row',

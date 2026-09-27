@@ -3,6 +3,9 @@ import {useEffect, useRef, useState} from 'react';
 import Text from 'components/Text/Text';
 import colors from 'theme/colors';
 
+const imageUrl = (item) => typeof item === 'string' ? item : item?.url || item?.uri;
+const imageLabel = (item) => ({BEFORE: 'Przed', AFTER: 'Po'})[item?.type] || null;
+
 const ImageCarousel = ({
 	images = [],
 	width,
@@ -16,8 +19,8 @@ const ImageCarousel = ({
 	containerStyle,
 }) => {
 	const listRef = useRef(null);
-	const safeImages = Array.isArray(images) ? images.filter(Boolean) : [];
-	const [activeIndex, setActiveIndex] = useState(Math.min(initialIndex, safeImages.length - 1));
+	const safeImages = Array.isArray(images) ? images.filter((item) => Boolean(imageUrl(item))) : [];
+	const [activeIndex, setActiveIndex] = useState(Math.max(0, Math.min(initialIndex, safeImages.length - 1)));
 
 	useEffect(() => {
 		if (!listRef.current || !width || !safeImages.length) return;
@@ -41,7 +44,7 @@ const ImageCarousel = ({
 			<FlatList
 				ref={listRef}
 				data={safeImages}
-				keyExtractor={(item, index) => `${item}-${index}`}
+				keyExtractor={(item, index) => `${item?.id || imageUrl(item)}-${index}`}
 				horizontal
 				pagingEnabled
 				showsHorizontalScrollIndicator={false}
@@ -54,7 +57,8 @@ const ImageCarousel = ({
 						onPress={() => onImagePress?.(index)}
 						style={[styles.slide, {width, height}]}
 					>
-						<Image source={{uri: item}} style={[styles.image, {width, height}]} resizeMode={imageResizeMode} />
+						<Image source={{uri: imageUrl(item)}} style={[styles.image, {width, height}]} resizeMode={imageResizeMode} />
+						{imageLabel(item) ? <View style={styles.typeLabel}><Text style={styles.typeLabelText}>{imageLabel(item)}</Text></View> : null}
 					</Pressable>
 				)}
 			/>
@@ -104,7 +108,7 @@ const styles = StyleSheet.create({
 		width: 6,
 		height: 6,
 		borderRadius: 3,
-		backgroundColor: 'rgba(255,255,255,0.6)',
+		backgroundColor: colors.white,
 	},
 	dotActive: {
 		backgroundColor: colors.primary,
@@ -116,11 +120,21 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 8,
 		paddingVertical: 4,
 		borderRadius: 999,
-		backgroundColor: 'rgba(15, 23, 42, 0.7)',
+		backgroundColor: colors.backdrop,
 	},
 	counterText: {
-		color: '#fff',
+		color: colors.white,
 		fontSize: 12,
 		fontWeight: '700',
 	},
+	typeLabel: {
+		position: 'absolute',
+		top: 12,
+		left: 12,
+		paddingHorizontal: 10,
+		paddingVertical: 5,
+		borderRadius: 999,
+		backgroundColor: colors.backdrop,
+	},
+	typeLabelText: {color: colors.white, fontSize: 12, fontWeight: '700'},
 });

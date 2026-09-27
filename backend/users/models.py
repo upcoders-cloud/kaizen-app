@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 import random
@@ -6,6 +7,15 @@ import random
 class Department(models.Model):
     name = models.CharField(max_length=100, unique=True, verbose_name="Nazwa działu")
     is_active = models.BooleanField(default=True, verbose_name="Czy aktywny?")
+    lead = models.ForeignKey(
+        'users.CustomUser',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='led_departments',
+        verbose_name='Lider działu',
+        help_text='Lider zespołu akceptujący pomysły pracowników działu (pierwszy etap).',
+    )
 
     class Meta:
         verbose_name = "Dział"
@@ -14,6 +24,28 @@ class Department(models.Model):
 
     def __str__(self):
         return self.name
+
+    def clean(self):
+        super().clean()
+        if self.lead_id:
+            error = department_lead_error(self.lead, self.pk)
+            if error:
+                raise ValidationError({'lead': error})
+
+
+def department_lead_error(lead, department_id):
+    """Komunikat, dlaczego `lead` nie może być liderem działu `department_id`, albo None.
+
+    Lider akceptuje pierwszy etap pomysłów pracowników działu, więc musi mieć rolę
+    TEAM_LEAD, być aktywny i należeć do tego działu.
+    """
+    if lead.role != CustomUser.Role.TEAM_LEAD:
+        return 'Lider działu musi mieć rolę lidera zespołu.'
+    if not lead.is_active:
+        return 'Lider działu musi mieć aktywne konto.'
+    if department_id is None or lead.department_id != department_id:
+        return 'Lider działu musi należeć do tego działu.'
+    return None
 
 
 class CustomUser(AbstractUser):

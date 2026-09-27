@@ -4,7 +4,7 @@ import Text from 'components/Text/Text';
 import colors from 'theme/colors';
 
 const formatDate = (value) => {
-	if (!value) return '—';
+	if (!value) return '-';
 	try {
 		return new Date(value).toLocaleDateString('pl-PL', {day: '2-digit', month: 'short', year: 'numeric'});
 	} catch (err) {
@@ -13,7 +13,7 @@ const formatDate = (value) => {
 };
 
 const formatCost = (value) => {
-	if (value == null || value === '') return '—';
+	if (value == null || value === '') return '-';
 	const number = Number(value);
 	if (!Number.isFinite(number)) return String(value);
 	return `${number.toLocaleString('pl-PL', {minimumFractionDigits: 0, maximumFractionDigits: 2})} zł`;
@@ -35,7 +35,7 @@ const deadlineMeta = (diff) => {
 	if (diff == null) return {color: colors.muted, text: ''};
 	if (diff < 0) return {color: colors.danger, text: `${Math.abs(diff)} dni po terminie`};
 	if (diff === 0) return {color: colors.danger, text: 'Dziś'};
-	if (diff <= 7) return {color: '#d97706', text: `Za ${diff} dni`};
+	if (diff <= 7) return {color: colors.warning, text: `Za ${diff} dni`};
 	return {color: colors.muted, text: `Za ${diff} dni`};
 };
 

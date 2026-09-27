@@ -139,7 +139,7 @@ export default ApproveDecisionModal;
 const styles = StyleSheet.create({
 	overlay: {
 		flex: 1,
-		backgroundColor: 'rgba(15, 23, 42, 0.45)',
+		backgroundColor: colors.backdrop,
 		justifyContent: 'center',
 		paddingHorizontal: 24,
 	},
@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 6,
 		paddingVertical: 2,
 		borderRadius: 6,
-		backgroundColor: '#fee2e2',
+		backgroundColor: colors.dangerSoft,
 	},
 	requiredBadgeText: {
 		fontSize: 10,

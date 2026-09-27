@@ -3,6 +3,8 @@ import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import colors from 'theme/colors';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useAuthStore} from 'store/authStore';
+import {radius, shadows} from 'theme/theme';
 
 const LEFT_TAB_NAMES = ['index', 'ranking'];
 const RIGHT_TAB_NAMES = ['my-cases', 'menu'];
@@ -13,6 +15,9 @@ const CREATE_BUTTON_SIZE = 60;
 
 const TabsLayout = () => {
 	const insets = useSafeAreaInsets();
+	const user = useAuthStore((state) => state.user);
+	const isApprover = Boolean(user?.permissions?.is_approver || user?.is_staff || user?.is_superuser ||
+		['TEAM_LEAD', 'MANAGER', 'DIRECTOR'].includes(user?.role));
 
 	return (
 		<Tabs
@@ -25,7 +30,7 @@ const TabsLayout = () => {
 			<Tabs.Screen
 				name="index"
 				options={{
-					title: 'Główna',
+					title: 'Pomysły',
 					tabBarIcon: ({color}) => <Feather name="home" size={ICON_SIZE} color={color} />,
 				}}
 			/>
@@ -40,15 +45,15 @@ const TabsLayout = () => {
 				name="create"
 				options={{
 					title: 'Dodaj',
-					tabBarIcon: () => <Feather name="edit-3" size={CREATE_ICON_SIZE} color={colors.surface} />,
+					tabBarIcon: () => <Feather name="plus" size={CREATE_ICON_SIZE} color={colors.surface} />,
 				}}
 			/>
 			<Tabs.Screen
 				name="my-cases"
 				options={{
-					title: 'Moje sprawy',
+					title: isApprover ? 'Akceptacje' : 'Moje sprawy',
 					href: '/my-cases',
-					tabBarIcon: ({color}) => <Feather name="clipboard" size={ICON_SIZE} color={color} />,
+					tabBarIcon: ({color}) => <Feather name={isApprover ? 'check-circle' : 'clipboard'} size={ICON_SIZE} color={color} />,
 				}}
 			/>
 			<Tabs.Screen
@@ -90,6 +95,9 @@ const SideTabButton = ({route, isFocused, descriptor, navigation}) => {
 	return (
 		<Pressable
 			onPress={onPress}
+			accessibilityRole="tab"
+			accessibilityLabel={label}
+			accessibilityState={{selected: isFocused}}
 			style={({pressed}) => [styles.sideButton, pressed ? styles.sideButtonPressed : null]}
 			hitSlop={6}
 		>
@@ -145,13 +153,16 @@ const ModernTabBar = ({state, descriptors, navigation, bottomInset}) => {
 				<View style={styles.centerSlot} pointerEvents="box-none">
 					<Pressable
 						onPress={onPressCreate}
+						accessibilityRole="tab"
+						accessibilityLabel="Dodaj pomysł"
+						accessibilityState={{selected: isCreateFocused}}
 						style={({pressed}) => [
 							styles.createButton,
 							isCreateFocused ? styles.createButtonActive : null,
 							pressed ? styles.createButtonPressed : null,
 						]}
 					>
-						<Feather name="edit-3" size={CREATE_ICON_SIZE} color={colors.surface} />
+						<Feather name="plus" size={CREATE_ICON_SIZE} color={colors.surface} />
 					</Pressable>
 				</View>
 				<View style={styles.sideZone}>{rightTabs.map(renderSideTab)}</View>
@@ -164,24 +175,22 @@ export default TabsLayout;
 
 const styles = StyleSheet.create({
 	outerContainer: {
-		paddingHorizontal: 14,
+		paddingHorizontal: 10,
 		paddingTop: 8,
+		zIndex: 20,
+		elevation: 20,
 		backgroundColor: 'transparent',
 	},
 	tabBar: {
 		flexDirection: 'row',
 		alignItems: 'center',
 		backgroundColor: colors.surface,
-		borderRadius: 28,
+		borderRadius: radius.xl,
 		borderWidth: 1,
 		borderColor: colors.border,
 		paddingVertical: 10,
 		paddingHorizontal: 8,
-		shadowColor: '#0f172a',
-		shadowOpacity: 0.10,
-		shadowRadius: 18,
-		shadowOffset: {width: 0, height: 8},
-		elevation: 10,
+		...shadows.floating,
 	},
 	sideZone: {
 		flex: 1,
@@ -193,9 +202,9 @@ const styles = StyleSheet.create({
 		alignItems: 'center',
 		justifyContent: 'center',
 		paddingVertical: 4,
-		paddingHorizontal: 8,
+		paddingHorizontal: 3,
 		gap: 3,
-		minWidth: 56,
+		minWidth: 52,
 	},
 	sideButtonPressed: {
 		opacity: 0.6,
@@ -206,7 +215,7 @@ const styles = StyleSheet.create({
 		borderRadius: 14,
 	},
 	iconWrapActive: {
-		backgroundColor: '#eef2ff',
+		backgroundColor: colors.primarySoft,
 	},
 	sideLabel: {
 		fontSize: 10,
@@ -219,7 +228,7 @@ const styles = StyleSheet.create({
 		fontWeight: '700',
 	},
 	centerSlot: {
-		width: 76,
+		width: 68,
 		alignItems: 'center',
 		justifyContent: 'center',
 	},
@@ -230,17 +239,13 @@ const styles = StyleSheet.create({
 		backgroundColor: colors.primary,
 		alignItems: 'center',
 		justifyContent: 'center',
-		shadowColor: '#1d2b64',
-		shadowOpacity: 0.32,
-		shadowRadius: 14,
-		shadowOffset: {width: 0, height: 8},
-		elevation: 10,
+		...shadows.floating,
 		transform: [{translateY: -22}],
 		borderWidth: 4,
 		borderColor: colors.background,
 	},
 	createButtonActive: {
-		backgroundColor: '#243474',
+		backgroundColor: colors.accent,
 	},
 	createButtonPressed: {
 		transform: [{translateY: -20}, {scale: 0.94}],

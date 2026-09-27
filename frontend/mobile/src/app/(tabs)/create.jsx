@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
 		width: 240,
 		height: 240,
 		borderRadius: 120,
-		backgroundColor: '#36d1dc22',
+		backgroundColor: colors.accentWash,
 		transform: [{rotate: '-6deg'}],
 	},
 });

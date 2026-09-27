@@ -1,15 +1,18 @@
-import {FlatList, RefreshControl, StyleSheet, Text, View} from 'react-native';
+import {ActivityIndicator, FlatList, RefreshControl, StyleSheet, View} from 'react-native';
 import Post from './Post';
 import PostListSkeleton from './PostSkeleton';
 import colors from 'theme/colors';
+import {EmptyState, ErrorState} from 'components/ui';
 
 const PostList = ({
 	posts = [],
 	loading = false,
 	refreshing = false,
+	loadingMore = false,
 	error = null,
 	emptyText = 'Brak postów do wyświetlenia.',
 	onRefresh,
+	onEndReached,
 	onPressItem,
 	onToggleLike,
 	onToggleBookmark,
@@ -24,9 +27,7 @@ const PostList = ({
 
 	if (error) {
 		return (
-			<View style={styles.centered}>
-				<Text style={styles.error}>Error: {error}</Text>
-			</View>
+			<ErrorState description={error} onRetry={onRefresh} style={styles.centered} />
 		);
 	}
 
@@ -49,7 +50,10 @@ const PostList = ({
 				/>
 			)}
 			contentContainerStyle={posts.length ? styles.listContent : styles.centered}
-			ListEmptyComponent={<Text style={styles.muted}>{emptyText}</Text>}
+			ListEmptyComponent={<EmptyState icon="lightbulb" title="Brak pomysłów" description={emptyText} />}
+			ListFooterComponent={loadingMore ? <ActivityIndicator color={colors.primary} style={styles.moreLoader} /> : null}
+			onEndReached={onEndReached}
+			onEndReachedThreshold={0.4}
 			showsVerticalScrollIndicator={false}
 			refreshControl={
 				onRefresh ? (
@@ -75,13 +79,5 @@ const styles = StyleSheet.create({
 		paddingBottom: 24,
 		gap: 12,
 	},
-	muted: {
-		color: colors.muted,
-		marginTop: 8,
-	},
-	error: {
-		color: colors.danger,
-		fontSize: 15,
-		textAlign: 'center',
-	},
+	moreLoader: {marginVertical: 16},
 });

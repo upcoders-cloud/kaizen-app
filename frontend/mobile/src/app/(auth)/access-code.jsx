@@ -119,7 +119,7 @@ const AccessCode = () => {
 				onPress={handleCodeLogin}
 				loading={loading}
 				disabled={loading}
-				leftIcon={<Feather name="key" size={16} color="#ffffff" />}
+				leftIcon={<Feather name="key" size={16} color={colors.white} />}
 			/>
 		</AuthScreenLayout>
 	);

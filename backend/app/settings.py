@@ -61,6 +61,7 @@ INSTALLED_APPS = [
     'access_control',
     'gamification',
     'analytics',
+    'admin_api',
     'app',
 ]
 
@@ -74,6 +75,7 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticatedOrReadOnly',
     ),
+    'EXCEPTION_HANDLER': 'app.exceptions.exception_handler',
     'DEFAULT_THROTTLE_RATES': {
         'access_code_login': '5/min',
     },
@@ -212,6 +214,14 @@ DATABASES = {
         # PoC SQLite3, później PostgreSQL
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
+        # SQLite ignoruje SELECT FOR UPDATE. BEGIN IMMEDIATE bierze blokadę zapisu na starcie
+        # każdej transakcji (atomic), więc transakcje zapisu (saldo, wymiany, decyzje) wykonują się
+        # po kolei. `timeout` = ile sekund czekać na blokadę, potem "database is locked" -> 409
+        # (app/exceptions.py). Na PostgreSQL te same ścieżki serializuje select_for_update().
+        'OPTIONS': {
+            'transaction_mode': 'IMMEDIATE',
+            'timeout': 20,
+        },
     }
 }
 
@@ -236,7 +246,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'pl'  # komunikaty walidacji DRF/Django po polsku (zwracane do UI)
 
 TIME_ZONE = 'UTC'
 

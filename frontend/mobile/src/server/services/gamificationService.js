@@ -8,8 +8,14 @@ const gamificationService = {
 	me() {
 		return httpClient.get(`${basePath}me/`, withAuthHeaders());
 	},
-	leaderboard({scope = 'users', period = 'all', limit = 20} = {}) {
-		return httpClient.get(`${basePath}leaderboard/`, withAuthHeaders({params: {scope, period, limit}}));
+	leaderboard({scope = 'users', period = 'all', limit = 20, department} = {}) {
+		return httpClient.get(`${basePath}leaderboard/`, withAuthHeaders({params: {scope, period, limit, department}}));
+	},
+	badges() {
+		return httpClient.get(`${basePath}badges/`, withAuthHeaders());
+	},
+	user(userId) {
+		return httpClient.get(`${basePath}users/${userId}/`, withAuthHeaders());
 	},
 	rewards() {
 		return httpClient.get(`${basePath}rewards/`, withAuthHeaders());

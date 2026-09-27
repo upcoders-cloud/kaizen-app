@@ -1,36 +1,83 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Panel web Kaizen
 
-## Getting Started
+Panel desktopowy do zgłaszania, akceptowania i wdrażania pomysłów usprawniających oraz do analityki i administracji. Aplikacja komunikuje się z API Django pod prefiksem `/api` przy użyciu JWT Bearer.
 
-First, run the development server:
+## Technologie
+
+- Next.js 16 (App Router), React 19 i TypeScript
+- Tailwind CSS 4, komponenty projektu w `src/components/ui/`, Geist, Lucide i Framer Motion
+- Axios do komunikacji z API, TanStack React Query do pobierania danych i zarządzania stanem żądań
+- Recharts do wykresów, date-fns do dat
+
+## Uruchomienie lokalne
+
+Uruchom backend zgodnie z [`backend/README.md`](../../backend/README.md). Następnie, z katalogu `frontend/web`:
+
+```bash
+npm install
+```
+
+Utwórz plik `.env.local`:
+
+```dotenv
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+```
+
+Podaj adres serwera backendu **bez** końcowego `/api`. Domyślna wartość przy braku zmiennej to `http://localhost:8000`.
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Otwórz [http://localhost:3000](http://localhost:3000). Pozostałe polecenia: `npm run build`, `npm run start`, `npm run lint`, `npx tsc --noEmit`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Struktura katalogów
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```text
+src/
+  app/
+    (app)/               strony zalogowane i współdzielona powłoka
+    login/               ekran logowania
+    globals.css          tokeny i globalne style
+    layout.tsx           główny layout i providery
+  components/
+    ui/                  design system
+    layout/              nawigacja i powłoka aplikacji
+    ideas/               karty i elementy pomysłów
+    notifications/       elementy list powiadomień i pomysłów
+    admin/, charts/      administracja i wykresy
+  lib/                   klient API, autoryzacja, role, typy i funkcje domenowe
+```
 
-## Learn More
+Nazwy w nawiasach, np. `(app)`, to grupy routingu Next.js i nie pojawiają się w adresie URL. `/` przekierowuje na `/feed`. Docelowy zakres tras opisuje [plan zespołu](../../docs/team/PLAN.md); część sekcji może być jeszcze w trakcie implementacji.
 
-To learn more about Next.js, take a look at the following resources:
+## Role i sekcje
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Role konta: `EMPLOYEE` (pracownik), `TEAM_LEAD` (lider zespołu), `MANAGER` (kierownik), `DIRECTOR` (dyrektor). Administrator to konto z `is_staff` lub `is_superuser`, niezależnie od roli. Dostęp zgodnie z planem:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Sekcja | Pracownik | Lider zespołu | Kierownik | Dyrektor | Administrator |
+|---|:---:|:---:|:---:|:---:|:---:|
+| `/feed` - Feed pomysłów | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `/ideas/new` - Nowy pomysł | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `/ideas/[id]` - Szczegóły | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `/my-ideas` - Moje pomysły | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `/bookmarks` - Zapisane | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `/notifications` - Powiadomienia | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `/profile`, `/profile/[id]` - Profil | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `/leaderboard` - Ranking | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `/rewards` - Nagrody | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `/impact` - Mój wkład | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `/approvals` - Do akceptacji |  | ✓ | ✓ | ✓ | ✓ |
+| `/team` - Mój zespół |  | ✓ | ✓ | ✓ | ✓ |
+| `/implementation` - Realizacja |  |  | ✓ | ✓ | ✓ |
+| `/dashboard` - Przegląd organizacji |  |  | ✓ | ✓ | ✓ |
+| `/departments` - Działy |  |  | ✓ | ✓ | ✓ |
+| `/reports` - Raporty |  |  | ✓ | ✓ | ✓ |
+| `/admin/users` - Użytkownicy |  |  |  |  | ✓ |
+| `/admin/structure` - Działy i kategorie |  |  |  |  | ✓ |
+| `/admin/rewards` - Nagrody i wymiany |  |  |  |  | ✓ |
+| `/admin/gamification` - Punkty, odznaki, poziomy |  |  |  |  | ✓ |
 
-## Deploy on Vercel
+## Design system
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Komponenty importuj z `@/components/ui` lub bezpośrednio z modułów w `src/components/ui/`. Używaj tokenów z `src/app/globals.css` zamiast kolorów wpisywanych na sztywno. Szczegóły API komponentów, motywu jasnego i ciemnego oraz formatowania danych są w [docs/team/WEB-UI.md](../../docs/team/WEB-UI.md).

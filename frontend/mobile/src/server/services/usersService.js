@@ -9,9 +9,15 @@ const usersService = {
 		const options = withAuthHeaders({params});
 		return httpClient.get(`${basePath}managers/`, options);
 	},
+	listApprovers(params) {
+		return httpClient.get(`${basePath}approvers/`, withAuthHeaders({params}));
+	},
 	me() {
 		const options = withAuthHeaders();
 		return httpClient.get(`${basePath}me/`, options);
+	},
+	get(userId) {
+		return httpClient.get(`${basePath}${userId}/`, withAuthHeaders());
 	},
 	updateMe(payload) {
 		const options = withAuthHeaders();

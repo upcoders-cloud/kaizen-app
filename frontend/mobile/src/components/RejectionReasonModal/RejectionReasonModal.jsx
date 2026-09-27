@@ -78,7 +78,7 @@ export default RejectionReasonModal;
 const styles = StyleSheet.create({
 	overlay: {
 		flex: 1,
-		backgroundColor: 'rgba(15, 23, 42, 0.3)',
+		backgroundColor: colors.backdrop,
 		justifyContent: 'center',
 		alignItems: 'center',
 		padding: 24,
@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
 		borderRadius: 16,
 		padding: 20,
 		gap: 12,
-		shadowColor: '#1d2b64',
+		shadowColor: colors.primary,
 		shadowOpacity: 0.14,
 		shadowRadius: 14,
 		shadowOffset: {width: 0, height: 8},
@@ -123,6 +123,6 @@ const styles = StyleSheet.create({
 		borderColor: colors.danger,
 	},
 	rejectButtonText: {
-		color: '#fff',
+		color: colors.white,
 	},
 });

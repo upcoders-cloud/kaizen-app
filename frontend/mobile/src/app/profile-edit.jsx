@@ -1,5 +1,5 @@
 import {useState} from 'react';
-import {Alert, Image, Pressable, ScrollView, StyleSheet, View} from 'react-native';
+import {Alert, Pressable, ScrollView, StyleSheet, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {Feather} from '@expo/vector-icons';
 import {useRouter} from 'expo-router';
@@ -13,6 +13,7 @@ import colors from 'theme/colors';
 import usersService from 'src/server/services/usersService';
 import {useAuthStore} from 'store/authStore';
 import {SPACE} from 'constants/constans';
+import {Avatar, Card} from 'components/ui';
 
 const GENDER_OPTIONS = [
 	{key: 'male', label: 'Mężczyzna'},
@@ -131,15 +132,7 @@ const ProfileEdit = () => {
 				</View>
 
 				<View style={styles.avatarSection}>
-					<View style={styles.avatarWrapper}>
-						{avatarPreview ? (
-							<Image source={{uri: avatarPreview}} style={styles.avatar} />
-						) : (
-							<View style={styles.avatarPlaceholder}>
-								<Text style={styles.avatarInitials}>{initials}</Text>
-							</View>
-						)}
-					</View>
+					<Avatar name={fullName || user?.username || initials} uri={avatarPreview} size={100} />
 					<View style={styles.avatarActions}>
 						<Pressable style={styles.avatarButton} onPress={handlePickAvatar}>
 							<Feather name="camera" size={14} color={colors.primary} />
@@ -154,7 +147,7 @@ const ProfileEdit = () => {
 					</View>
 				</View>
 
-				<View style={styles.card}>
+				<Card style={styles.card} padded={false}>
 					<Input
 						label="Pseudonim"
 						value={nickname}
@@ -194,7 +187,7 @@ const ProfileEdit = () => {
 							);
 						})}
 					</View>
-				</View>
+				</Card>
 
 				<View style={styles.actions}>
 					<Button

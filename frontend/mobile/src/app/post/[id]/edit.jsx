@@ -51,6 +51,7 @@ const EditPostRoute = () => {
 			? imageItems.map((item) => ({
 				id: item.id,
 				uri: item.url,
+				type: item.type || 'GENERAL',
 				isExisting: true,
 			}))
 			: fallbackUrls.map((url) => ({
@@ -131,7 +132,7 @@ const styles = StyleSheet.create({
 		width: 240,
 		height: 240,
 		borderRadius: 120,
-		backgroundColor: '#36d1dc22',
+		backgroundColor: colors.accentWash,
 		transform: [{rotate: '-6deg'}],
 	},
 	centered: {

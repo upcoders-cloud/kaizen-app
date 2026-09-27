@@ -6,6 +6,8 @@ import {useRef} from 'react';
 import ConfettiCannon from 'react-native-confetti-cannon';
 import colors from 'theme/colors';
 import Text from 'components/Text/Text';
+import {Card} from 'components/ui';
+import {radius, spacing} from 'theme/theme';
 
 const UNIT_LABELS = {DAY: 'Dziennie', WEEK: 'Tygodniowo', MONTH: 'Miesięcznie'};
 const UNIT_MULTIPLIER_LABELS = {DAY: '× 22 dni', WEEK: '× 4 tyg.', MONTH: '× 1'};
@@ -59,7 +61,7 @@ const SurveyResults = () => {
 				<ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
 					<View style={styles.successBanner}>
 						<View style={styles.successIcon}>
-							<Feather name="check" size={24} color="#fff" />
+							<Feather name="check" size={24} color={colors.white} />
 						</View>
 						<Text style={styles.successTitle}>Ankieta zapisana</Text>
 						<Text style={styles.successSubtitle}>
@@ -67,7 +69,7 @@ const SurveyResults = () => {
 						</Text>
 					</View>
 
-					<View style={styles.resultsCard}>
+					<Card style={styles.resultsCard} padded={false}>
 						<Text style={styles.resultsTitle}>Oszczędności / miesiąc</Text>
 						<View style={styles.resultsRow}>
 							<View style={styles.resultItem}>
@@ -77,17 +79,17 @@ const SurveyResults = () => {
 							</View>
 							<View style={styles.resultDivider} />
 							<View style={styles.resultItem}>
-								<Feather name="trending-up" size={20} color="#16a34a" />
+								<Feather name="trending-up" size={20} color={colors.success} />
 								<Text style={[styles.resultValue, styles.resultValueGreen]}>
 									{savingsLabel} PLN
 								</Text>
 								<Text style={styles.resultLabel}>Oszczędności</Text>
 							</View>
 						</View>
-					</View>
+					</Card>
 
 					{hasBreakdown ? (
-						<View style={styles.breakdownCard}>
+						<Card style={styles.breakdownCard} padded={false}>
 							<Text style={styles.breakdownTitle}>Jak to wyliczyliśmy?</Text>
 
 							<View style={styles.inputsGrid}>
@@ -119,11 +121,11 @@ const SurveyResults = () => {
 									= {hoursLabel} h × 60 PLN/h = {savingsLabel} PLN
 								</Text>
 							</View>
-						</View>
+						</Card>
 					) : null}
 
 					<Pressable style={styles.closeButton} onPress={handleClose}>
-						<Feather name="arrow-left" size={16} color="#fff" />
+						<Feather name="arrow-left" size={16} color={colors.white} />
 						<Text style={styles.closeText}>Wróć do zgłoszenia</Text>
 					</Pressable>
 				</ScrollView>
@@ -162,10 +164,10 @@ const styles = StyleSheet.create({
 		backgroundColor: colors.background,
 	},
 	container: {
-		paddingHorizontal: 16,
+		paddingHorizontal: spacing.lg,
 		paddingTop: 12,
 		paddingBottom: 32,
-		gap: 16,
+		gap: spacing.lg,
 	},
 	successBanner: {
 		alignItems: 'center',
@@ -177,7 +179,7 @@ const styles = StyleSheet.create({
 		width: 52,
 		height: 52,
 		borderRadius: 26,
-		backgroundColor: '#16a34a',
+		backgroundColor: colors.success,
 		alignItems: 'center',
 		justifyContent: 'center',
 		marginBottom: 4,
@@ -197,10 +199,10 @@ const styles = StyleSheet.create({
 	resultsCard: {
 		gap: 14,
 		padding: 18,
-		borderRadius: 14,
-		backgroundColor: '#f0f4ff',
+		borderRadius: radius.lg,
+		backgroundColor: colors.primarySoft,
 		borderWidth: 1,
-		borderColor: '#c7d2fe',
+		borderColor: colors.borderStrong,
 	},
 	resultsTitle: {
 		fontSize: 13,
@@ -221,7 +223,7 @@ const styles = StyleSheet.create({
 	resultDivider: {
 		width: 1,
 		height: 48,
-		backgroundColor: '#c7d2fe',
+		backgroundColor: colors.borderStrong,
 	},
 	resultValue: {
 		fontSize: 24,
@@ -229,7 +231,7 @@ const styles = StyleSheet.create({
 		color: colors.primary,
 	},
 	resultValueGreen: {
-		color: '#16a34a',
+		color: colors.success,
 	},
 	resultLabel: {
 		fontSize: 12,
@@ -239,7 +241,7 @@ const styles = StyleSheet.create({
 	breakdownCard: {
 		gap: 14,
 		padding: 16,
-		borderRadius: 14,
+		borderRadius: radius.lg,
 		backgroundColor: colors.surface,
 		borderWidth: 1,
 		borderColor: colors.border,
@@ -261,7 +263,7 @@ const styles = StyleSheet.create({
 		width: 26,
 		height: 26,
 		borderRadius: 13,
-		backgroundColor: '#e0e7ff',
+		backgroundColor: colors.primarySoft,
 		alignItems: 'center',
 		justifyContent: 'center',
 	},
@@ -299,7 +301,7 @@ const styles = StyleSheet.create({
 	formulaResult: {
 		fontSize: 14,
 		fontWeight: '700',
-		color: '#16a34a',
+		color: colors.success,
 	},
 	closeButton: {
 		flexDirection: 'row',
@@ -314,7 +316,7 @@ const styles = StyleSheet.create({
 		marginTop: 4,
 	},
 	closeText: {
-		color: '#fff',
+		color: colors.white,
 		fontWeight: '700',
 		fontSize: 15,
 	},

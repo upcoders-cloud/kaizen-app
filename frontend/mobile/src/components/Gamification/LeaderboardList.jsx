@@ -2,13 +2,14 @@ import {StyleSheet, View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import Text from 'components/Text/Text';
 import colors from 'theme/colors';
+import {Card, EmptyState} from 'components/ui';
 
-const MEDALS = ['#f59e0b', '#94a3b8', '#b45309'];
+const MEDALS = [colors.medalGold, colors.medalSilver, colors.medalBronze];
 
 const Row = ({rank, title, subtitle, points, highlight}) => {
 	const medalColor = rank <= 3 ? MEDALS[rank - 1] : null;
 	return (
-		<View style={[styles.row, highlight ? styles.rowHighlight : null]}>
+		<Card style={[styles.row, highlight ? styles.rowHighlight : null]} padded={false}>
 			<View style={[styles.rankCircle, medalColor ? {backgroundColor: medalColor} : null]}>
 				<Text style={[styles.rankText, medalColor ? styles.rankTextMedal : null]}>{rank}</Text>
 			</View>
@@ -20,13 +21,13 @@ const Row = ({rank, title, subtitle, points, highlight}) => {
 				<Feather name="star" size={12} color={colors.primary} />
 				<Text style={styles.points}>{points}</Text>
 			</View>
-		</View>
+		</Card>
 	);
 };
 
 const LeaderboardList = ({scope, rows = [], currentUserId}) => {
 	if (!rows.length) {
-		return <Text style={styles.empty}>Brak danych w tym okresie.</Text>;
+		return <EmptyState icon="users" title="Brak wyników" description="W tym okresie nie ma jeszcze punktów do porównania." />;
 	}
 	return (
 		<View style={styles.list}>
@@ -35,8 +36,8 @@ const LeaderboardList = ({scope, rows = [], currentUserId}) => {
 					return (
 						<Row
 							key={`cat-${i}-${r.category ?? ''}`}
-							rank={i + 1}
-							title={r.category}
+							rank={r.rank ?? i + 1}
+							title={r.category?.name || r.category}
 							points={r.points}
 						/>
 					);
@@ -45,8 +46,8 @@ const LeaderboardList = ({scope, rows = [], currentUserId}) => {
 					return (
 						<Row
 							key={`dep-${i}-${r.department_id ?? ''}`}
-							rank={i + 1}
-							title={r.department}
+							rank={r.rank ?? i + 1}
+							title={r.department?.name || r.department}
 							points={r.points}
 						/>
 					);
@@ -58,7 +59,7 @@ const LeaderboardList = ({scope, rows = [], currentUserId}) => {
 				return (
 					<Row
 						key={`usr-${i}-${u.id ?? ''}`}
-						rank={i + 1}
+						rank={r.rank ?? i + 1}
 						title={name}
 						subtitle={r.level?.name ? `${r.level.name}` : (u.nickname ? `@${u.nickname}` : null)}
 						points={r.points}
@@ -87,7 +88,7 @@ const styles = StyleSheet.create({
 	},
 	rowHighlight: {
 		borderColor: colors.primary,
-		backgroundColor: '#eef2ff',
+		backgroundColor: colors.primarySoft,
 	},
 	rankCircle: {
 		width: 28,
@@ -98,7 +99,7 @@ const styles = StyleSheet.create({
 		backgroundColor: colors.placeholderSurface,
 	},
 	rankText: {fontSize: 13, fontWeight: '800', color: colors.muted},
-	rankTextMedal: {color: '#fff'},
+	rankTextMedal: {color: colors.white},
 	title: {fontSize: 14, fontWeight: '700', color: colors.text},
 	subtitle: {fontSize: 12, color: colors.muted, marginTop: 1},
 	pointsPill: {
@@ -108,7 +109,7 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 10,
 		paddingVertical: 5,
 		borderRadius: 999,
-		backgroundColor: '#eef2ff',
+		backgroundColor: colors.primarySoft,
 	},
 	points: {fontSize: 13, fontWeight: '800', color: colors.primary},
 	empty: {color: colors.muted, textAlign: 'center', paddingVertical: 24},

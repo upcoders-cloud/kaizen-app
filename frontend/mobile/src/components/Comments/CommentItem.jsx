@@ -1,4 +1,4 @@
-import {Alert, Animated, Easing, LayoutAnimation, Pressable, StyleSheet, View} from 'react-native';
+import {Alert, Animated, Easing, LayoutAnimation, StyleSheet, View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import {useEffect, useRef, useState} from 'react';
 import Button from 'components/Button/Button';
@@ -6,6 +6,7 @@ import Input from 'components/Input/Input';
 import Text from 'components/Text/Text';
 import colors from 'theme/colors';
 import {splitMentions} from 'utils/mentions';
+import {Avatar, IconButton} from 'components/ui';
 
 const MentionText = ({value, style}) => {
 	const segments = splitMentions(value);
@@ -28,7 +29,7 @@ const MentionText = ({value, style}) => {
 const formatDate = (value) => {
 	if (!value) return '';
 	const date = new Date(value);
-	return date.toLocaleString(undefined, {day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'});
+	return date.toLocaleString('pl-PL', {day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'});
 };
 
 const CommentItem = ({
@@ -43,17 +44,16 @@ const CommentItem = ({
 	isReply = false,
 	replyToNickname = null,
 }) => {
-	if (!comment) return null;
 	const [isEditing, setIsEditing] = useState(false);
-	const [draft, setDraft] = useState(comment.text ?? '');
+	const [draft, setDraft] = useState(comment?.text ?? '');
 	const [error, setError] = useState(null);
 	const [isPaddingActive, setIsPaddingActive] = useState(false);
 	const highlightOpacity = useRef(new Animated.Value(0)).current;
 	const highlightInset = isPaddingActive ? 8 : 0;
 
 	useEffect(() => {
-		setDraft(comment.text ?? '');
-	}, [comment.text]);
+		setDraft(comment?.text ?? '');
+	}, [comment?.text]);
 
 	useEffect(() => {
 		if (!isHighlighted) return;
@@ -128,6 +128,7 @@ const CommentItem = ({
 	};
 
 	const actionsDisabled = isUpdating || isDeleting;
+	if (!comment) return null;
 	return (
 		<View style={[styles.container, isReply ? styles.containerReply : null]}>
 			<Animated.View
@@ -145,7 +146,7 @@ const CommentItem = ({
 				<View style={styles.header}>
 					<View style={styles.authorBlock}>
 						<View style={styles.authorRow}>
-							<Feather name="user" size={14} color={colors.muted} />
+							<Avatar name={comment.author?.nickname || 'Anonim'} uri={comment.author?.avatar_url} size={26} />
 							<Text style={styles.author} numberOfLines={1}>
 								{comment.author?.nickname || 'Anonim'}
 							</Text>
@@ -164,30 +165,10 @@ const CommentItem = ({
 					</View>
 					<View style={styles.metaRow}>
 						{onReply ? (
-							<Pressable
-								onPress={() => onReply(comment)}
-								disabled={actionsDisabled}
-								hitSlop={8}
-								style={({pressed}) => [
-									styles.iconButton,
-									pressed && !actionsDisabled ? styles.iconButtonPressed : null,
-								]}
-							>
-								<Feather name="message-circle" size={14} color={colors.primary} />
-							</Pressable>
+							<IconButton icon="message-circle" size={15} onPress={() => onReply(comment)} disabled={actionsDisabled} accessibilityLabel="Odpowiedz na komentarz" />
 						) : null}
 						{isOwner ? (
-							<Pressable
-								onPress={handleOpenMenu}
-								disabled={actionsDisabled}
-								hitSlop={8}
-								style={({pressed}) => [
-									styles.iconButton,
-									pressed && !actionsDisabled ? styles.iconButtonPressed : null,
-								]}
-							>
-								<Feather name="more-vertical" size={16} color={colors.muted} />
-							</Pressable>
+							<IconButton icon="more-vertical" size={16} color={colors.muted} onPress={handleOpenMenu} disabled={actionsDisabled} accessibilityLabel="Więcej akcji komentarza" />
 						) : null}
 					</View>
 				</View>
@@ -292,7 +273,7 @@ const styles = StyleSheet.create({
 	date: {
 		fontSize: 12,
 		color: colors.muted,
-		marginLeft: 20,
+		marginLeft: 32,
 	},
 	text: {
 		fontSize: 14,
@@ -346,8 +327,8 @@ const styles = StyleSheet.create({
 	},
 	highlightOverlay: {
 		...StyleSheet.absoluteFillObject,
-		backgroundColor: '#e7f3ff',
-		borderColor: '#c7e2ff',
+		backgroundColor: colors.primarySoft,
+		borderColor: colors.borderStrong,
 		borderRadius: 10,
 		borderWidth: 1,
 	},

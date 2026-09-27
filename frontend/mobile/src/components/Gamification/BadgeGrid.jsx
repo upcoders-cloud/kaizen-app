@@ -2,19 +2,21 @@ import {StyleSheet, View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import Text from 'components/Text/Text';
 import colors from 'theme/colors';
+import {Card, EmptyState} from 'components/ui';
 
 const TIER_COLOR = {
-	BRONZE: '#b45309',
-	SILVER: '#64748b',
-	GOLD: '#f59e0b',
+	BRONZE: colors.medalBronze,
+	SILVER: colors.medalSilver,
+	GOLD: colors.medalGold,
 };
 
 const BadgeCell = ({item}) => {
-	const b = item.badge;
+	const b = item.badge || item;
 	const earned = item.earned;
 	const tint = earned ? (TIER_COLOR[b.tier] || colors.primary) : colors.mutedAlt;
+	const progress = Math.max(0, Math.min(1, item.progress || 0));
 	return (
-		<View style={[styles.cell, earned ? styles.cellEarned : styles.cellLocked]}>
+		<Card style={[styles.cell, earned ? styles.cellEarned : styles.cellLocked]} padded={false}>
 			<View style={[styles.iconWrap, {backgroundColor: earned ? `${tint}22` : colors.placeholderSurface}]}>
 				<Feather name={b.icon || 'award'} size={22} color={tint} />
 			</View>
@@ -24,18 +26,18 @@ const BadgeCell = ({item}) => {
 			) : (
 				<>
 					<View style={styles.progressTrack}>
-						<View style={[styles.progressFill, {width: `${Math.round((item.progress || 0) * 100)}%`}]} />
+						<View style={[styles.progressFill, {width: `${Math.round(progress * 100)}%`}]} />
 					</View>
-					<Text style={styles.progressText}>{item.value}/{item.threshold}</Text>
+					<Text style={styles.progressText}>{item.value != null ? `${item.value}/${item.threshold}` : 'Do zdobycia'}</Text>
 				</>
 			)}
-		</View>
+		</Card>
 	);
 };
 
 const BadgeGrid = ({badges = []}) => {
 	if (!badges.length) {
-		return <Text style={styles.empty}>Brak odznak do zdobycia.</Text>;
+		return <EmptyState icon="award" title="Brak odznak" description="Odznaki pojawią się tutaj po pierwszych osiągnięciach." />;
 	}
 	const earnedCount = badges.filter((b) => b.earned).length;
 	return (
@@ -43,7 +45,7 @@ const BadgeGrid = ({badges = []}) => {
 			<Text style={styles.summary}>Zdobyte: {earnedCount}/{badges.length}</Text>
 			<View style={styles.grid}>
 				{badges.map((item) => (
-					<BadgeCell key={item.badge.id} item={item} />
+					<BadgeCell key={(item.badge || item).id} item={item} />
 				))}
 			</View>
 		</View>
@@ -76,7 +78,7 @@ const styles = StyleSheet.create({
 	},
 	name: {fontSize: 13, fontWeight: '700', color: colors.text, textAlign: 'center'},
 	nameLocked: {color: colors.muted},
-	earnedTag: {fontSize: 11, fontWeight: '700', color: '#16a34a'},
+	earnedTag: {fontSize: 11, fontWeight: '700', color: colors.success},
 	progressTrack: {
 		height: 6,
 		width: '100%',

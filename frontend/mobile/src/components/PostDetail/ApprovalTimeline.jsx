@@ -10,9 +10,9 @@ const STAGE_LABEL = {
 };
 
 const DECISION_META = {
-	PENDING: {icon: 'clock', color: '#d97706', bg: '#fef3c7', text: 'Oczekuje'},
-	APPROVED: {icon: 'check-circle', color: '#16a34a', bg: '#dcfce7', text: 'Zaakceptowane'},
-	REJECTED: {icon: 'x-circle', color: '#dc2626', bg: '#fee2e2', text: 'Odrzucone'},
+	PENDING: {icon: 'clock', color: colors.warning, bg: colors.warningSoft, text: 'Oczekuje'},
+	APPROVED: {icon: 'check-circle', color: colors.success, bg: colors.successSoft, text: 'Zaakceptowane'},
+	REJECTED: {icon: 'x-circle', color: colors.danger, bg: colors.dangerSoft, text: 'Odrzucone'},
 	SKIPPED: {icon: 'minus-circle', color: colors.muted, bg: colors.placeholderSurface, text: 'Pominięte'},
 };
 

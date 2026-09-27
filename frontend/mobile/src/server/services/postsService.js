@@ -26,7 +26,8 @@ const postsService = {
 		return httpClient.delete(`${basePath}${postId}/`, options);
 	},
 	fetchComments(postId, params) {
-		return httpClient.get(`${basePath}${postId}/comments/`, {params});
+		const options = withAuthHeaders({params});
+		return httpClient.get(`${basePath}${postId}/comments/`, options);
 	},
 	addComment(postId, payload) {
 		const options = withAuthHeaders();
@@ -67,6 +68,15 @@ const postsService = {
 	myCases(params) {
 		const options = withAuthHeaders({params});
 		return httpClient.get(`${basePath}my_cases/`, options);
+	},
+	approvalsQueue(params) {
+		return httpClient.get(`${basePath}approvals_queue/`, withAuthHeaders({params}));
+	},
+	approvalsQueueCount() {
+		return httpClient.get(`${basePath}approvals_queue/count/`, withAuthHeaders());
+	},
+	trending(params) {
+		return httpClient.get(`${basePath}trending/`, withAuthHeaders({params}));
 	},
 	updateProgress(postId, payload) {
 		const options = withAuthHeaders();

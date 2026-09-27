@@ -1,6 +1,7 @@
 import {StyleSheet, TextInput, View} from 'react-native';
 import colors from 'theme/colors';
 import Text from 'components/Text/Text';
+import {radius, typography} from 'theme/theme';
 
 const Input = ({
 	label,
@@ -42,18 +43,17 @@ const styles = StyleSheet.create({
 		gap: 6,
 	},
 	label: {
-		fontWeight: '700',
-		fontSize: 14,
+		...typography.bodyStrong,
 		color: colors.text,
 	},
 	input: {
-		minHeight: 48,
+		minHeight: 50,
 		borderWidth: 1,
 		borderColor: colors.border,
-		borderRadius: 10,
+		borderRadius: radius.md,
 		paddingHorizontal: 12,
 		paddingVertical: 10,
-		fontSize: 15,
+		fontSize: typography.subtitle.fontSize,
 		color: colors.text,
 		backgroundColor: colors.surface,
 	},

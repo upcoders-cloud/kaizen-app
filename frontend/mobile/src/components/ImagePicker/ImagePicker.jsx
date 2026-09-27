@@ -5,9 +5,16 @@ import {Feather} from '@expo/vector-icons';
 import Button from 'components/Button/Button';
 import Text from 'components/Text/Text';
 import colors from 'theme/colors';
+import {radius, spacing} from 'theme/theme';
+import {Chip} from 'components/ui';
 import {EXPO_IMAGE_PICKER_STATUS_GRANTED} from "constants/constans";
 
 const MAX_DEFAULT = 5;
+const IMAGE_TYPES = [
+	{value: 'GENERAL', label: 'Załącznik'},
+	{value: 'BEFORE', label: 'Przed'},
+	{value: 'AFTER', label: 'Po'},
+];
 
 const ImagePicker = ({value = [], onChange, maxCount = MAX_DEFAULT}) => {
 	const remaining = Math.max(0, maxCount - value.length);
@@ -16,7 +23,7 @@ const ImagePicker = ({value = [], onChange, maxCount = MAX_DEFAULT}) => {
 	const requestLibraryPermission = useCallback(async () => {
 		const {status} = await ExpoImagePicker.requestMediaLibraryPermissionsAsync();
 		if (status !== EXPO_IMAGE_PICKER_STATUS_GRANTED) {
-			Alert.alert('Permission needed', 'Please allow access to your photos to pick images.');
+			Alert.alert('Brak dostępu', 'Zezwól na dostęp do zdjęć w ustawieniach urządzenia.');
 			return false;
 		}
 		return true;
@@ -25,7 +32,7 @@ const ImagePicker = ({value = [], onChange, maxCount = MAX_DEFAULT}) => {
 	const requestCameraPermission = useCallback(async () => {
 		const {status} = await ExpoImagePicker.requestCameraPermissionsAsync();
 		if (status !== EXPO_IMAGE_PICKER_STATUS_GRANTED) {
-			Alert.alert('Permission needed', 'Please allow access to your camera to take a photo.');
+			Alert.alert('Brak dostępu', 'Zezwól na dostęp do aparatu w ustawieniach urządzenia.');
 			return false;
 		}
 		return true;
@@ -43,13 +50,16 @@ const ImagePicker = ({value = [], onChange, maxCount = MAX_DEFAULT}) => {
 				mimeType: asset.mimeType || asset.type || 'image',
 				fileSize: asset.fileSize,
 				base64: asset.base64,
+				type: 'GENERAL',
 			}));
 
 	const addImages = useCallback(
 		(assets) => {
 			if (!onChange) return;
 			const normalized = normalizeAssets(assets);
-			const next = [...value, ...normalized].slice(0, maxCount);
+			const ids = new Set(value.map((item) => String(item.id)));
+			const unique = normalized.filter((item) => !ids.has(String(item.id)));
+			const next = [...value, ...unique].slice(0, maxCount);
 			onChange(next);
 		},
 		[value, maxCount, onChange]
@@ -57,7 +67,7 @@ const ImagePicker = ({value = [], onChange, maxCount = MAX_DEFAULT}) => {
 
 	const handlePickFromLibrary = useCallback(async () => {
 		if (remaining <= 0) {
-			Alert.alert('Limit reached', `You can attach up to ${maxCount} images.`);
+			Alert.alert('Limit zdjęć', `Możesz dodać maksymalnie ${maxCount} zdjęć.`);
 			return;
 		}
 		if (!(await requestLibraryPermission())) return;
@@ -66,6 +76,7 @@ const ImagePicker = ({value = [], onChange, maxCount = MAX_DEFAULT}) => {
 			mediaTypes: ['images'],
 			allowsEditing: false,
 			allowsMultipleSelection: true,
+			selectionLimit: remaining,
 			quality: 0.85,
 			base64: true,
 		});
@@ -76,7 +87,7 @@ const ImagePicker = ({value = [], onChange, maxCount = MAX_DEFAULT}) => {
 
 	const handleCapture = useCallback(async () => {
 		if (remaining <= 0) {
-			Alert.alert('Limit reached', `You can attach up to ${maxCount} images.`);
+			Alert.alert('Limit zdjęć', `Możesz dodać maksymalnie ${maxCount} zdjęć.`);
 			return;
 		}
 		if (!(await requestCameraPermission())) return;
@@ -101,13 +112,18 @@ const ImagePicker = ({value = [], onChange, maxCount = MAX_DEFAULT}) => {
 		[onChange, value]
 	);
 
+	const handleTypeChange = useCallback((targetId, type) => {
+		if (!onChange) return;
+		onChange(value.map((item) => item.id === targetId ? {...item, type} : item));
+	}, [onChange, value]);
+
 	const previewImage = useMemo(() => value.find((item) => item.id === previewId), [previewId, value]);
 	const closePreview = () => setPreviewId(null);
 
 	return (
 		<View style={styles.container}>
 			<View style={styles.headerRow}>
-				<Text style={styles.label}>Images</Text>
+				<Text style={styles.label}>Zdjęcia</Text>
 				<Text style={styles.counter}>{value.length}/{maxCount}</Text>
 			</View>
 			<View style={styles.actions}>
@@ -138,18 +154,37 @@ const ImagePicker = ({value = [], onChange, maxCount = MAX_DEFAULT}) => {
 			) : (
 				<View style={styles.previewGrid}>
 					{value.map((item) => (
-						<Pressable key={item.id} style={styles.thumbWrapper} onPress={() => setPreviewId(item.id)}>
-							<Image source={{uri: item.uri}} style={styles.thumb} />
-							<Pressable
-								style={styles.removeBadge}
-								onPress={(e) => {
-									e?.stopPropagation?.();
-									handleRemove(item.id);
-								}}
-							>
-								<Feather name="x" size={14} color={colors.surface} />
+						<View key={item.id} style={styles.imageItem}>
+							<Pressable style={styles.thumbWrapper} onPress={() => setPreviewId(item.id)} accessibilityRole="button" accessibilityLabel="Podgląd zdjęcia">
+								<Image source={{uri: item.uri}} style={styles.thumb} />
+								<Pressable
+									style={styles.removeBadge}
+									accessibilityRole="button"
+									accessibilityLabel="Usuń zdjęcie"
+									onPress={(e) => {
+										e?.stopPropagation?.();
+										handleRemove(item.id);
+									}}
+								>
+									<Feather name="x" size={14} color={colors.surface} />
+								</Pressable>
 							</Pressable>
-						</Pressable>
+							<View style={styles.typeColumn}>
+								<Text style={styles.typeLabel}>Typ zdjęcia</Text>
+								<View style={styles.typeOptions}>
+									{IMAGE_TYPES.map((option) => (
+										<Chip
+											key={option.value}
+											label={option.label}
+											selected={(item.type || (item.isExisting ? null : 'GENERAL')) === option.value}
+											onPress={item.isExisting ? undefined : () => handleTypeChange(item.id, option.value)}
+											accessibilityLabel={`Typ zdjęcia: ${option.label}`}
+										/>
+									))}
+								</View>
+								{item.isExisting ? <Text style={styles.savedHint}>Zapisane zdjęcie</Text> : null}
+							</View>
+						</View>
 					))}
 				</View>
 			)}
@@ -180,9 +215,9 @@ const styles = StyleSheet.create({
 	container: {
 		borderWidth: 1,
 		borderColor: colors.border,
-		borderRadius: 12,
-		padding: 12,
-		backgroundColor: colors.placeholderSurface,
+		borderRadius: radius.md,
+		padding: spacing.md,
+		backgroundColor: colors.surfaceAlt,
 		gap: 10,
 	},
 	headerRow: {
@@ -218,9 +253,35 @@ const styles = StyleSheet.create({
 		fontSize: 12,
 	},
 	previewGrid: {
+		gap: spacing.sm,
+	},
+	imageItem: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		gap: spacing.md,
+		padding: spacing.sm,
+		borderRadius: radius.md,
+		borderWidth: 1,
+		borderColor: colors.border,
+		backgroundColor: colors.surface,
+	},
+	typeColumn: {
+		flex: 1,
+		gap: spacing.sm,
+	},
+	typeLabel: {
+		fontSize: 12,
+		fontWeight: '700',
+		color: colors.textMuted,
+	},
+	typeOptions: {
 		flexDirection: 'row',
 		flexWrap: 'wrap',
-		gap: 10,
+		gap: spacing.xs,
+	},
+	savedHint: {
+		fontSize: 11,
+		color: colors.textMuted,
 	},
 	thumbWrapper: {
 		width: 90,

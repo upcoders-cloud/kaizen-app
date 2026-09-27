@@ -5,6 +5,7 @@ import AuthScreenLayout from 'components/Auth/AuthScreenLayout';
 import Text from 'components/Text/Text';
 import {useAuthStore} from 'store/authStore';
 import colors from 'theme/colors';
+import {shadows} from 'theme/theme';
 
 const AUTH_ROUTES = {
 	password: '/(auth)/login-password',
@@ -93,7 +94,8 @@ const styles = StyleSheet.create({
 		borderWidth: 1,
 		borderColor: colors.border,
 		borderRadius: 12,
-		backgroundColor: '#f9fbff',
+		backgroundColor: colors.surface,
+		...shadows.card,
 	},
 	methodButtonPressed: {
 		opacity: 0.85,
@@ -104,7 +106,7 @@ const styles = StyleSheet.create({
 		borderRadius: 8,
 		alignItems: 'center',
 		justifyContent: 'center',
-		backgroundColor: '#e8efff',
+		backgroundColor: colors.primarySoft,
 	},
 	methodCopy: {
 		flex: 1,
@@ -131,7 +133,7 @@ const styles = StyleSheet.create({
 		borderRadius: 999,
 		borderWidth: 1,
 		borderColor: colors.borderMuted,
-		backgroundColor: '#ffffffb3',
+		backgroundColor: colors.surfaceAlt,
 	},
 	fillerText: {
 		fontSize: 12,

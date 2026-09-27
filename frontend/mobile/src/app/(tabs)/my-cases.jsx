@@ -22,6 +22,7 @@ import {FAILED_TO_LOAD_POSTS} from 'constants/constans';
 import AppHeader from 'components/Navigation/AppHeader';
 import SearchBar from 'components/Search/SearchBar';
 import {useAuthStore} from 'store/authStore';
+import {EmptyState, ErrorState, Chip} from 'components/ui';
 
 const STATUS_LABELS = {
 	TO_VERIFY: 'Do weryfikacji',
@@ -30,6 +31,8 @@ const STATUS_LABELS = {
 
 const MyCases = () => {
 	const [allPosts, setAllPosts] = useState([]);
+	const [nextPage, setNextPage] = useState(null);
+	const [loadingMore, setLoadingMore] = useState(false);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
 	const [refreshing, setRefreshing] = useState(false);
@@ -38,24 +41,49 @@ const MyCases = () => {
 	const [rejectLoading, setRejectLoading] = useState(false);
 	const [searchVisible, setSearchVisible] = useState(false);
 	const [searchQuery, setSearchQuery] = useState('');
+	const [tab, setTab] = useState('queue');
 	const router = useRouter();
 	const user = useAuthStore((state) => state.user);
-	const isManager = user?.role === 'MANAGER';
+	const isApprover = user?.permissions?.is_approver ?? Boolean(user?.is_staff || user?.is_superuser ||
+		['TEAM_LEAD', 'MANAGER', 'DIRECTOR'].includes(user?.role));
+	// Approver ma dwie listy: sprawy do decyzji oraz własne zgłoszenia (oczekujące i odrzucone).
+	const showQueue = isApprover && tab === 'queue';
 
 	const fetchCases = useCallback(async ({withLoader = true} = {}) => {
 		if (withLoader) setLoading(true);
 		setError(null);
 		try {
-			const data = await postsService.myCases();
+			let data;
+			if (showQueue) data = await postsService.approvalsQueue({page: 1});
+			else if (isApprover) data = await postsService.list({mine: true, status: 'TO_VERIFY,CANCELLED', page_size: 50});
+			else data = await postsService.myCases();
 			const resolved = Array.isArray(data) ? data : data?.results ?? [];
 			setAllPosts(resolved);
+			setNextPage(showQueue && data?.next ? 2 : null);
 		} catch (err) {
 			setError(err?.message || FAILED_TO_LOAD_POSTS);
 		} finally {
 			setLoading(false);
 			setRefreshing(false);
 		}
-	}, []);
+	}, [isApprover, showQueue]);
+	const loadNext = async () => {
+		if (!showQueue || !nextPage || loadingMore) return;
+		setLoadingMore(true);
+		try {
+			const data = await postsService.approvalsQueue({page: nextPage});
+			const incoming = Array.isArray(data) ? data : data?.results ?? [];
+			setAllPosts((prev) => {
+				const ids = new Set(prev.map((post) => String(post.id)));
+				return [...prev, ...incoming.filter((post) => !ids.has(String(post.id)))];
+			});
+			setNextPage(data?.next ? nextPage + 1 : null);
+		} catch (err) {
+			Toast.show({type: 'error', text1: 'Nie udało się pobrać kolejnych spraw', text2: err?.message});
+		} finally {
+			setLoadingMore(false);
+		}
+	};
 
 	useFocusEffect(
 		useCallback(() => {
@@ -84,7 +112,12 @@ const MyCases = () => {
 		void fetchCases({withLoader: false});
 	};
 
-	const handleApprove = async (postId) => {
+	const handleApprove = async (post) => {
+		const postId = post?.id;
+		if (post?.current_stage?.stage === 'MANAGER') {
+			router.push(`/post/${postId}`);
+			return;
+		}
 		if (approvingId) return;
 		setApprovingId(postId);
 		try {
@@ -146,14 +179,15 @@ const MyCases = () => {
 
 		return (
 			<View style={styles.cardWrapper}>
+				<View style={styles.caseHeading}><Text style={styles.caseHeadingText}>Do Twojej decyzji</Text><Chip label={{TEAM_LEAD: 'Lider', MANAGER: 'Kierownik', DIRECTOR: 'Dyrektor'}[item?.current_stage?.stage] || 'Akceptacja'} /></View>
 				<Post post={item} onPress={() => router.push(`/post/${item.id}`)} />
 				{!isCancelled ? (
 					<View style={styles.caseActions}>
 						<Button
-							title="Zatwierdź"
-							onPress={() => handleApprove(item.id)}
+							title={item?.current_stage?.stage === 'MANAGER' ? 'Przejdź do decyzji' : 'Zatwierdź'}
+							onPress={() => handleApprove(item)}
 							loading={isApproving}
-							leftIcon={<Feather name="check" size={16} color="#fff" />}
+							leftIcon={<Feather name="check" size={16} color={colors.white} />}
 							style={styles.approveButton}
 							textStyle={styles.approveText}
 						/>
@@ -196,7 +230,7 @@ const MyCases = () => {
 							<Button
 								title="Zgłoś ponownie"
 								onPress={() => handleResubmit(item.id)}
-								leftIcon={<Feather name="refresh-cw" size={14} color="#fff" />}
+								leftIcon={<Feather name="refresh-cw" size={14} color={colors.white} />}
 								style={styles.smallButton}
 								textStyle={styles.smallButtonTextWhite}
 							/>
@@ -212,7 +246,7 @@ const MyCases = () => {
 		);
 	};
 
-	const emptyText = isManager
+	const emptyText = showQueue
 		? 'Brak spraw do weryfikacji.'
 		: 'Nie masz zgłoszeń oczekujących na weryfikację.';
 
@@ -233,22 +267,31 @@ const MyCases = () => {
 					onClear={handleClearSearch}
 					placeholder="Szukaj spraw po tytule..."
 				/>
+				{isApprover ? (
+					<View style={styles.tabs}>
+						<Chip label="Do decyzji" selected={tab === 'queue'} onPress={() => setTab('queue')} />
+						<Chip label="Moje zgłoszenia" selected={tab === 'mine'} onPress={() => setTab('mine')} />
+					</View>
+				) : null}
 				{loading && !refreshing ? (
 					<View style={styles.centered}>
 						<ActivityIndicator size="large" color={colors.primary} />
 					</View>
 				) : error ? (
 					<View style={styles.centered}>
-						<Text style={styles.error}>{error}</Text>
+						<ErrorState description={error} onRetry={() => void fetchCases()} />
 					</View>
 				) : (
 					<FlatList
 						data={filteredPosts}
 						keyExtractor={(item) => String(item?.id)}
-						renderItem={isManager ? renderManagerItem : renderEmployeeItem}
+						renderItem={showQueue ? renderManagerItem : renderEmployeeItem}
 						contentContainerStyle={
 							filteredPosts.length ? styles.listContent : styles.listContentEmpty
 						}
+						onEndReached={() => void loadNext()}
+						onEndReachedThreshold={0.4}
+						ListFooterComponent={loadingMore ? <ActivityIndicator size="small" color={colors.primary} style={styles.moreLoader} /> : null}
 						refreshControl={
 							<RefreshControl
 								refreshing={refreshing}
@@ -257,13 +300,11 @@ const MyCases = () => {
 							/>
 						}
 						ListEmptyComponent={
-							<View style={styles.emptyState}>
-								<Text style={styles.emptyText}>{emptyText}</Text>
-							</View>
+							<EmptyState icon={showQueue ? 'check-circle' : 'inbox'} title="Wszystko załatwione" description={emptyText} />
 						}
 					/>
 				)}
-				{isManager ? (
+				{isApprover ? (
 					<RejectionReasonModal
 						visible={Boolean(rejectingPost)}
 						onClose={() => setRejectingPost(null)}
@@ -283,16 +324,21 @@ const styles = StyleSheet.create({
 		flex: 1,
 		backgroundColor: colors.background,
 	},
+	tabs: {flexDirection: 'row', gap: 8, paddingHorizontal: 12, paddingTop: 10},
 	listContent: {
 		padding: 12,
+		paddingBottom: 120,
 		gap: 12,
 	},
+	moreLoader: {marginVertical: 16},
 	listContentEmpty: {
 		flexGrow: 1,
 	},
 	cardWrapper: {
 		gap: 0,
 	},
+	caseHeading: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingTop: 11, paddingBottom: 7, borderTopLeftRadius: 14, borderTopRightRadius: 14, backgroundColor: colors.surface, borderWidth: 1, borderBottomWidth: 0, borderColor: colors.border},
+	caseHeadingText: {fontSize: 12, fontWeight: '800', color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.5},
 	caseActions: {
 		flexDirection: 'row',
 		gap: 10,
@@ -323,16 +369,16 @@ const styles = StyleSheet.create({
 		borderRadius: 6,
 	},
 	statusPending: {
-		backgroundColor: '#fef3c7',
+		backgroundColor: colors.warningSoft,
 	},
 	statusPendingText: {
-		color: '#92400e',
+		color: colors.warning,
 	},
 	statusCancelled: {
-		backgroundColor: '#fee2e2',
+		backgroundColor: colors.dangerSoft,
 	},
 	statusCancelledText: {
-		color: '#991b1b',
+		color: colors.statusTextCancelled,
 	},
 	statusBadgeText: {
 		fontSize: 12,
@@ -351,7 +397,7 @@ const styles = StyleSheet.create({
 	},
 	smallButtonTextWhite: {
 		fontSize: 13,
-		color: '#fff',
+		color: colors.white,
 	},
 	rejectionReason: {
 		fontSize: 12,
@@ -361,11 +407,11 @@ const styles = StyleSheet.create({
 	approveButton: {
 		flex: 1,
 		minHeight: 40,
-		backgroundColor: '#16a34a',
-		borderColor: '#16a34a',
+		backgroundColor: colors.success,
+		borderColor: colors.success,
 	},
 	approveText: {
-		color: '#fff',
+		color: colors.white,
 	},
 	rejectButton: {
 		flex: 1,
@@ -402,7 +448,7 @@ const styles = StyleSheet.create({
 		width: 200,
 		height: 200,
 		borderRadius: 100,
-		backgroundColor: '#36d1dc22',
+		backgroundColor: colors.accentWash,
 		transform: [{rotate: '8deg'}],
 	},
 });

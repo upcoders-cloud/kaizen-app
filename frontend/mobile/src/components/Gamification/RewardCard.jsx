@@ -2,14 +2,16 @@ import {Pressable, StyleSheet, View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import Text from 'components/Text/Text';
 import colors from 'theme/colors';
+import {Card} from 'components/ui';
 
 const RewardCard = ({reward, onRedeem, redeeming}) => {
 	const soldOut = reward.stock != null && reward.stock <= 0;
 	const disabled = soldOut || !reward.affordable || redeeming;
+	const iconName = reward.icon && Feather.glyphMap[reward.icon] ? reward.icon : 'gift';
 	return (
-		<View style={styles.card}>
+		<Card style={styles.card} padded={false}>
 			<View style={styles.iconWrap}>
-				<Feather name={reward.icon || 'gift'} size={22} color={colors.primary} />
+				<Feather name={iconName} size={22} color={colors.primary} />
 			</View>
 			<View style={{flex: 1}}>
 				<Text style={styles.name}>{reward.name}</Text>
@@ -34,7 +36,7 @@ const RewardCard = ({reward, onRedeem, redeeming}) => {
 					{soldOut ? 'Brak' : reward.affordable ? 'Wymień' : 'Za mało pkt'}
 				</Text>
 			</Pressable>
-		</View>
+		</Card>
 	);
 };
 
@@ -55,7 +57,7 @@ const styles = StyleSheet.create({
 		width: 44,
 		height: 44,
 		borderRadius: 12,
-		backgroundColor: '#eef2ff',
+		backgroundColor: colors.primarySoft,
 		alignItems: 'center',
 		justifyContent: 'center',
 	},
@@ -70,6 +72,6 @@ const styles = StyleSheet.create({
 	},
 	btnPressed: {opacity: 0.8},
 	btnDisabled: {backgroundColor: colors.border},
-	btnText: {fontSize: 13, fontWeight: '800', color: '#fff'},
+	btnText: {fontSize: 13, fontWeight: '800', color: colors.white},
 	btnTextDisabled: {color: colors.muted},
 });

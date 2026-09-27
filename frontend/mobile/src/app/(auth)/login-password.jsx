@@ -108,7 +108,7 @@ const LoginPassword = () => {
 				title="Zaloguj"
 				onPress={handleLogin}
 				loading={loading}
-				leftIcon={<Feather name="log-in" size={16} color="#ffffff" />}
+				leftIcon={<Feather name="log-in" size={16} color={colors.white} />}
 				style={styles.submitButton}
 			/>
 		</AuthScreenLayout>

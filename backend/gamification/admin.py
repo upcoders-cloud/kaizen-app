@@ -11,7 +11,9 @@ from .models import (
     UserBadge,
     UserGamificationProfile,
 )
-from .services.rewards import set_status
+from django.contrib import messages
+
+from .services.rewards import RedemptionConflict, set_status
 
 
 @admin.register(PointRule)
@@ -69,17 +71,26 @@ class RewardRedemptionAdmin(admin.ModelAdmin):
     search_fields = ('user__username', 'reward__name')
     actions = ('mark_approved', 'mark_delivered', 'mark_rejected')
 
+    def _apply(self, request, queryset, status):
+        changed, skipped = 0, 0
+        for r in queryset:
+            try:
+                set_status(r.id, status, request.user)
+                changed += 1
+            except RedemptionConflict:
+                skipped += 1
+        self.message_user(request, f'Zmieniono: {changed}.')
+        if skipped:
+            self.message_user(request, f'Pominięto (niedozwolona zmiana statusu): {skipped}.', messages.WARNING)
+
     @admin.action(description='Zaakceptuj zaznaczone')
     def mark_approved(self, request, queryset):
-        for r in queryset:
-            set_status(r.id, RewardRedemption.Status.APPROVED, request.user)
+        self._apply(request, queryset, RewardRedemption.Status.APPROVED)
 
     @admin.action(description='Oznacz jako wydane')
     def mark_delivered(self, request, queryset):
-        for r in queryset:
-            set_status(r.id, RewardRedemption.Status.DELIVERED, request.user)
+        self._apply(request, queryset, RewardRedemption.Status.DELIVERED)
 
     @admin.action(description='Odrzuć (zwrot punktów)')
     def mark_rejected(self, request, queryset):
-        for r in queryset:
-            set_status(r.id, RewardRedemption.Status.REJECTED, request.user)
+        self._apply(request, queryset, RewardRedemption.Status.REJECTED)

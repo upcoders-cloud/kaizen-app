@@ -46,7 +46,7 @@ const CommentInput = ({
 				title={isReply ? 'Wyślij odpowiedź' : 'Dodaj komentarz'}
 				onPress={onSubmit}
 				loading={loading}
-				leftIcon={<Feather name="send" size={16} color="#fff" />}
+				leftIcon={<Feather name="send" size={16} color={colors.white} />}
 				style={styles.button}
 			/>
 		</View>

@@ -4,6 +4,7 @@ import {Feather} from '@expo/vector-icons';
 import Text from 'components/Text/Text';
 import CommentItem from './CommentItem';
 import colors from 'theme/colors';
+import {EmptyState} from 'components/ui';
 
 const CommentsList = ({
 	tree = [],
@@ -50,11 +51,7 @@ const CommentsList = ({
 	};
 
 	if (!tree.length) {
-		return (
-			<View style={styles.empty}>
-				<Text style={styles.emptyText}>Brak komentarzy — bądź pierwszy!</Text>
-			</View>
-		);
+		return <EmptyState icon="message-circle" title="Brak komentarzy" description="Podziel się pierwszą opinią." style={styles.empty} />;
 	}
 
 	const renderNode = ({comment, isReply = false, replyToNickname = null}) => {

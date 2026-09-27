@@ -1,23 +1,8 @@
-import {useEffect, useRef} from 'react';
-import {Animated, StyleSheet, View} from 'react-native';
+import {StyleSheet, View} from 'react-native';
 import colors from 'theme/colors';
+import {Skeleton} from 'components/ui';
 
-const Shimmer = ({style}) => {
-	const opacity = useRef(new Animated.Value(0.5)).current;
-
-	useEffect(() => {
-		const loop = Animated.loop(
-			Animated.sequence([
-				Animated.timing(opacity, {toValue: 1, duration: 700, useNativeDriver: true}),
-				Animated.timing(opacity, {toValue: 0.5, duration: 700, useNativeDriver: true}),
-			])
-		);
-		loop.start();
-		return () => loop.stop();
-	}, [opacity]);
-
-	return <Animated.View style={[styles.shimmer, {opacity}, style]} />;
-};
+const Shimmer = ({style}) => <Skeleton style={style} />;
 
 const PostSkeletonItem = () => (
 	<View style={styles.card}>
@@ -75,10 +60,6 @@ const styles = StyleSheet.create({
 		width: 36,
 		height: 36,
 		borderRadius: 18,
-	},
-	shimmer: {
-		backgroundColor: colors.placeholderSurface ?? '#e2e8f0',
-		borderRadius: 6,
 	},
 	line60: {
 		height: 12,

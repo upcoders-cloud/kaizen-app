@@ -1,4 +1,4 @@
-import {Image, Pressable, ScrollView, StyleSheet, View} from 'react-native';
+import {Pressable, ScrollView, StyleSheet, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {Feather} from '@expo/vector-icons';
 import {useRouter} from 'expo-router';
@@ -7,9 +7,12 @@ import Text from 'components/Text/Text';
 import colors from 'theme/colors';
 import {useAuthStore} from 'store/authStore';
 import {SPACE} from 'constants/constans';
+import {Avatar, Card, SectionHeader} from 'components/ui';
 
 const ROLE_LABEL = {
+	TEAM_LEAD: 'Lider zespołu',
 	MANAGER: 'Kierownik',
+	DIRECTOR: 'Dyrektor',
 	EMPLOYEE: 'Pracownik',
 };
 
@@ -59,19 +62,13 @@ const Menu = () => {
 					<Text style={styles.title}>Menu</Text>
 				</View>
 
-				<Pressable
+				<Card
 					onPress={() => router.push('/profile')}
-					style={({pressed}) => [styles.profileCard, pressed ? styles.profileCardPressed : null]}
+					style={styles.profileCard}
+					padded={false}
+					elevated
 				>
-					<View style={styles.avatarWrapper}>
-						{avatar ? (
-							<Image source={{uri: avatar}} style={styles.avatar} />
-						) : (
-							<View style={styles.avatarPlaceholder}>
-								<Text style={styles.avatarInitials}>{initials}</Text>
-							</View>
-						)}
-					</View>
+					<Avatar name={fullName || user?.username || initials} uri={avatar} size={56} />
 					<View style={{flex: 1, gap: 2}}>
 						<Text style={styles.profileName} numberOfLines={1}>
 							{fullName || user?.username || 'Użytkownik'}
@@ -84,7 +81,7 @@ const Menu = () => {
 						</View>
 					</View>
 					<Feather name="chevron-right" size={20} color={colors.mutedAlt} />
-				</Pressable>
+				</Card>
 
 				<View style={styles.section}>
 					<MenuRow
@@ -111,9 +108,11 @@ const Menu = () => {
 						hint="Lista aktywności"
 						onPress={() => router.push('/notifications')}
 					/>
+					<MenuRow icon="award" label="Ranking i odznaki" hint="Twoja pozycja i osiągnięcia" onPress={() => router.push('/ranking')} />
+					<MenuRow icon="gift" label="Sklep nagród" hint="Wymień punkty na nagrody" onPress={() => router.push('/rewards')} />
 				</View>
 
-				<Text style={styles.sectionLabel}>Aplikacja</Text>
+				<SectionHeader title="Aplikacja" />
 				<View style={styles.section}>
 					<MenuRow icon="settings" label="Ustawienia" hint="Wkrótce" disabled />
 					<MenuRow icon="help-circle" label="Pomoc" hint="Wkrótce" disabled />
@@ -156,7 +155,7 @@ const styles = StyleSheet.create({
 		backgroundColor: colors.surface,
 		borderWidth: 1,
 		borderColor: colors.border,
-		shadowColor: '#000',
+		shadowColor: colors.primary,
 		shadowOpacity: 0.04,
 		shadowOffset: {width: 0, height: 6},
 		shadowRadius: 14,
@@ -204,7 +203,7 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 8,
 		paddingVertical: 2,
 		borderRadius: 999,
-		backgroundColor: '#eef2ff',
+		backgroundColor: colors.primarySoft,
 		marginTop: 2,
 	},
 	roleBadgeText: {
@@ -251,12 +250,12 @@ const styles = StyleSheet.create({
 		width: 32,
 		height: 32,
 		borderRadius: 10,
-		backgroundColor: '#eef2ff',
+		backgroundColor: colors.primarySoft,
 		alignItems: 'center',
 		justifyContent: 'center',
 	},
 	rowIconDanger: {
-		backgroundColor: '#fee2e2',
+		backgroundColor: colors.dangerSoft,
 	},
 	rowLabel: {
 		fontSize: 14,

@@ -1,32 +1,34 @@
 import {ActivityIndicator, Pressable, StyleSheet, Text, View} from 'react-native';
+import colors from 'theme/colors';
+import {radius, typography} from 'theme/theme';
 
 const VARIANTS = {
 	primary: {
-		backgroundColor: '#1d2b64',
-		borderColor: '#1d2b64',
-		textColor: '#ffffff',
+		backgroundColor: colors.primary,
+		borderColor: colors.primary,
+		textColor: colors.white,
 	},
 	secondary: {
-		backgroundColor: '#36d1dc',
-		borderColor: '#36d1dc',
-		textColor: '#0f172a',
+		backgroundColor: colors.secondary,
+		borderColor: colors.secondary,
+		textColor: colors.text,
 	},
 	outline: {
 		backgroundColor: 'transparent',
-		borderColor: '#1d2b64',
-		textColor: '#1d2b64',
+		borderColor: colors.primary,
+		textColor: colors.primary,
 	},
 	ghost: {
 		backgroundColor: 'transparent',
 		borderColor: 'transparent',
-		textColor: '#1d2b64',
+		textColor: colors.primary,
 	},
 };
 
 const DISABLED_STYLE = {
-	backgroundColor: '#e5e7eb',
-	borderColor: '#d1d5db',
-	textColor: '#9ca3af',
+	backgroundColor: colors.borderMuted,
+	borderColor: colors.border,
+	textColor: colors.textSubtle,
 };
 
 const Button = ({
@@ -74,9 +76,9 @@ export default Button;
 
 const styles = StyleSheet.create({
 	base: {
-		minHeight: 48,
+		minHeight: 50,
 		paddingHorizontal: 14,
-		borderRadius: 12,
+		borderRadius: radius.md,
 		borderWidth: 1,
 		justifyContent: 'center',
 		alignItems: 'center',
@@ -88,8 +90,7 @@ const styles = StyleSheet.create({
 		gap: 8,
 	},
 	text: {
-		fontWeight: '700',
-		fontSize: 16,
+		...typography.subtitle,
 	},
 	pressed: {
 		opacity: 0.85,

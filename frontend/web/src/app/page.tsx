@@ -9,12 +9,8 @@ export default function Index() {
 
   useEffect(() => {
     if (loading) return;
-    router.replace(user ? "/dashboard" : "/login");
+    router.replace(user ? "/feed" : "/login");
   }, [user, loading, router]);
 
-  return (
-    <div className="flex h-screen items-center justify-center text-muted">
-      Ładowanie…
-    </div>
-  );
+  return <div className="h-screen bg-background" />;
 }

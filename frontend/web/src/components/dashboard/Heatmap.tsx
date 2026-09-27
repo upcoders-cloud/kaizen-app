@@ -8,7 +8,8 @@ import {
   startOfYear,
 } from "date-fns";
 
-const LEVELS = ["#eef2f7", "#bfe3ea", "#7fcdd9", "#36d1dc", "#1d8fa3"];
+// Skala sekwencyjna (jeden odcień, jasny -> ciemny), osobno dobrana dla trybu ciemnego w globals.css.
+const LEVELS = ["var(--accent)", "var(--chart-seq-2)", "var(--chart-seq-3)", "var(--chart-seq-4)", "var(--chart-seq-5)"];
 const MONTHS = ["Sty", "Lut", "Mar", "Kwi", "Maj", "Cze", "Lip", "Sie", "Wrz", "Paź", "Lis", "Gru"];
 
 export function Heatmap({
@@ -54,7 +55,7 @@ export function Heatmap({
   return (
     <div className="overflow-x-auto">
       <div className="inline-flex flex-col gap-1">
-        <div className="ml-7 flex gap-[3px] text-[10px] text-muted">
+        <div className="ml-7 flex gap-[3px] text-[10px] text-subtle">
           {weeks.map((w, i) => {
             const d = w.find((x) => x.count >= 0)?.date;
             const showMonth =
@@ -67,7 +68,7 @@ export function Heatmap({
           })}
         </div>
         <div className="flex gap-[3px]">
-          <div className="flex flex-col gap-[3px] pr-1 text-[10px] text-muted">
+          <div className="flex flex-col gap-[3px] pr-1 text-[10px] text-subtle">
             {["Pon", "", "Śr", "", "Pt", "", "Nd"].map((d, i) => (
               <span key={i} className="h-[13px] leading-[13px]">
                 {d}
@@ -81,17 +82,17 @@ export function Heatmap({
                   key={j}
                   title={
                     cell.count >= 0
-                      ? `${format(cell.date, "dd.MM.yyyy")}: ${cell.count}`
+                      ? `${format(cell.date, "dd.MM.yyyy")}: ${cell.count} ${cell.count === 1 ? "akcja" : "akcji"}`
                       : ""
                   }
-                  className="h-[13px] w-[13px] rounded-[3px]"
+                  className="h-[13px] w-[13px] rounded-[3px] transition-transform hover:scale-125"
                   style={{ background: colorFor(cell.count) }}
                 />
               ))}
             </div>
           ))}
         </div>
-        <div className="ml-7 mt-1 flex items-center gap-1 text-[10px] text-muted">
+        <div className="ml-7 mt-1 flex items-center gap-1 text-[10px] text-subtle">
           <span>mniej</span>
           {LEVELS.map((c) => (
             <span

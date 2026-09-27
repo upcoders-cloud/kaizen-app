@@ -28,7 +28,7 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 # Importujemy widok z folderu 'ideas'
 # Python znajdzie to, bo folder 'ideas' jest obok folderu 'app'
 from ideas.views import PostViewSet, CommentViewSet, LikeViewSet, NotificationViewSet, CategoryViewSet
-from users.views import UserViewSet
+from users.views import DepartmentViewSet, UserViewSet
 
 
 # Tworzymy router
@@ -38,6 +38,7 @@ router = DefaultRouter()
 router.register(r'posts', PostViewSet, basename='post')
 router.register(r'categories', CategoryViewSet, basename='category')
 router.register(r'users', UserViewSet, basename='user')
+router.register(r'departments', DepartmentViewSet, basename='department')
 router.register(r'comments', CommentViewSet, basename='comment')
 router.register(r'likes', LikeViewSet, basename='like')
 router.register(r'notifications', NotificationViewSet, basename='notification')
@@ -55,6 +56,7 @@ api_urlpatterns = [
     path('access/', include('access_control.urls')),
     path('gamification/', include('gamification.urls')),
     path('analytics/', include('analytics.urls')),
+    path('admin/', include('admin_api.urls')),
     path('', include(router.urls)),  # Router should usually come last
 ]
 

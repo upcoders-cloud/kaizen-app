@@ -17,13 +17,13 @@ SAMPLE_COMMENTS = [
     'Ciekawe rozwiązanie, ale obawiam się o utrzymanie w czasie.',
 ]
 
-# Treści replyów — niektóre z @mention'ami
+# Treści replyów - niektóre z @mention'ami
 SAMPLE_REPLIES = [
     'Zgadzam się, @{nick} podsuwa świetny pomysł.',
     'Dokładnie, popieram.',
     'Może @{nick} doprecyzuje koszty?',
     'A jak to wpłynie na zmianę nocną?',
-    'Też miałem podobny pomysł — fajnie że ktoś to wreszcie napisał, @{nick}.',
+    'Też miałem podobny pomysł - fajnie że ktoś to wreszcie napisał, @{nick}.',
 ]
 
 
@@ -78,7 +78,7 @@ class Command(BaseCommand):
 
     def _seed_comments(self, posts, users):
         if Comment.objects.exists():
-            self.stdout.write(self.style.WARNING('Comments already exist — skipping.'))
+            self.stdout.write(self.style.WARNING('Comments already exist - skipping.'))
             return 0
 
         created = 0
@@ -121,7 +121,7 @@ class Command(BaseCommand):
 
     def _seed_likes(self, posts, users):
         if Like.objects.exists():
-            self.stdout.write(self.style.WARNING('Likes already exist — skipping.'))
+            self.stdout.write(self.style.WARNING('Likes already exist - skipping.'))
             return 0
 
         created = 0
@@ -137,7 +137,7 @@ class Command(BaseCommand):
 
     def _seed_bookmarks(self, posts, users):
         if Bookmark.objects.exists():
-            self.stdout.write(self.style.WARNING('Bookmarks already exist — skipping.'))
+            self.stdout.write(self.style.WARNING('Bookmarks already exist - skipping.'))
             return 0
 
         created = 0

@@ -20,6 +20,11 @@ if [ "${SEED_DB}" = "true" ]; then
 
   echo "Seeding gamification..."
   python manage.py init_gamification
+
+  # Bogate dane demo (działy z liderami, ~32 konta, ~120 pomysłów z 12 miesięcy).
+  # Idempotentne - ponowne uruchomienie niczego nie duplikuje.
+  echo "Seeding demo data..."
+  python manage.py init_demo
 else
   echo "Skipping seeders (set SEED_DB=true to enable)."
 fi

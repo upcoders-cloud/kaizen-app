@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import AccessLoginCode
+from .permissions import permissions_payload
 
 ACCESS_CODE_REGEX = re.compile(r'^[A-Z0-9]{4}-[A-Z0-9]{4}$')
 REFRESH_COOKIE_PATH = '/api/access/token/refresh/'
@@ -54,6 +55,12 @@ def build_login_response_payload(*, user, access_token: str, request=None) -> di
         'gender': user.gender or '',
         'role': getattr(user, 'role', 'EMPLOYEE'),
         'avatar_url': avatar_url,
+        # Rozszerzenia (jak w GET /users/me/) - klient mobile trzyma odpowiedź logowania jako `user`.
+        'is_staff': bool(user.is_staff),
+        'is_superuser': bool(user.is_superuser),
+        'department': user.department_id,
+        'department_name': user.department.name if user.department_id else None,
+        'permissions': permissions_payload(user),
     }
 
 

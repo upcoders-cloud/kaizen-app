@@ -1,4 +1,4 @@
-"""Ewaluacja odznak — strategia pluggable (criteria_type → funkcja licząca metrykę)."""
+"""Ewaluacja odznak - strategia pluggable (criteria_type → funkcja licząca metrykę)."""
 from ..models import Badge, UserBadge
 
 
@@ -85,16 +85,17 @@ def evaluate_badges(user, profile):
 
 def badge_progress(user, profile):
     """Lista wszystkich aktywnych odznak z postępem i statusem posiadania."""
-    owned_ids = set(
-        UserBadge.objects.filter(user=user).values_list('badge_id', flat=True)
+    owned = dict(
+        UserBadge.objects.filter(user=user).values_list('badge_id', 'awarded_at')
     )
     out = []
     for badge in Badge.objects.filter(is_active=True):
         value = metric_value(badge.criteria_type, user, profile)
-        earned = badge.id in owned_ids
+        earned = badge.id in owned
         out.append({
             'badge': badge,
             'earned': earned,
+            'awarded_at': owned.get(badge.id),
             'value': value,
             'threshold': badge.threshold,
             'progress': 1.0 if earned else min(1.0, value / badge.threshold) if badge.threshold else 0.0,

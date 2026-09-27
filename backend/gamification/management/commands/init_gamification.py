@@ -140,7 +140,7 @@ class Command(BaseCommand):
 
         # Pomijamy jeśli ledger niepusty (idempotencja bez --reset)
         if PointTransaction.objects.exists():
-            self.stdout.write(self.style.WARNING('Ledger not empty — skipping backfill (use --reset).'))
+            self.stdout.write(self.style.WARNING('Ledger not empty - skipping backfill (use --reset).'))
             return
 
         User = get_user_model()

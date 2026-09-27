@@ -50,7 +50,7 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.SUCCESS(f'User "{username}" created ({role}).'))
                 continue
 
-            # Idempotentny update — uzupełniamy brakujące pola + zawsze resetujemy hasło
+            # Idempotentny update - uzupełniamy brakujące pola + zawsze resetujemy hasło
             # do konwencji "password == username" (łatwiejsze QA / testy ręczne).
             user.set_password(password)
             updated = True

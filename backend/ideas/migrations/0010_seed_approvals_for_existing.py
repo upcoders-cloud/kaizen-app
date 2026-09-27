@@ -29,7 +29,7 @@ def seed_approvals(apps, schema_editor):
 
 
 def reverse_seed(apps, schema_editor):
-    # Brak operacji odwrotnej — usunięcie wszystkich aprobat byłoby destrukcyjne.
+    # Brak operacji odwrotnej - usunięcie wszystkich aprobat byłoby destrukcyjne.
     pass
 
 

@@ -1,5 +1,5 @@
 """
-Czysta warstwa agregacji analityki — funkcje bezstanowe, testowalne,
+Czysta warstwa agregacji analityki - funkcje bezstanowe, testowalne,
 niezależne od HTTP. Widoki DRF tylko je wołają i serializują.
 """
 from datetime import timedelta
@@ -104,13 +104,14 @@ def overview(base_qs=None):
     }
 
 
-def departments():
+def departments(base_qs=None):
     """KPI per dział: pomysły, % wdrożeń, oszczędności, ROI, czas akceptacji."""
     from users.models import Department
 
+    base_qs = base_qs if base_qs is not None else KaizenPost.objects.all()
     result = []
     for dep in Department.objects.all().order_by('name'):
-        qs = KaizenPost.objects.filter(author__department=dep)
+        qs = base_qs.filter(author__department=dep)
         total = qs.count()
         if total == 0:
             continue
@@ -134,10 +135,11 @@ def departments():
     return result
 
 
-def categories():
+def categories(base_qs=None):
+    base_qs = base_qs if base_qs is not None else KaizenPost.objects.all()
     result = []
     for cat in Category.objects.all().order_by('name'):
-        qs = KaizenPost.objects.filter(category=cat)
+        qs = base_qs.filter(category=cat)
         total = qs.count()
         if total == 0:
             continue
@@ -157,28 +159,32 @@ def categories():
     return result
 
 
-def trends(granularity='month', months_back=12):
-    """Szeregi czasowe: zgłoszenia, wdrożenia, oszczędności w okresach."""
+def trends(granularity='month', months_back=12, base_qs=None, date_from=None):
+    """Szeregi czasowe: zgłoszenia, wdrożenia, oszczędności w okresach.
+
+    Bez `date_from` okno to ostatnie `months_back` miesięcy.
+    """
     trunc = TruncQuarter if granularity == 'quarter' else TruncMonth
-    since = timezone.now() - timedelta(days=months_back * 31)
+    base_qs = base_qs if base_qs is not None else KaizenPost.objects.all()
+    if date_from is None:
+        since = timezone.now() - timedelta(days=months_back * 31)
+        base_qs = base_qs.filter(created_at__gte=since)
 
     submissions = (
-        KaizenPost.objects.filter(created_at__gte=since)
+        base_qs
         .annotate(period=trunc('created_at'))
         .values('period')
         .annotate(n=Count('id'))
     )
     implemented = (
-        KaizenPost.objects.filter(
-            created_at__gte=since, status=Status.IMPLEMENTED
-        )
+        base_qs.filter(status=Status.IMPLEMENTED)
         .annotate(period=trunc('created_at'))
         .values('period')
         .annotate(n=Count('id'))
     )
     savings = (
         PostSurvey.objects.filter(
-            post__created_at__gte=since, post__status=Status.IMPLEMENTED
+            post__in=base_qs, post__status=Status.IMPLEMENTED
         )
         .annotate(period=trunc('post__created_at'))
         .values('period')
@@ -229,8 +235,11 @@ def me_impact(user):
     total = qs.count()
     breakdown = _status_breakdown(qs)
     savings = _savings(qs)
-    gamification = getattr(user, 'gamification', None)
+    from gamification.models import UserGamificationProfile
     from gamification.services.leaderboard import user_rank
+
+    # Zapytanie zamiast `user.gamification` - relacja bywa zbuforowana na obiekcie usera.
+    gamification = UserGamificationProfile.objects.filter(user=user).first()
 
     return {
         'total_ideas': total,

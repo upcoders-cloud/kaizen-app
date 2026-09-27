@@ -11,5 +11,7 @@ services:
       - "8000:8000"
     env_file:
       - ./backend/.env
+    environment:
+      SEED_DB: ${SEED_DB:-false}
     # This command overrides the default if you need to;
     # otherwise it uses the ENTRYPOINT from Dockerfile

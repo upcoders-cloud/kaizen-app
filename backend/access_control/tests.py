@@ -56,6 +56,15 @@ class AccessCodeLoginTests(APITestCase):
         self.assertEqual(response.data['username'], self.user.username)
         self.assertEqual(response.data['email'], self.user.email)
         self.assertIn('refresh_token', response.cookies)
+        # rozszerzenia payloadu (jak GET /users/me/)
+        self.assertIs(response.data['is_staff'], False)
+        self.assertIs(response.data['is_superuser'], False)
+        self.assertIsNone(response.data['department'])
+        self.assertIsNone(response.data['department_name'])
+        self.assertEqual(
+            response.data['permissions'],
+            {'is_admin': False, 'is_approver': False, 'is_management': False},
+        )
 
     def test_access_code_login_invalid_format_returns_400(self):
         response = self.client.post(self.endpoint, {'code': 'ABC-1234'}, format='json')
